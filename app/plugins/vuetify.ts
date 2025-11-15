@@ -99,12 +99,15 @@ export default defineNuxtPlugin((app) => {
     defaults: {
       VTextField: {
         variant: 'outlined',
+        rounded: 'xl',
       },
       VAutocomplete: {
         variant: 'outlined',
+        rounded: 'xl',
       },
       VSelect: {
         variant: 'outlined',
+        rounded: 'xl',
       },
       VBtn: {
         variant: 'outlined',
