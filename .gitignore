@@ -28,3 +28,4 @@ logs
 bun.lock
 CLAUDE.md
 UI_OVERVIEW.md
+.claude/

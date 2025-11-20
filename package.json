@@ -24,6 +24,7 @@
     "@vueuse/core": "^14.0.0",
     "@vueuse/head": "^2.0.0",
     "@vueuse/nuxt": "^14.0.0",
+    "axios": "^1.13.2",
     "eslint": "^9.39.1",
     "nuxt": "^4.2.1",
     "pinia": "^3.0.4",

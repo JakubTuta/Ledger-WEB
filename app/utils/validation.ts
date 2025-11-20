@@ -27,3 +27,9 @@ export const passwordRequirements: PasswordRequirement[] = [
   { text: 'Contains lowercase letter', test: (v: string) => /[a-z]/.test(v) },
   { text: 'Contains digit', test: (v: string) => /\d/.test(v) },
 ]
+
+export const apiKeyNameRules = [
+  (v: string) => !!v || 'API key name is required',
+  (v: string) => v.length >= 1 || 'API key name must be at least 1 character',
+  (v: string) => v.length <= 255 || 'API key name must be at most 255 characters',
+]

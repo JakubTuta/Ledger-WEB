@@ -99,3 +99,21 @@
     </v-btn>
   </v-container>
 </template>
+
+<script setup lang="ts">
+import { onMounted } from 'vue'
+
+definePageMeta({
+  middleware: 'auth',
+})
+
+const projectsStore = useProjectsStore()
+
+function fetchData() {
+  projectsStore.fetchProjects()
+}
+
+onMounted(() => {
+  fetchData()
+})
+</script>

@@ -15,6 +15,7 @@ export interface LoginResponse {
   account_id: string
   email: string
   expires_in: number
+  name: string
 }
 
 export interface RegisterRequest {
@@ -30,5 +31,23 @@ export interface RegisterResponse {
   email: string
   name: string
   expires_in: number
-  message: string
+  detail: string
+}
+
+export interface UpdateNameRequest {
+  name: string
+}
+
+export interface UpdateNameResponse {
+  detail: string
+  name: string
+}
+
+export interface ChangePasswordRequest {
+  old_password: string
+  new_password: string
+}
+
+export interface ChangePasswordResponse {
+  detail: string
 }

@@ -117,17 +117,18 @@ export default defineNuxtPlugin((app) => {
         style: 'max-width: 1400px',
       },
       VCard: {
-        rounded: 'lg',
+        rounded: 'xl',
         width: '100%',
       },
       VTab: {
         rounded: 'xl',
       },
       VListItem: {
-        rounded: 'lg',
+        rounded: 'xl',
       },
       VAlert: {
         variant: 'tonal',
+        rounded: 'xl',
       },
     },
     display: {

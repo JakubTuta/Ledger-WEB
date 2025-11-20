@@ -168,6 +168,10 @@
 <script setup lang="ts">
 import { emailRules, passwordRequirements, passwordRules } from '~/utils/validation'
 
+definePageMeta({
+  middleware: 'guest',
+})
+
 const authStore = useAuthStore()
 
 const formRef = ref()

@@ -1,15 +1,18 @@
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, User } from '~/types/auth'
+import type { ChangePasswordRequest, ChangePasswordResponse, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UpdateNameRequest, UpdateNameResponse, User } from '~/types/auth'
 import { defineStore } from 'pinia'
 
 const TOKEN_KEY = 'ledger_auth_token'
 
 export const useAuthStore = defineStore('auth', () => {
-  const config = useRuntimeConfig()
+  const apiStore = useApiStore()
+  const { client } = storeToRefs(apiStore)
+
   const router = useRouter()
 
   const user = ref<User | null>(null)
   const token = ref<string | null>(null)
   const isAuthenticated = computed(() => !!user.value && !!token.value)
+  const authInitialized = ref(false)
 
   const saveToken = (newToken: string) => {
     token.value = newToken
@@ -39,13 +42,9 @@ export const useAuthStore = defineStore('auth', () => {
       return false
 
     try {
-      const response = await $fetch<User>(`${config.public.serverUrl}/api/v1/accounts/me`, {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
-      })
+      const response = await client.value.get<User>('/api/v1/accounts/me')
 
-      user.value = response
+      user.value = response.data
 
       return true
     }
@@ -60,18 +59,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   const login = async (credentials: LoginRequest) => {
     try {
-      const response = await $fetch<LoginResponse>(`${config.public.serverUrl}/api/v1/accounts/login`, {
-        method: 'POST',
-        body: credentials,
-      })
+      const response = await client.value.post<LoginResponse>('/api/v1/accounts/login', credentials)
 
-      saveToken(response.access_token)
+      saveToken(response.data.access_token)
 
       user.value = {
-        account_id: response.account_id,
-        email: response.email,
+        account_id: response.data.account_id,
+        email: response.data.email,
+        name: response.data.name,
       }
 
+      authInitialized.value = true
       await router.push('/panel')
 
       return { success: true }
@@ -79,45 +77,48 @@ export const useAuthStore = defineStore('auth', () => {
     catch (error: any) {
       console.error('Login failed:', error)
 
-      return { success: false, error: error.message || 'Login failed' }
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || 'Login failed'
+
+      return { success: false, error: errorMessage }
     }
   }
 
   const register = async (data: RegisterRequest) => {
     try {
-      const response = await $fetch<RegisterResponse>(`${config.public.serverUrl}/api/v1/accounts/register`, {
-        method: 'POST',
-        body: data,
-      })
+      const response = await client.value.post<RegisterResponse>('/api/v1/accounts/register', data)
 
-      saveToken(response.access_token)
+      saveToken(response.data.access_token)
 
       user.value = {
-        account_id: response.account_id,
-        email: response.email,
-        name: response.name,
+        account_id: response.data.account_id,
+        email: response.data.email,
+        name: response.data.name,
       }
 
+      authInitialized.value = true
       await router.push('/panel')
 
-      return { success: true, message: response.message }
+      return { success: true, message: response.data.detail }
     }
     catch (error: any) {
       console.error('Registration failed:', error)
 
-      return { success: false, error: error.message || 'Registration failed' }
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || 'Registration failed'
+
+      return { success: false, error: errorMessage }
     }
   }
 
   const logout = async () => {
     try {
       if (token.value) {
-        await $fetch(`${config.public.serverUrl}/api/v1/accounts/logout`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token.value}`,
-          },
-        })
+        await client.value.post('/api/v1/accounts/logout')
       }
     }
     catch (error) {
@@ -126,20 +127,62 @@ export const useAuthStore = defineStore('auth', () => {
     finally {
       clearToken()
       user.value = null
+      authInitialized.value = false
       await router.push('/')
     }
   }
 
   const autoLogin = async () => {
+    // Prevent multiple initialization attempts
+    if (authInitialized.value) {
+      return
+    }
+
     loadToken()
     if (token.value) {
-      const success = await fetchCurrentUser()
-      if (success) {
-        const currentPath = router.currentRoute.value.path
-        if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
-          await router.push('/panel')
-        }
+      await fetchCurrentUser()
+    }
+
+    authInitialized.value = true
+  }
+
+  const updateName = async (name: string) => {
+    try {
+      const response = await client.value.patch<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
+
+      if (user.value) {
+        user.value.name = response.data.name
       }
+
+      return { success: true, message: response.data.detail }
+    }
+    catch (error: any) {
+      console.error('Failed to update name:', error)
+
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || 'Failed to update name'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const changePassword = async (data: ChangePasswordRequest) => {
+    try {
+      const response = await client.value.post<ChangePasswordResponse>('/api/v1/accounts/me/password', data)
+
+      return { success: true, message: response.data.detail }
+    }
+    catch (error: any) {
+      console.error('Failed to change password:', error)
+
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || 'Failed to change password'
+
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -151,5 +194,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     autoLogin,
+    updateName,
+    changePassword,
   }
 })
