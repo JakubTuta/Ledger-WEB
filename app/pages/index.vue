@@ -13,19 +13,6 @@
             lg="6"
             class="text-center"
           >
-            <div class="hero-badge mb-6">
-              <v-chip
-                color="primary"
-                variant="tonal"
-                size="small"
-              >
-                <v-icon start>
-                  mdi-chart-timeline-variant
-                </v-icon>
-                Real-time Log Analytics
-              </v-chip>
-            </div>
-
             <h1 class="hero-title mb-6">
               Beautiful log analytics
               <span class="gradient-text">in your browser</span>
