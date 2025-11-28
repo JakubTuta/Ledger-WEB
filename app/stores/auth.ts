@@ -148,7 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const updateName = async (name: string) => {
     try {
-      const response = await client.value.patch<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
+      const response = await client.value.put<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
 
       if (user.value) {
         user.value.name = response.data.name

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Project, ProjectListResponse } from '~/types/project'
+import type { CreateProjectRequest, Project, ProjectListResponse } from '~/types/project'
 
 export const useProjectsStore = defineStore('projects', () => {
   const apiStore = useApiStore()
@@ -40,7 +40,7 @@ export const useProjectsStore = defineStore('projects', () => {
     await fetchProjects(true)
   }
 
-  const createProject = async (data: { name: string, slug: string }) => {
+  const createProject = async (data: CreateProjectRequest) => {
     try {
       const response = await client.value.post<Project>('/api/v1/projects', data)
 

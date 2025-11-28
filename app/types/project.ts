@@ -5,6 +5,7 @@ export interface Project {
   environment: string
   retention_days: number
   daily_quota: number
+  available_routes: string[]
 }
 
 export interface ProjectListResponse {

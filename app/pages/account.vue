@@ -23,6 +23,13 @@
             <v-list-subheader>Settings</v-list-subheader>
 
             <v-list-item
+              :active="activeSection === 'projects'"
+              title="Projects"
+              prepend-icon="mdi-folder-multiple"
+              @click="scrollToSection('projects')"
+            />
+
+            <v-list-item
               :active="activeSection === 'quota'"
               title="Quota usage"
               prepend-icon="mdi-chart-line"
@@ -58,6 +65,22 @@
             style="height: 100%;"
             @scroll="handleScroll"
           >
+            <!-- Projects Section -->
+            <div
+              ref="projectsSection"
+              style="min-height: calc(100vh - 120px);"
+            >
+              <v-card flat>
+                <v-card-title class="text-h5 font-weight-bold mb-4">
+                  Projects
+                </v-card-title>
+
+                <v-card-text>
+                  <ProjectsList />
+                </v-card-text>
+              </v-card>
+            </div>
+
             <!-- Quota Usage Section -->
             <div
               ref="quotaSection"
@@ -148,22 +171,26 @@ const { projects } = storeToRefs(projectsStore)
 
 const apiKeysStore = useApiKeysStore()
 
-const activeSection = ref<'quota' | 'apiKeys' | 'account'>('quota')
+const activeSection = ref<'projects' | 'quota' | 'apiKeys' | 'account'>('projects')
 const selectedProjectId = ref<number | null>(null)
 const scrollContainer = ref<HTMLElement | null>(null)
+const projectsSection = ref<HTMLElement | null>(null)
 const quotaSection = ref<HTMLElement | null>(null)
 const apiKeysSection = ref<HTMLElement | null>(null)
 const accountSection = ref<HTMLElement | null>(null)
 
 let isScrolling = false
 
-function scrollToSection(section: 'quota' | 'apiKeys' | 'account') {
+function scrollToSection(section: 'projects' | 'quota' | 'apiKeys' | 'account') {
   if (!scrollContainer.value)
     return
 
   let targetElement: HTMLElement | null = null
 
   switch (section) {
+    case 'projects':
+      targetElement = projectsSection.value
+      break
     case 'quota':
       targetElement = quotaSection.value
       break
@@ -180,7 +207,7 @@ function scrollToSection(section: 'quota' | 'apiKeys' | 'account') {
     activeSection.value = section
 
     const containerTop = scrollContainer.value.offsetTop
-    const targetTop = targetElement.offsetTop
+    const targetTop = targetElement.offsetTop - 30
     const scrollPosition = targetTop - containerTop
 
     scrollContainer.value.scrollTo({
@@ -202,10 +229,14 @@ function handleScroll() {
   const scrollTop = container.scrollTop
   const offset = 100
 
+  const quotaOffset = quotaSection.value?.offsetTop ?? 0
   const apiKeysOffset = apiKeysSection.value?.offsetTop ?? 0
   const accountOffset = accountSection.value?.offsetTop ?? 0
 
-  if (scrollTop < apiKeysOffset - offset) {
+  if (scrollTop < quotaOffset - offset) {
+    activeSection.value = 'projects'
+  }
+  else if (scrollTop < apiKeysOffset - offset) {
     activeSection.value = 'quota'
   }
   else if (scrollTop < accountOffset - offset) {
@@ -242,7 +273,7 @@ watch(projects, (newProjects) => {
 }, { immediate: true })
 
 onMounted(() => {
-  activeSection.value = 'quota'
+  activeSection.value = 'projects'
   fetchData()
 })
 </script>
