@@ -4,10 +4,10 @@ FROM oven/bun:1-alpine AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb ./
+COPY package.json ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile --production=false
+RUN bun install
 
 # Stage 2: Builder
 FROM oven/bun:1-alpine AS builder
