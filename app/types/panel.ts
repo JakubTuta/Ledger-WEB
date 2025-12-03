@@ -1,4 +1,4 @@
-export type PanelType = 'logs' | 'errors' | 'metrics'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list'
 
 export type TimeRangePreset = 'today' | 'last7days' | 'last30days' | 'currentWeek' | 'currentMonth' | 'currentYear'
 

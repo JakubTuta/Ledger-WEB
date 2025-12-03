@@ -11,6 +11,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   access_token: string
+  refresh_token: string
   token_type: string
   account_id: string
   email: string
@@ -26,6 +27,7 @@ export interface RegisterRequest {
 
 export interface RegisterResponse {
   access_token: string
+  refresh_token: string
   token_type: string
   account_id: string
   email: string
@@ -50,4 +52,17 @@ export interface ChangePasswordRequest {
 
 export interface ChangePasswordResponse {
   detail: string
+}
+
+export interface RefreshTokenRequest {
+  refresh_token: string
+}
+
+export interface RefreshTokenResponse {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  account_id: string
+  email: string
+  expires_in: number
 }

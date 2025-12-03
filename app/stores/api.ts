@@ -23,14 +23,26 @@ export const useApiStore = defineStore('api', () => {
 
   client.value.interceptors.response.use(
     response => response,
-    (error) => {
+    async (error) => {
       if (error.response?.status === 401) {
         const requestUrl = error.config?.url || ''
-        const isAuthEndpoint = requestUrl.includes('/accounts/login') || requestUrl.includes('/accounts/register')
+        const isAuthEndpoint = requestUrl.includes('/accounts/login')
+          || requestUrl.includes('/accounts/register')
+          || requestUrl.includes('/accounts/refresh')
 
         if (!isAuthEndpoint) {
           const authStore = useAuthStore()
-          authStore.logout()
+
+          // Try to refresh the token
+          const refreshed = await authStore.refreshAccessToken()
+
+          if (refreshed && error.config) {
+            // Retry the original request with the new token
+            error.config.headers.Authorization = `Bearer ${authStore.token}`
+            return client.value.request(error.config)
+          }
+
+          // If refresh failed, logout is already handled in refreshAccessToken
         }
       }
 

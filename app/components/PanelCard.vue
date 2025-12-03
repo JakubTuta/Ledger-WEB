@@ -95,7 +95,7 @@
       <div
         v-if="loading"
         class="d-flex align-center justify-center"
-        style="height: 200px;"
+        style="height: 500px;"
       >
         <v-progress-circular
           indeterminate
@@ -107,7 +107,7 @@
       <div
         v-else-if="!metrics || chartData.length === 0"
         class="d-flex align-center text-grey justify-center"
-        style="height: 200px;"
+        style="height: 500px;"
       >
         <div class="text-center">
           <v-icon
@@ -260,6 +260,8 @@ const panelTypeIcon = computed(() => {
       return 'mdi-alert-circle'
     case 'metrics':
       return 'mdi-chart-line'
+    case 'error_list':
+      return 'mdi-format-list-bulleted'
     default:
       return 'mdi-view-dashboard'
   }
@@ -268,6 +270,8 @@ const panelTypeIcon = computed(() => {
 const panelTypeColor = computed(() => {
   switch (props.panel.type) {
     case 'errors':
+      return 'error'
+    case 'error_list':
       return 'error'
     case 'metrics':
       return 'success'
@@ -436,7 +440,7 @@ function formatYAxisLabel(value: number): string {
 }
 
 .chart-container {
-  height: 200px;
+  height: 500px;
   display: flex;
   flex-direction: column;
 }

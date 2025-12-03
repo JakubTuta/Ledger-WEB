@@ -143,7 +143,22 @@
             cols="12"
             lg="6"
           >
+            <ErrorListPanelCard
+              v-if="panel.type === 'error_list'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              :errors="panelsStore.getErrorsForPanel(panel.id)"
+              :loading="panelsStore.isErrorsLoading(panel.id)"
+              :has-more="panelsStore.getErrorsHasMore(panel.id)"
+              :offset="panelsStore.getErrorsOffset(panel.id)"
+              :disabled="isEditMode"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+              @load-page="(offset) => panelsStore.fetchErrorsForPanel(panel, offset)"
+            />
+
             <PanelCard
+              v-else
               :panel="panel"
               :project="getProjectForPanel(panel)"
               :metrics="panelsStore.getMetricsForPanel(panel.id)"
@@ -206,6 +221,7 @@ const panelTypeOptions = [
   { label: 'Logs', value: 'logs' },
   { label: 'Errors', value: 'errors' },
   { label: 'Metrics', value: 'metrics' },
+  { label: 'Error List', value: 'error_list' },
 ]
 
 const projectOptions = computed(() => projectsStore.projects.map(p => ({
@@ -345,12 +361,22 @@ async function handleTimeOptionsApply(params: { period?: TimeRangePreset, period
 }
 
 async function handlePanelCreated(panel: Panel) {
-  await panelsStore.fetchMetricsForPanel(panel)
+  if (panel.type === 'error_list') {
+    await panelsStore.fetchErrorsForPanel(panel)
+  }
+  else {
+    await panelsStore.fetchMetricsForPanel(panel)
+  }
 }
 
 function fetchAllMetrics() {
   for (const panel of panelsStore.sortedPanels) {
-    panelsStore.fetchMetricsForPanel(panel)
+    if (panel.type === 'error_list') {
+      panelsStore.fetchErrorsForPanel(panel)
+    }
+    else {
+      panelsStore.fetchMetricsForPanel(panel)
+    }
   }
 }
 
@@ -383,7 +409,7 @@ function loadFiltersFromUrl() {
     filters.value.projectId = query.project
   }
 
-  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics'].includes(query.type)) {
+  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list'].includes(query.type)) {
     filters.value.panelType = query.type as PanelType
   }
 }

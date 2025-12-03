@@ -22,6 +22,11 @@ export const usePanelsStore = defineStore('panels', () => {
   const panelMetrics = ref<Map<number, AggregatedMetricsResponse>>(new Map())
   const metricsLoading = ref<Set<number>>(new Set())
 
+  const panelErrors = ref<Map<number, any[]>>(new Map())
+  const errorsLoading = ref<Set<number>>(new Set())
+  const errorsOffset = ref<Map<number, number>>(new Map())
+  const errorsHasMore = ref<Map<number, boolean>>(new Map())
+
   const sortedPanels = computed(() => [...panels.value].sort((a, b) => a.index - b.index),
   )
 
@@ -124,6 +129,87 @@ export const usePanelsStore = defineStore('panels', () => {
     return metricsLoading.value.has(panelId)
   }
 
+  const fetchErrorsForPanel = async (panel: Panel, offset = 0) => {
+    if (errorsLoading.value.has(panel.id))
+      return
+
+    errorsLoading.value.add(panel.id)
+
+    try {
+      const searchParams = new URLSearchParams()
+
+      searchParams.set('project_id', panel.project_id)
+      searchParams.set('limit', '100')
+      searchParams.set('offset', String(offset))
+
+      if (panel.period) {
+        searchParams.set('period', panel.period)
+      }
+      else if (panel.periodFrom && panel.periodTo) {
+        searchParams.set('periodFrom', panel.periodFrom)
+        searchParams.set('periodTo', panel.periodTo)
+      }
+      else {
+        searchParams.set('period', 'last7days')
+      }
+
+      const response = await client.value.get<any>(
+        `/api/v1/errors/list?${searchParams.toString()}`,
+      )
+
+      const errors = response.data.errors.map((error: any) => ({
+        ...error,
+        isNew: false,
+      }))
+
+      panelErrors.value.set(panel.id, errors)
+      errorsOffset.value.set(panel.id, offset)
+      errorsHasMore.value.set(panel.id, response.data.has_more)
+    }
+    catch (error) {
+      console.error(`Error fetching errors for panel ${panel.id}:`, error)
+      panelErrors.value.set(panel.id, [])
+      errorsHasMore.value.set(panel.id, false)
+    }
+    finally {
+      errorsLoading.value.delete(panel.id)
+    }
+  }
+
+  const getErrorsForPanel = (panelId: number) => {
+    return panelErrors.value.get(panelId) || []
+  }
+
+  const isErrorsLoading = (panelId: number) => {
+    return errorsLoading.value.has(panelId)
+  }
+
+  const getErrorsHasMore = (panelId: number) => {
+    return errorsHasMore.value.get(panelId) || false
+  }
+
+  const getErrorsOffset = (panelId: number) => {
+    return errorsOffset.value.get(panelId) || 0
+  }
+
+  const addNewErrorToPanel = (projectId: string, error: any) => {
+    for (const panel of panels.value) {
+      if (panel.type === 'error_list' && panel.project_id === projectId) {
+        const currentErrors = panelErrors.value.get(panel.id) || []
+
+        const newError = {
+          ...error,
+          log_id: Date.now(),
+          project_id: Number.parseInt(projectId),
+          isNew: true,
+          expanded: false,
+        }
+
+        panelErrors.value.set(panel.id, [newError, ...currentErrors])
+      }
+    }
+  }
+
   const createPanel = async (data: CreatePanelRequest) => {
     try {
       const response = await client.value.post<Panel>('/api/v1/dashboard/panels', data)
@@ -193,6 +279,9 @@ export const usePanelsStore = defineStore('panels', () => {
       panels.value = panels.value.filter(p => p.id !== panelId)
       total.value -= 1
       panelMetrics.value.delete(panelId)
+      panelErrors.value.delete(panelId)
+      errorsOffset.value.delete(panelId)
+      errorsHasMore.value.delete(panelId)
 
       return { success: true }
     }
@@ -280,7 +369,12 @@ export const usePanelsStore = defineStore('panels', () => {
         panels.value[index] = response.data
       }
 
-      await fetchMetricsForPanel(response.data)
+      if (response.data.type === 'error_list') {
+        await fetchErrorsForPanel(response.data)
+      }
+      else {
+        await fetchMetricsForPanel(response.data)
+      }
 
       return { success: true, panel: response.data }
     }
@@ -306,6 +400,12 @@ export const usePanelsStore = defineStore('panels', () => {
     fetchMetricsForPanel,
     getMetricsForPanel,
     isMetricsLoading,
+    fetchErrorsForPanel,
+    getErrorsForPanel,
+    isErrorsLoading,
+    getErrorsHasMore,
+    getErrorsOffset,
+    addNewErrorToPanel,
     createPanel,
     updatePanel,
     deletePanel,

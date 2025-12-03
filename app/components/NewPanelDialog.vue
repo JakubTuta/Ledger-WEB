@@ -70,7 +70,9 @@
 
               <v-chip
                 size="x-small"
-                :color="item.raw.environment === 'production' ? 'error' : 'primary'"
+                :color="item.raw.environment === 'production'
+                  ? 'error'
+                  : 'primary'"
                 variant="tonal"
                 class="ml-2"
               >
@@ -146,7 +148,9 @@
 
             <v-btn
               variant="outlined"
-              :color="timeRangeError ? 'error' : undefined"
+              :color="timeRangeError
+                ? 'error'
+                : undefined"
               prepend-icon="mdi-clock-outline"
               @click="timeOptionsDialog = true"
             >
@@ -266,6 +270,7 @@ const projectOptions = computed(() => projectsStore.projects.map(p => ({
 const selectedProject = computed(() => {
   if (!form.value.projectId)
     return null
+
   return projectsStore.projects.find(p => String(p.project_id) === form.value.projectId)
 })
 
@@ -277,6 +282,7 @@ const panelTypeOptions = [
   { label: 'Logs', value: 'logs', icon: 'mdi-text-box-outline' },
   { label: 'Errors', value: 'errors', icon: 'mdi-alert-circle' },
   { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line' },
+  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted' },
 ]
 
 const nameRules = [
@@ -304,6 +310,7 @@ const timeRangeError = computed(() => {
   if (hasAttemptedSubmit.value && !hasTimeRange.value) {
     return 'Time range is required'
   }
+
   return null
 })
 
@@ -382,11 +389,17 @@ async function handleCreate() {
       name: form.value.name,
       project_id: form.value.projectId,
       type: form.value.panelType,
-      endpoint: form.value.panelType === 'metrics' ? form.value.endpointUrl || undefined : undefined,
+      endpoint: form.value.panelType === 'metrics'
+        ? form.value.endpointUrl || undefined
+        : undefined,
       index: panelsStore.panels.length,
       period: form.value.period || null,
-      periodFrom: form.value.period ? null : form.value.periodFrom || null,
-      periodTo: form.value.period ? null : form.value.periodTo || null,
+      periodFrom: form.value.period
+        ? null
+        : form.value.periodFrom || null,
+      periodTo: form.value.period
+        ? null
+        : form.value.periodTo || null,
     }
 
     const result = await panelsStore.createPanel(panelData)
