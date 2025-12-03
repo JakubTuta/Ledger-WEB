@@ -1,175 +1,97 @@
 <template>
-  <v-card
-    :class="{'panel-card--disabled': disabled}"
-    height="100%"
+  <BasePanelCard
+    :panel="panel"
+    :project="project"
+    :disabled="disabled"
+    icon="mdi-format-list-bulleted"
+    icon-color="error"
+    @delete="emit('delete')"
+    @time-options="emit('timeOptions')"
   >
-    <!-- Header -->
-    <v-card-title class="d-flex align-center justify-space-between pa-4">
-      <div class="d-flex align-center flex-grow-1 gap-2">
-        <v-icon
-          icon="mdi-format-list-bulleted"
-          color="error"
-          size="small"
-        />
-
+    <template #content>
+      <v-card-text class="panel-content-container pa-4">
+        <!-- Loading State -->
         <div
-          v-if="!isEditingName"
-          class="d-flex align-center cursor-pointer gap-1"
-          @click="startEditingName"
+          v-if="loading"
+          class="panel-empty-state"
         >
-          <span class="text-subtitle-1 font-weight-medium">{{ panel.name }}</span>
-
-          <v-icon
-            icon="mdi-pencil"
-            size="x-small"
-            class="text-grey"
+          <v-progress-circular
+            indeterminate
+            color="primary"
           />
         </div>
 
-        <v-text-field
-          v-else
-          v-model="editedName"
-          density="compact"
-          variant="outlined"
-          hide-details
-          autofocus
-          :loading="isSavingName"
-          class="panel-name-input"
-          @blur="saveNameEdit"
-          @keydown.enter="saveNameEdit"
-          @keydown.esc="cancelNameEdit"
-        />
-      </div>
-
-      <div class="d-flex align-center gap-1">
-        <v-btn
-          variant="text"
-          size="small"
-          :disabled="disabled"
-          prepend-icon="mdi-clock-outline"
-          @click="emit('timeOptions')"
+        <!-- No Data State -->
+        <div
+          v-else-if="!errors || errors.length === 0"
+          class="panel-empty-state text-grey"
         >
-          {{ timeRangeText }}
-        </v-btn>
+          <div class="text-center">
+            <v-icon
+              icon="mdi-check-circle"
+              size="48"
+              class="mb-2"
+            />
 
-        <v-btn
-          icon="mdi-delete"
-          variant="text"
-          size="small"
-          color="error"
-          :disabled="disabled"
-          @click="emit('delete')"
-        />
-      </div>
-    </v-card-title>
-
-    <!-- Project Info -->
-    <v-card-subtitle class="px-4 pb-2">
-      <div class="d-flex align-center gap-2">
-        <v-chip
-          size="x-small"
-          :color="project?.environment === 'production'
-            ? 'error'
-            : 'primary'"
-          variant="tonal"
-        >
-          {{ project?.environment || 'Unknown' }}
-        </v-chip>
-
-        <span class="text-caption">{{ project?.name || 'Unknown Project' }}</span>
-      </div>
-    </v-card-subtitle>
-
-    <v-divider />
-
-    <!-- Error List Content -->
-    <v-card-text class="pa-4 error-list-container">
-      <!-- Loading State -->
-      <div
-        v-if="loading"
-        class="d-flex align-center justify-center"
-        style="min-height: 500px;"
-      >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-        />
-      </div>
-
-      <!-- No Data State -->
-      <div
-        v-else-if="!errors || errors.length === 0"
-        class="d-flex align-center text-grey justify-center"
-        style="min-height: 500px;"
-      >
-        <div class="text-center">
-          <v-icon
-            icon="mdi-check-circle"
-            size="48"
-            class="mb-2"
-          />
-
-          <div class="text-body-2">
-            No errors found
+            <div class="text-body-2">
+              No errors found
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Error List -->
-      <div
-        v-else
-        class="error-list"
-      >
-        <v-card
-          v-for="error in errors"
-          :key="error.log_id"
-          :color="getErrorColor(error.level)"
-          variant="elevated"
-          elevation="1"
-          class="mb-2 error-card"
+        <!-- Error List -->
+        <div
+          v-else
+          class="error-list"
         >
-          <v-card-title class="d-flex align-center justify-space-between pa-2">
-            <div class="d-flex align-center gap-1">
-              <v-icon
-                :icon="getErrorIcon(error.level)"
-                :color="getIconColor(error.level)"
-                size="small"
-                class="mr-1"
-              />
-
-              <span class="text-body-2 font-weight-bold">
-                {{ error.error_type }}
-              </span>
-
-              <v-chip
-                v-if="error.isNew"
-                size="x-small"
-                color="success"
-                variant="flat"
-                class="ml-1"
-              >
-                NEW
-              </v-chip>
-            </div>
-
-            <v-btn
-              :icon="error.expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-              size="x-small"
-              variant="text"
-              density="compact"
+          <v-card
+            v-for="error in errors"
+            :key="error.log_id"
+            :color="getErrorColor(error.level)"
+            variant="elevated"
+            elevation="1"
+            class="error-card mb-2"
+          >
+            <v-card-title
+              class="d-flex align-center justify-space-between min-h-50px cursor-pointer pa-2"
               @click="toggleExpanded(error.log_id)"
-            />
-          </v-card-title>
+            >
+              <div class="d-flex align-center gap-1">
+                <v-icon
+                  :icon="getErrorIcon(error.level)"
+                  :color="getIconColor(error.level)"
+                  size="x-small"
+                  class="mr-1"
+                />
 
-          <v-card-text class="pa-2 pt-0">
-            <div class="d-flex align-center gap-2 text-caption text-medium-emphasis mb-1">
-              <span v-if="error.timestamp">
+                <span class="text-body-2 font-weight-bold">
+                  {{ error.error_type }}
+                </span>
+
+                <v-chip
+                  v-if="error.isNew"
+                  size="x-small"
+                  color="success"
+                  variant="flat"
+                  class="ml-1"
+                >
+                  NEW
+                </v-chip>
+              </div>
+
+              <span
+                v-if="error.timestamp"
+                class="text-caption text-medium-emphasis"
+              >
                 {{ formatTimestamp(error.timestamp) }}
               </span>
-            </div>
+            </v-card-title>
 
             <v-expand-transition>
-              <div v-if="error.expanded">
+              <v-card-text
+                v-if="error.expanded"
+                class="pa-2 pt-0"
+              >
                 <div class="mb-2">
                   <div class="text-caption font-weight-bold mb-1">
                     Message:
@@ -177,26 +99,6 @@
 
                   <div class="text-caption">
                     {{ error.message }}
-                  </div>
-                </div>
-
-                <div class="mb-2">
-                  <div class="d-flex align-center gap-1">
-                    <v-chip
-                      :color="getErrorColor(error.level)"
-                      size="x-small"
-                      variant="flat"
-                    >
-                      {{ error.level.toUpperCase() }}
-                    </v-chip>
-
-                    <v-chip
-                      v-if="project?.name"
-                      size="x-small"
-                      variant="outlined"
-                    >
-                      {{ project.name }}
-                    </v-chip>
                   </div>
                 </div>
 
@@ -220,47 +122,47 @@
 
                   <pre class="context-data text-caption">{{ JSON.stringify(error.attributes, null, 2) }}</pre>
                 </div>
-              </div>
+              </v-card-text>
             </v-expand-transition>
-          </v-card-text>
-        </v-card>
+          </v-card>
 
-        <!-- Pagination -->
-        <div
-          v-if="hasMore || offset > 0"
-          class="d-flex justify-center align-center gap-2 mt-4"
-        >
-          <v-btn
-            variant="outlined"
-            size="small"
-            :disabled="offset === 0 || loading"
-            @click="loadPreviousPage"
+          <!-- Pagination -->
+          <div
+            v-if="hasMore || (offset || 0) > 0"
+            class="d-flex align-center mt-4 justify-center gap-2"
           >
-            Previous
-          </v-btn>
+            <v-btn
+              variant="outlined"
+              size="small"
+              :disabled="(offset || 0) === 0 || loading"
+              @click="loadPreviousPage"
+            >
+              Previous
+            </v-btn>
 
-          <span class="text-caption text-grey">
-            {{ offset + 1 }} - {{ offset + errors.length }}
-          </span>
+            <span class="text-caption text-grey">
+              {{ (offset || 0) + 1 }} - {{ (offset || 0) + errors.length }}
+            </span>
 
-          <v-btn
-            variant="outlined"
-            size="small"
-            :disabled="!hasMore || loading"
-            @click="loadNextPage"
-          >
-            Next
-          </v-btn>
+            <v-btn
+              variant="outlined"
+              size="small"
+              :disabled="!hasMore || loading"
+              @click="loadNextPage"
+            >
+              Next
+            </v-btn>
+          </div>
         </div>
-      </div>
-    </v-card-text>
-  </v-card>
+      </v-card-text>
+    </template>
+  </BasePanelCard>
 </template>
 
 <script setup lang="ts">
-import type { Panel, TimeRangePreset } from '~/types/panel'
-import type { Project } from '~/types/project'
 import type { NotificationLevel } from '~/types/notifications'
+import type { Panel } from '~/types/panel'
+import type { Project } from '~/types/project'
 
 interface ErrorItem {
   log_id: number
@@ -294,41 +196,7 @@ const emit = defineEmits<{
   loadPage: [offset: number]
 }>()
 
-const panelsStore = usePanelsStore()
-
-const isEditingName = ref(false)
-const editedName = ref('')
-const isSavingName = ref(false)
 const currentTime = ref(Date.now())
-
-const timeRangeText = computed(() => {
-  if (props.panel.period) {
-    const presetLabels: Record<TimeRangePreset, string> = {
-      today: 'Today',
-      last7days: 'Last 7 Days',
-      last30days: 'Last 30 Days',
-      currentWeek: 'Current Week',
-      currentMonth: 'Current Month',
-      currentYear: 'Current Year',
-    }
-
-    return presetLabels[props.panel.period as TimeRangePreset] || 'Select Range'
-  }
-
-  if (!props.panel.periodFrom || !props.panel.periodTo)
-    return 'Select Range'
-
-  const from = formatDateToDisplay(props.panel.periodFrom)
-  const to = formatDateToDisplay(props.panel.periodTo)
-
-  return `${from} - ${to}`
-})
-
-function formatDateToDisplay(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-')
-
-  return `${day}/${month}/${year}`
-}
 
 function getErrorColor(level: NotificationLevel): string {
   const colors: Record<NotificationLevel, string> = {
@@ -399,38 +267,6 @@ function loadPreviousPage() {
   emit('loadPage', newOffset)
 }
 
-function startEditingName() {
-  if (props.disabled)
-    return
-  editedName.value = props.panel.name
-  isEditingName.value = true
-}
-
-async function saveNameEdit() {
-  if (!editedName.value.trim() || editedName.value === props.panel.name) {
-    cancelNameEdit()
-
-    return
-  }
-
-  isSavingName.value = true
-
-  const result = await panelsStore.updatePanel(props.panel.id, {
-    name: editedName.value.trim(),
-  })
-
-  isSavingName.value = false
-
-  if (result.success) {
-    isEditingName.value = false
-  }
-}
-
-function cancelNameEdit() {
-  isEditingName.value = false
-  editedName.value = ''
-}
-
 let timeUpdateInterval: NodeJS.Timeout | null = null
 
 onMounted(() => {
@@ -447,17 +283,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.panel-card--disabled {
-  opacity: 0.9;
-  cursor: move;
-  user-select: none;
-}
-
-.error-list-container {
-  height: 500px;
-  overflow-y: auto;
-}
-
+/* Error list specific styles */
 .error-list {
   display: flex;
   flex-direction: column;
@@ -467,8 +293,7 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-.stack-trace,
-.context-data {
+.stack-trace {
   background-color: rgba(0, 0, 0, 0.1);
   padding: 6px;
   border-radius: 4px;
@@ -482,11 +307,17 @@ onUnmounted(() => {
   word-break: break-all;
 }
 
-.cursor-pointer {
-  cursor: pointer;
-}
-
-.panel-name-input {
-  max-width: 300px;
+.context-data {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  border-radius: 4px;
+  overflow-x: auto;
+  max-height: 250px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

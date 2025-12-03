@@ -4,92 +4,88 @@
     class="pa-6"
   >
     <!-- Filters Section -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="mb-4">
-          <v-card-text
-            class="align-center"
-            flex
-          >
-            <v-select
-              v-model="filters.projectId"
-              label="Project"
-              variant="outlined"
-              density="comfortable"
-              :items="projectOptions"
-              item-title="name"
-              item-value="id"
-              clearable
-              hide-details
-              max-width="250px"
-              class="mx-2"
-            >
-              <template #item="{'props': itemProps, item}">
-                <v-list-item
-                  v-bind="itemProps"
-                  :subtitle="item.raw.environment"
-                />
-              </template>
-            </v-select>
-
-            <v-select
-              v-model="filters.panelType"
-              label="Panel Type"
-              variant="outlined"
-              density="comfortable"
-              :items="panelTypeOptions"
-              item-title="label"
-              item-value="value"
-              clearable
-              hide-details
-              max-width="250px"
-              class="mx-2"
+    <v-card class="mb-4">
+      <v-card-text
+        class="align-center"
+        flex
+      >
+        <v-select
+          v-model="filters.projectId"
+          label="Project"
+          variant="outlined"
+          density="comfortable"
+          :items="projectOptions"
+          item-title="name"
+          item-value="id"
+          clearable
+          hide-details
+          max-width="250px"
+          class="mx-2"
+        >
+          <template #item="{'props': itemProps, item}">
+            <v-list-item
+              v-bind="itemProps"
+              :subtitle="item.raw.environment"
             />
+          </template>
+        </v-select>
 
-            <v-spacer />
+        <v-select
+          v-model="filters.panelType"
+          label="Panel Type"
+          variant="outlined"
+          density="comfortable"
+          :items="panelTypeOptions"
+          item-title="label"
+          item-value="value"
+          clearable
+          hide-details
+          max-width="250px"
+          class="mx-2"
+        />
 
-            <div v-if="!isEditMode">
-              <v-btn
-                color="primary"
-                prepend-icon="mdi-plus"
-                class="mx-2"
-                @click="newPanelDialog = true"
-              >
-                Add Panel
-              </v-btn>
+        <v-spacer />
 
-              <v-btn
-                variant="outlined"
-                prepend-icon="mdi-pencil"
-                class="mx-2"
-                @click="enterEditMode"
-              >
-                Edit Layout
-              </v-btn>
-            </div>
+        <div v-if="!isEditMode">
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-plus"
+            class="mx-2"
+            @click="newPanelDialog = true"
+          >
+            Add Panel
+          </v-btn>
 
-            <div v-else>
-              <v-btn
-                variant="outlined"
-                class="mx-2"
-                @click="cancelEditMode"
-              >
-                Cancel
-              </v-btn>
+          <v-btn
+            variant="outlined"
+            prepend-icon="mdi-pencil"
+            class="mx-2"
+            @click="enterEditMode"
+          >
+            Edit Layout
+          </v-btn>
+        </div>
 
-              <v-btn
-                color="primary"
-                :loading="isSavingOrder"
-                class="mx-2"
-                @click="saveOrder"
-              >
-                Save Order
-              </v-btn>
-            </div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+        <div v-else>
+          <v-btn
+            variant="outlined"
+            class="mx-2"
+            @click="cancelEditMode"
+          >
+            Cancel
+          </v-btn>
+
+          <v-btn
+            color="primary"
+            :loading="isSavingOrder"
+            class="mx-2"
+            @click="saveOrder"
+          >
+            Save Order
+          </v-btn>
+        </div>
+      </v-card-text>
+    </v-card>
 
     <!-- Loading State -->
     <v-row v-if="panelsStore.isLoading && !panelsStore.hasData">

@@ -1,236 +1,153 @@
 <template>
-  <v-card
-    :class="{'panel-card--disabled': disabled}"
-    height="100%"
+  <BasePanelCard
+    :panel="panel"
+    :project="project"
+    :disabled="disabled"
+    :icon="panelTypeIcon"
+    :icon-color="panelTypeColor"
+    @delete="emit('delete')"
+    @time-options="emit('timeOptions')"
   >
-    <!-- Header -->
-    <v-card-title class="d-flex align-center justify-space-between pa-4">
-      <div class="d-flex align-center flex-grow-1 gap-2">
-        <v-icon
-          :icon="panelTypeIcon"
-          :color="panelTypeColor"
-          size="small"
-        />
-
+    <template #content>
+      <v-card-text class="pa-4">
+        <!-- Loading State -->
         <div
-          v-if="!isEditingName"
-          class="d-flex align-center cursor-pointer gap-1"
-          @click="startEditingName"
+          v-if="loading"
+          class="panel-empty-state"
         >
-          <span class="text-subtitle-1 font-weight-medium">{{ panel.name }}</span>
-
-          <v-icon
-            icon="mdi-pencil"
-            size="x-small"
-            class="text-grey"
+          <v-progress-circular
+            indeterminate
+            color="primary"
           />
         </div>
 
-        <v-text-field
+        <!-- No Data State -->
+        <div
+          v-else-if="!metrics || chartData.length === 0"
+          class="panel-empty-state text-grey"
+        >
+          <div class="text-center">
+            <v-icon
+              icon="mdi-chart-bar"
+              size="48"
+              class="mb-2"
+            />
+
+            <div class="text-body-2">
+              No data available
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar Chart -->
+        <div
           v-else
-          v-model="editedName"
-          density="compact"
-          variant="outlined"
-          hide-details
-          autofocus
-          :loading="isSavingName"
-          class="panel-name-input"
-          @blur="saveNameEdit"
-          @keydown.enter="saveNameEdit"
-          @keydown.esc="cancelNameEdit"
-        />
-      </div>
-
-      <div class="d-flex align-center gap-1">
-        <v-btn
-          variant="text"
-          size="small"
-          :disabled="disabled"
-          prepend-icon="mdi-clock-outline"
-          @click="emit('timeOptions')"
+          class="panel-content-container chart-container"
         >
-          {{ timeRangeText }}
-        </v-btn>
+          <div class="chart-wrapper">
+            <!-- Y-axis labels -->
+            <div class="chart-y-axis">
+              <div class="y-axis-label">
+                {{ formatYAxisLabel(maxLogCount) }}
+              </div>
 
-        <v-btn
-          icon="mdi-delete"
-          variant="text"
-          size="small"
-          color="error"
-          :disabled="disabled"
-          @click="emit('delete')"
-        />
-      </div>
-    </v-card-title>
+              <div class="y-axis-label">
+                {{ formatYAxisLabel(Math.round(maxLogCount * 0.5)) }}
+              </div>
 
-    <!-- Project Info -->
-    <v-card-subtitle class="px-4 pb-2">
-      <div class="d-flex align-center gap-2">
-        <v-chip
-          size="x-small"
-          :color="project?.environment === 'production'
-            ? 'error'
-            : 'primary'"
-          variant="tonal"
-        >
-          {{ project?.environment || 'Unknown' }}
-        </v-chip>
-
-        <span class="text-caption">{{ project?.name || 'Unknown Project' }}</span>
-      </div>
-
-      <div
-        v-if="panel.type === 'metrics' && panel.endpoint"
-        class="text-caption text-grey mt-1"
-      >
-        {{ panel.endpoint }}
-      </div>
-    </v-card-subtitle>
-
-    <v-divider />
-
-    <!-- Chart Area -->
-    <v-card-text class="pa-4">
-      <!-- Loading State -->
-      <div
-        v-if="loading"
-        class="d-flex align-center justify-center"
-        style="height: 500px;"
-      >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-        />
-      </div>
-
-      <!-- No Data State -->
-      <div
-        v-else-if="!metrics || chartData.length === 0"
-        class="d-flex align-center text-grey justify-center"
-        style="height: 500px;"
-      >
-        <div class="text-center">
-          <v-icon
-            icon="mdi-chart-bar"
-            size="48"
-            class="mb-2"
-          />
-
-          <div class="text-body-2">
-            No data available
-          </div>
-        </div>
-      </div>
-
-      <!-- Bar Chart -->
-      <div
-        v-else
-        class="chart-container"
-      >
-        <div class="chart-wrapper">
-          <!-- Y-axis labels -->
-          <div class="chart-y-axis">
-            <div class="y-axis-label">
-              {{ formatYAxisLabel(maxLogCount) }}
+              <div class="y-axis-label">
+                0
+              </div>
             </div>
 
-            <div class="y-axis-label">
-              {{ formatYAxisLabel(Math.round(maxLogCount * 0.5)) }}
-            </div>
+            <!-- Bars -->
+            <div class="chart-bars">
+              <div
+                v-for="(item, index) in chartData"
+                :key="index"
+                class="chart-bar-wrapper"
+              >
+                <v-tooltip location="top">
+                  <template #activator="{'props': tooltipProps}">
+                    <div
+                      v-bind="tooltipProps"
+                      class="chart-bar"
+                      :style="{
+                        'height': `${getBarHeight(item.log_count)}%`,
+                        'backgroundColor': getBarColor(item),
+                      }"
+                    />
+                  </template>
 
-            <div class="y-axis-label">
-              0
-            </div>
-          </div>
+                  <div class="text-center">
+                    <div class="font-weight-bold">
+                      {{ formatTooltipDate(item) }}
+                    </div>
 
-          <!-- Bars -->
-          <div class="chart-bars">
-            <div
-              v-for="(item, index) in chartData"
-              :key="index"
-              class="chart-bar-wrapper"
-            >
-              <v-tooltip location="top">
-                <template #activator="{'props': tooltipProps}">
-                  <div
-                    v-bind="tooltipProps"
-                    class="chart-bar"
-                    :style="{
-                      'height': `${getBarHeight(item.log_count)}%`,
-                      'backgroundColor': getBarColor(item),
-                    }"
-                  />
-                </template>
+                    <div>Logs: {{ item.log_count.toLocaleString() }}</div>
 
-                <div class="text-center">
-                  <div class="font-weight-bold">
-                    {{ formatTooltipDate(item) }}
+                    <div v-if="item.error_count > 0">
+                      Errors: {{ item.error_count.toLocaleString() }}
+                    </div>
+
+                    <div v-if="item.avg_duration_ms">
+                      Avg: {{ item.avg_duration_ms.toFixed(0) }}ms
+                    </div>
                   </div>
+                </v-tooltip>
+              </div>
+            </div>
+          </div>
 
-                  <div>Logs: {{ item.log_count.toLocaleString() }}</div>
+          <div class="chart-labels mt-2">
+            <span class="text-caption text-grey">{{ chartStartLabel }}</span>
 
-                  <div v-if="item.error_count > 0">
-                    Errors: {{ item.error_count.toLocaleString() }}
-                  </div>
+            <span class="text-caption text-grey">{{ chartEndLabel }}</span>
+          </div>
+        </div>
+      </v-card-text>
+    </template>
 
-                  <div v-if="item.avg_duration_ms">
-                    Avg: {{ item.avg_duration_ms.toFixed(0) }}ms
-                  </div>
-                </div>
-              </v-tooltip>
+    <template #footer>
+      <v-card-actions class="pa-4">
+        <div class="d-flex justify-space-between w-100">
+          <div class="text-center">
+            <div class="text-h6">
+              {{ totalLogs.toLocaleString() }}
+            </div>
+
+            <div class="text-caption text-grey">
+              Total Logs
+            </div>
+          </div>
+
+          <div class="text-center">
+            <div class="text-h6 text-error">
+              {{ totalErrors.toLocaleString() }}
+            </div>
+
+            <div class="text-caption text-grey">
+              Errors
+            </div>
+          </div>
+
+          <div class="text-center">
+            <div class="text-h6">
+              {{ avgDuration }}
+            </div>
+
+            <div class="text-caption text-grey">
+              Avg Duration
             </div>
           </div>
         </div>
-
-        <div class="chart-labels mt-2">
-          <span class="text-caption text-grey">{{ chartStartLabel }}</span>
-
-          <span class="text-caption text-grey">{{ chartEndLabel }}</span>
-        </div>
-      </div>
-    </v-card-text>
-
-    <!-- Footer Stats -->
-    <v-divider />
-
-    <v-card-actions class="pa-4">
-      <div class="d-flex justify-space-between w-100">
-        <div class="text-center">
-          <div class="text-h6">
-            {{ totalLogs.toLocaleString() }}
-          </div>
-
-          <div class="text-caption text-grey">
-            Total Logs
-          </div>
-        </div>
-
-        <div class="text-center">
-          <div class="text-h6 text-error">
-            {{ totalErrors.toLocaleString() }}
-          </div>
-
-          <div class="text-caption text-grey">
-            Errors
-          </div>
-        </div>
-
-        <div class="text-center">
-          <div class="text-h6">
-            {{ avgDuration }}
-          </div>
-
-          <div class="text-caption text-grey">
-            Avg Duration
-          </div>
-        </div>
-      </div>
-    </v-card-actions>
-  </v-card>
+      </v-card-actions>
+    </template>
+  </BasePanelCard>
 </template>
 
 <script setup lang="ts">
-import type { AggregatedMetricData, AggregatedMetricsResponse, Panel, TimeRangePreset } from '~/types/panel'
+import type { AggregatedMetricData, AggregatedMetricsResponse, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
 const props = defineProps<{
@@ -245,12 +162,6 @@ const emit = defineEmits<{
   delete: []
   timeOptions: []
 }>()
-
-const panelsStore = usePanelsStore()
-
-const isEditingName = ref(false)
-const editedName = ref('')
-const isSavingName = ref(false)
 
 const panelTypeIcon = computed(() => {
   switch (props.panel.type) {
@@ -323,35 +234,6 @@ const chartEndLabel = computed(() => {
   return formatDateLabel(chartData.value[chartData.value.length - 1]!)
 })
 
-function formatDateToDisplay(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-')
-
-  return `${day}/${month}/${year}`
-}
-
-const timeRangeText = computed(() => {
-  if (props.panel.period) {
-    const presetLabels: Record<TimeRangePreset, string> = {
-      today: 'Today',
-      last7days: 'Last 7 Days',
-      last30days: 'Last 30 Days',
-      currentWeek: 'Current Week',
-      currentMonth: 'Current Month',
-      currentYear: 'Current Year',
-    }
-
-    return presetLabels[props.panel.period as TimeRangePreset] || 'Select Range'
-  }
-
-  if (!props.panel.periodFrom || !props.panel.periodTo)
-    return 'Select Range'
-
-  const from = formatDateToDisplay(props.panel.periodFrom)
-  const to = formatDateToDisplay(props.panel.periodTo)
-
-  return `${from} - ${to}`
-})
-
 function getBarHeight(logCount: number): number {
   return Math.max((logCount / maxLogCount.value) * 100, 2)
 }
@@ -390,38 +272,6 @@ function formatTooltipDate(item: AggregatedMetricData): string {
   return `${day}/${month}/${year}`
 }
 
-function startEditingName() {
-  if (props.disabled)
-    return
-  editedName.value = props.panel.name
-  isEditingName.value = true
-}
-
-async function saveNameEdit() {
-  if (!editedName.value.trim() || editedName.value === props.panel.name) {
-    cancelNameEdit()
-
-    return
-  }
-
-  isSavingName.value = true
-
-  const result = await panelsStore.updatePanel(props.panel.id, {
-    name: editedName.value.trim(),
-  })
-
-  isSavingName.value = false
-
-  if (result.success) {
-    isEditingName.value = false
-  }
-}
-
-function cancelNameEdit() {
-  isEditingName.value = false
-  editedName.value = ''
-}
-
 function formatYAxisLabel(value: number): string {
   if (value >= 1_000_000)
     return `${(value / 1_000_000).toFixed(1)}M`
@@ -433,14 +283,9 @@ function formatYAxisLabel(value: number): string {
 </script>
 
 <style scoped>
-.panel-card--disabled {
-  opacity: 0.9;
-  cursor: move;
-  user-select: none;
-}
-
+/* Chart-specific styles */
 .chart-container {
-  height: 500px;
+  height: 300px;
   display: flex;
   flex-direction: column;
 }
@@ -496,13 +341,5 @@ function formatYAxisLabel(value: number): string {
 .chart-labels {
   display: flex;
   justify-content: space-between;
-}
-
-.cursor-pointer {
-  cursor: pointer;
-}
-
-.panel-name-input {
-  max-width: 300px;
 }
 </style>
