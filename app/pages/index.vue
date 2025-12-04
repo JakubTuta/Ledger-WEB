@@ -136,46 +136,6 @@
       </v-container>
     </section>
 
-    <!-- Tech Stack Section -->
-    <section class="tech-section">
-      <v-container class="py-16">
-        <div class="section-header mb-12 text-center">
-          <h2 class="section-title">
-            Built with modern technology
-          </h2>
-
-          <p class="section-subtitle">
-            Leveraging the latest and greatest web technologies
-          </p>
-        </div>
-
-        <v-row justify="center">
-          <v-col
-            v-for="tech in techStack"
-            :key="tech.name"
-            cols="6"
-            sm="4"
-            md="3"
-            lg="2"
-          >
-            <div class="tech-item">
-              <v-icon
-                :color="tech.color"
-                size="48"
-                class="mb-3"
-              >
-                {{ tech.icon }}
-              </v-icon>
-
-              <div class="tech-name">
-                {{ tech.name }}
-              </div>
-            </div>
-          </v-col>
-        </v-row>
-      </v-container>
-    </section>
-
     <!-- Ecosystem Section -->
     <section class="ecosystem-section">
       <v-container class="py-16">
@@ -360,15 +320,6 @@ const features = [
     title: 'Analytics & Metrics',
     description: 'Visualize trends, track performance, and gain insights from your log data.',
   },
-]
-
-const techStack = [
-  { name: 'Nuxt 3', icon: 'mdi-nuxt', color: 'success' },
-  { name: 'Vue 3', icon: 'mdi-vuejs', color: 'success' },
-  { name: 'TypeScript', icon: 'mdi-language-typescript', color: 'info' },
-  { name: 'Vuetify', icon: 'mdi-material-design', color: 'primary' },
-  { name: 'Pinia', icon: 'mdi-fruit-pineapple', color: 'warning' },
-  { name: 'Axios', icon: 'mdi-api', color: 'purple' },
 ]
 
 const ecosystem = [
