@@ -9,11 +9,12 @@
     @time-options="emit('timeOptions')"
   >
     <template #content>
-      <v-card-text class="pa-4">
+      <v-card-text class="panel-content-container pa-3">
         <!-- Loading State -->
         <div
           v-if="loading"
-          class="panel-empty-state"
+          class="d-flex align-center justify-center"
+          style="height: 100%;"
         >
           <v-progress-circular
             indeterminate
@@ -24,7 +25,8 @@
         <!-- No Data State -->
         <div
           v-else-if="!metrics || chartData.length === 0"
-          class="panel-empty-state text-grey"
+          class="text-grey d-flex align-center justify-center"
+          style="height: 100%;"
         >
           <div class="text-center">
             <v-icon
@@ -42,7 +44,7 @@
         <!-- Bar Chart -->
         <div
           v-else
-          class="panel-content-container chart-container"
+          class="chart-container"
         >
           <div class="chart-wrapper">
             <!-- Y-axis labels -->
@@ -109,10 +111,10 @@
     </template>
 
     <template #footer>
-      <v-card-actions class="pa-4">
+      <v-card-actions class="pa-2">
         <div class="d-flex justify-space-between w-100">
           <div class="text-center">
-            <div class="text-h6">
+            <div class="text-body-2 font-weight-medium">
               {{ totalLogs.toLocaleString() }}
             </div>
 
@@ -122,7 +124,7 @@
           </div>
 
           <div class="text-center">
-            <div class="text-h6 text-error">
+            <div class="text-body-2 font-weight-medium text-error">
               {{ totalErrors.toLocaleString() }}
             </div>
 
@@ -132,7 +134,7 @@
           </div>
 
           <div class="text-center">
-            <div class="text-h6">
+            <div class="text-body-2 font-weight-medium">
               {{ avgDuration }}
             </div>
 
@@ -285,7 +287,7 @@ function formatYAxisLabel(value: number): string {
 <style scoped>
 /* Chart-specific styles */
 .chart-container {
-  height: 300px;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }

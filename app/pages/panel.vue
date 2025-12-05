@@ -13,7 +13,7 @@
           v-model="filters.projectId"
           label="Project"
           variant="outlined"
-          density="comfortable"
+          density="compact"
           :items="projectOptions"
           item-title="name"
           item-value="id"
@@ -34,7 +34,7 @@
           v-model="filters.panelType"
           label="Panel Type"
           variant="outlined"
-          density="comfortable"
+          density="compact"
           :items="panelTypeOptions"
           item-title="label"
           item-value="value"
@@ -139,18 +139,34 @@
             cols="12"
             lg="6"
           >
-            <ErrorListPanelCard
+            <ListPanelCard
               v-if="panel.type === 'error_list'"
               :panel="panel"
               :project="getProjectForPanel(panel)"
-              :errors="panelsStore.getErrorsForPanel(panel.id)"
+              :items="panelsStore.getErrorsForPanel(panel.id)"
               :loading="panelsStore.isErrorsLoading(panel.id)"
               :has-more="panelsStore.getErrorsHasMore(panel.id)"
               :offset="panelsStore.getErrorsOffset(panel.id)"
               :disabled="isEditMode"
+              type="errors"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
               @load-page="(offset) => panelsStore.fetchErrorsForPanel(panel, offset)"
+            />
+
+            <ListPanelCard
+              v-else-if="panel.type === 'logs'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              :items="panelsStore.getLogsForPanel(panel.id)"
+              :loading="panelsStore.isLogsLoading(panel.id)"
+              :has-more="panelsStore.getLogsHasMore(panel.id)"
+              :offset="panelsStore.getLogsOffset(panel.id)"
+              :disabled="isEditMode"
+              type="logs"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+              @load-page="(offset) => panelsStore.fetchLogsForPanel(panel, offset)"
             />
 
             <PanelCard
@@ -360,6 +376,9 @@ async function handlePanelCreated(panel: Panel) {
   if (panel.type === 'error_list') {
     await panelsStore.fetchErrorsForPanel(panel)
   }
+  else if (panel.type === 'logs') {
+    await panelsStore.fetchLogsForPanel(panel)
+  }
   else {
     await panelsStore.fetchMetricsForPanel(panel)
   }
@@ -369,6 +388,9 @@ function fetchAllMetrics() {
   for (const panel of panelsStore.sortedPanels) {
     if (panel.type === 'error_list') {
       panelsStore.fetchErrorsForPanel(panel)
+    }
+    else if (panel.type === 'logs') {
+      panelsStore.fetchLogsForPanel(panel)
     }
     else {
       panelsStore.fetchMetricsForPanel(panel)

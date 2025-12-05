@@ -1,11 +1,10 @@
 <template>
   <v-card
     :class="{'panel-card--disabled': disabled}"
-    class="d-flex flex-column"
-    height="100%"
+    class="d-flex flex-column panel-card"
   >
     <!-- Header -->
-    <v-card-title class="d-flex align-center justify-space-between pa-4">
+    <v-card-title class="d-flex align-center justify-space-between pa-3">
       <div class="d-flex align-center flex-grow-1 gap-2">
         <v-icon
           :icon="icon"
@@ -65,7 +64,7 @@
     </v-card-title>
 
     <!-- Project Info -->
-    <v-card-subtitle class="px-4 pb-2">
+    <v-card-subtitle class="px-3 pb-2">
       <div class="d-flex align-center gap-2">
         <v-chip
           size="x-small"
@@ -77,21 +76,23 @@
           {{ project?.environment || 'Unknown' }}
         </v-chip>
 
-        <span class="text-caption">{{ project?.name || 'Unknown Project' }}</span>
-      </div>
+        <span class="text-caption ml-1">{{ project?.name || 'Unknown Project' }}</span>
 
-      <div
-        v-if="panel.type === 'metrics' && panel.endpoint"
-        class="text-caption text-grey mt-1"
-      >
-        {{ panel.endpoint }}
+        <span
+          v-if="panel.type === 'metrics' && panel.endpoint"
+          class="text-caption text-grey ml-1"
+        >
+          {{ panel.endpoint }}
+        </span>
       </div>
     </v-card-subtitle>
 
     <v-divider />
 
     <!-- Content Slot -->
-    <slot name="content" />
+    <div class="panel-content-wrapper">
+      <slot name="content" />
+    </div>
 
     <!-- Footer Slot (optional) -->
     <template v-if="$slots.footer">
@@ -188,6 +189,10 @@ function cancelNameEdit() {
 </script>
 
 <style scoped>
+.panel-card {
+  height: 450px;
+}
+
 .panel-card--disabled {
   opacity: 0.9;
   cursor: move;
@@ -202,15 +207,21 @@ function cancelNameEdit() {
   max-width: 300px;
 }
 
-/* Shared content container - fixed 300px height */
+.panel-content-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Shared content container - flexible height */
 :deep(.panel-content-container) {
-  height: 300px;
+  height: 100%;
   overflow-y: auto;
 }
 
 /* Shared empty state container */
 :deep(.panel-empty-state) {
-  height: 300px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

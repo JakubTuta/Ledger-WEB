@@ -27,6 +27,11 @@ export const usePanelsStore = defineStore('panels', () => {
   const errorsOffset = ref<Map<number, number>>(new Map())
   const errorsHasMore = ref<Map<number, boolean>>(new Map())
 
+  const panelLogs = ref<Map<number, any[]>>(new Map())
+  const logsLoading = ref<Set<number>>(new Set())
+  const logsOffset = ref<Map<number, number>>(new Map())
+  const logsHasMore = ref<Map<number, boolean>>(new Map())
+
   const sortedPanels = computed(() => [...panels.value].sort((a, b) => a.index - b.index),
   )
 
@@ -139,7 +144,7 @@ export const usePanelsStore = defineStore('panels', () => {
       const searchParams = new URLSearchParams()
 
       searchParams.set('project_id', panel.project_id)
-      searchParams.set('limit', '100')
+      searchParams.set('limit', '50')
       searchParams.set('offset', String(offset))
 
       if (panel.period) {
@@ -157,18 +162,28 @@ export const usePanelsStore = defineStore('panels', () => {
         `/api/v1/errors/list?${searchParams.toString()}`,
       )
 
-      const errors = response.data.errors.map((error: any) => ({
+      const newErrors = response.data.errors.map((error: any) => ({
         ...error,
         isNew: false,
       }))
 
-      panelErrors.value.set(panel.id, errors)
+      const currentErrors = panelErrors.value.get(panel.id) || []
+
+      if (offset === 0) {
+        panelErrors.value.set(panel.id, newErrors)
+      }
+      else {
+        panelErrors.value.set(panel.id, [...currentErrors, ...newErrors])
+      }
+
       errorsOffset.value.set(panel.id, offset)
       errorsHasMore.value.set(panel.id, response.data.has_more)
     }
     catch (error) {
       console.error(`Error fetching errors for panel ${panel.id}:`, error)
-      panelErrors.value.set(panel.id, [])
+      if (offset === 0) {
+        panelErrors.value.set(panel.id, [])
+      }
       errorsHasMore.value.set(panel.id, false)
     }
     finally {
@@ -208,6 +223,79 @@ export const usePanelsStore = defineStore('panels', () => {
         panelErrors.value.set(panel.id, [newError, ...currentErrors])
       }
     }
+  }
+
+  const fetchLogsForPanel = async (panel: Panel, offset = 0) => {
+    if (logsLoading.value.has(panel.id))
+      return
+
+    logsLoading.value.add(panel.id)
+
+    try {
+      const searchParams = new URLSearchParams()
+
+      searchParams.set('project_id', panel.project_id)
+      searchParams.set('limit', '50')
+      searchParams.set('offset', String(offset))
+
+      if (panel.period) {
+        searchParams.set('period', panel.period)
+      }
+      else if (panel.periodFrom && panel.periodTo) {
+        searchParams.set('periodFrom', panel.periodFrom)
+        searchParams.set('periodTo', panel.periodTo)
+      }
+      else {
+        searchParams.set('period', 'last7days')
+      }
+
+      const response = await client.value.get<any>(
+        `/api/v1/logs?${searchParams.toString()}`,
+      )
+
+      const newLogs = response.data.logs.map((log: any) => ({
+        ...log,
+        expanded: false,
+      }))
+
+      const currentLogs = panelLogs.value.get(panel.id) || []
+
+      if (offset === 0) {
+        panelLogs.value.set(panel.id, newLogs)
+      }
+      else {
+        panelLogs.value.set(panel.id, [...currentLogs, ...newLogs])
+      }
+
+      logsOffset.value.set(panel.id, offset)
+      logsHasMore.value.set(panel.id, response.data.has_more)
+    }
+    catch (error) {
+      console.error(`Error fetching logs for panel ${panel.id}:`, error)
+      if (offset === 0) {
+        panelLogs.value.set(panel.id, [])
+      }
+      logsHasMore.value.set(panel.id, false)
+    }
+    finally {
+      logsLoading.value.delete(panel.id)
+    }
+  }
+
+  const getLogsForPanel = (panelId: number) => {
+    return panelLogs.value.get(panelId) || []
+  }
+
+  const isLogsLoading = (panelId: number) => {
+    return logsLoading.value.has(panelId)
+  }
+
+  const getLogsHasMore = (panelId: number) => {
+    return logsHasMore.value.get(panelId) || false
+  }
+
+  const getLogsOffset = (panelId: number) => {
+    return logsOffset.value.get(panelId) || 0
   }
 
   const createPanel = async (data: CreatePanelRequest) => {
@@ -282,6 +370,9 @@ export const usePanelsStore = defineStore('panels', () => {
       panelErrors.value.delete(panelId)
       errorsOffset.value.delete(panelId)
       errorsHasMore.value.delete(panelId)
+      panelLogs.value.delete(panelId)
+      logsOffset.value.delete(panelId)
+      logsHasMore.value.delete(panelId)
 
       return { success: true }
     }
@@ -372,6 +463,9 @@ export const usePanelsStore = defineStore('panels', () => {
       if (response.data.type === 'error_list') {
         await fetchErrorsForPanel(response.data)
       }
+      else if (response.data.type === 'logs') {
+        await fetchLogsForPanel(response.data)
+      }
       else {
         await fetchMetricsForPanel(response.data)
       }
@@ -406,6 +500,11 @@ export const usePanelsStore = defineStore('panels', () => {
     getErrorsHasMore,
     getErrorsOffset,
     addNewErrorToPanel,
+    fetchLogsForPanel,
+    getLogsForPanel,
+    isLogsLoading,
+    getLogsHasMore,
+    getLogsOffset,
     createPanel,
     updatePanel,
     deletePanel,
