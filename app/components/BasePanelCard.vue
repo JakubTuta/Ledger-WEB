@@ -53,6 +53,14 @@
         </v-btn>
 
         <v-btn
+          icon="mdi-refresh"
+          variant="text"
+          size="small"
+          :disabled="disabled"
+          @click="emit('refresh')"
+        />
+
+        <v-btn
           icon="mdi-delete"
           variant="text"
           size="small"
@@ -118,6 +126,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   delete: []
   timeOptions: []
+  refresh: []
 }>()
 
 const panelsStore = usePanelsStore()

@@ -7,6 +7,7 @@
     :icon-color="panelTypeColor"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
+    @refresh="emit('refresh')"
   >
     <template #content>
       <v-card-text class="panel-content-container pa-3">
@@ -163,6 +164,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   delete: []
   timeOptions: []
+  refresh: []
 }>()
 
 const panelTypeIcon = computed(() => {

@@ -144,7 +144,7 @@ export const usePanelsStore = defineStore('panels', () => {
       const searchParams = new URLSearchParams()
 
       searchParams.set('project_id', panel.project_id)
-      searchParams.set('limit', '50')
+      searchParams.set('limit', '25')
       searchParams.set('offset', String(offset))
 
       if (panel.period) {
@@ -235,7 +235,7 @@ export const usePanelsStore = defineStore('panels', () => {
       const searchParams = new URLSearchParams()
 
       searchParams.set('project_id', panel.project_id)
-      searchParams.set('limit', '50')
+      searchParams.set('limit', '25')
       searchParams.set('offset', String(offset))
 
       if (panel.period) {

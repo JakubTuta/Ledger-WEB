@@ -151,6 +151,7 @@
               type="errors"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchErrorsForPanel(panel)"
               @load-page="(offset) => panelsStore.fetchErrorsForPanel(panel, offset)"
             />
 
@@ -166,6 +167,7 @@
               type="logs"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchLogsForPanel(panel)"
               @load-page="(offset) => panelsStore.fetchLogsForPanel(panel, offset)"
             />
 
@@ -178,6 +180,7 @@
               :disabled="isEditMode"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
             />
           </v-col>
         </template>
