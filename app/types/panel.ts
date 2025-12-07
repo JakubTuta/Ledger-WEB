@@ -1,4 +1,6 @@
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck'
+
+export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 
 export type TimeRangePreset = 'today' | 'last7days' | 'last30days' | 'currentWeek' | 'currentMonth' | 'currentYear'
 
@@ -8,6 +10,8 @@ export interface Panel {
   name: string
   type: PanelType
   endpoint?: string
+  routes?: string[]
+  statistic?: BottleneckStatistic
   period?: TimeRangePreset | null
   periodFrom?: string | null
   periodTo?: string | null
@@ -26,6 +30,8 @@ export interface CreatePanelRequest {
   project_id: string
   type: PanelType
   endpoint?: string
+  routes?: string[]
+  statistic?: BottleneckStatistic
   period?: TimeRangePreset | null
   periodFrom?: string | null
   periodTo?: string | null
@@ -38,6 +44,8 @@ export interface UpdatePanelRequest {
   project_id: string
   type: PanelType
   endpoint?: string | null
+  routes?: string[] | null
+  statistic?: BottleneckStatistic | null
   period?: TimeRangePreset | null
   periodFrom?: string | null
   periodTo?: string | null
@@ -78,4 +86,20 @@ export interface TimeRangeSelection {
   preset?: TimeRangePreset
   from: string
   to: string
+}
+
+export interface BottleneckMetricData {
+  date: string
+  hour?: number | null
+  route: string
+  value: number
+}
+
+export interface BottleneckMetricsResponse {
+  project_id: number
+  statistic: BottleneckStatistic
+  granularity: 'hourly' | 'daily' | 'weekly' | 'monthly'
+  start_date: string
+  end_date: string
+  data: BottleneckMetricData[]
 }

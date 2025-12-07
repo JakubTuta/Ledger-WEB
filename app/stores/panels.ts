@@ -1,5 +1,7 @@
 import type {
   AggregatedMetricsResponse,
+  BottleneckMetricsResponse,
+  BottleneckStatistic,
   CreatePanelRequest,
   MetricsQueryParams,
   Panel,
@@ -31,6 +33,9 @@ export const usePanelsStore = defineStore('panels', () => {
   const logsLoading = ref<Set<number>>(new Set())
   const logsOffset = ref<Map<number, number>>(new Map())
   const logsHasMore = ref<Map<number, boolean>>(new Map())
+
+  const panelBottlenecks = ref<Map<number, BottleneckMetricsResponse>>(new Map())
+  const bottlenecksLoading = ref<Set<number>>(new Set())
 
   const sortedPanels = computed(() => [...panels.value].sort((a, b) => a.index - b.index),
   )
@@ -298,6 +303,60 @@ export const usePanelsStore = defineStore('panels', () => {
     return logsOffset.value.get(panelId) || 0
   }
 
+  const fetchBottleneckForPanel = async (
+    panel: Panel,
+    routes: string[],
+    statistic: BottleneckStatistic,
+  ) => {
+    if (bottlenecksLoading.value.has(panel.id))
+      return
+
+    if (routes.length === 0)
+      return
+
+    bottlenecksLoading.value.add(panel.id)
+
+    try {
+      const searchParams = new URLSearchParams()
+
+      searchParams.set('project_id', panel.project_id)
+      searchParams.set('statistic', statistic)
+
+      routes.forEach(route => searchParams.append('routes', route))
+
+      if (panel.period) {
+        searchParams.set('period', panel.period)
+      }
+      else if (panel.periodFrom && panel.periodTo) {
+        searchParams.set('periodFrom', panel.periodFrom)
+        searchParams.set('periodTo', panel.periodTo)
+      }
+      else {
+        searchParams.set('period', 'last7days')
+      }
+
+      const response = await client.value.get<BottleneckMetricsResponse>(
+        `/api/v1/metrics/bottleneck?${searchParams.toString()}`,
+      )
+
+      panelBottlenecks.value.set(panel.id, response.data)
+    }
+    catch (error) {
+      console.error(`Error fetching bottleneck for panel ${panel.id}:`, error)
+    }
+    finally {
+      bottlenecksLoading.value.delete(panel.id)
+    }
+  }
+
+  const getBottleneckForPanel = (panelId: number) => {
+    return panelBottlenecks.value.get(panelId)
+  }
+
+  const isBottleneckLoading = (panelId: number) => {
+    return bottlenecksLoading.value.has(panelId)
+  }
+
   const createPanel = async (data: CreatePanelRequest) => {
     try {
       const response = await client.value.post<Panel>('/api/v1/dashboard/panels', data)
@@ -331,6 +390,12 @@ export const usePanelsStore = defineStore('panels', () => {
         endpoint: data.endpoint !== undefined
           ? data.endpoint
           : panel.endpoint || null,
+        routes: data.routes !== undefined
+          ? data.routes
+          : panel.routes || null,
+        statistic: data.statistic !== undefined
+          ? data.statistic
+          : panel.statistic || null,
         period: data.period !== undefined
           ? data.period
           : panel.period || null,
@@ -373,6 +438,7 @@ export const usePanelsStore = defineStore('panels', () => {
       panelLogs.value.delete(panelId)
       logsOffset.value.delete(panelId)
       logsHasMore.value.delete(panelId)
+      panelBottlenecks.value.delete(panelId)
 
       return { success: true }
     }
@@ -399,6 +465,8 @@ export const usePanelsStore = defineStore('panels', () => {
             project_id: panel.project_id,
             type: panel.type,
             endpoint: panel.endpoint || null,
+            routes: panel.routes || null,
+            statistic: panel.statistic || null,
             period: panel.period || null,
             periodFrom: panel.periodFrom || null,
             periodTo: panel.periodTo || null,
@@ -442,6 +510,8 @@ export const usePanelsStore = defineStore('panels', () => {
         project_id: panel.project_id,
         type: panel.type,
         endpoint: panel.endpoint || null,
+        routes: panel.routes || null,
+        statistic: panel.statistic || null,
         period: timeRange.period !== undefined
           ? timeRange.period
           : null,
@@ -465,6 +535,13 @@ export const usePanelsStore = defineStore('panels', () => {
       }
       else if (response.data.type === 'logs') {
         await fetchLogsForPanel(response.data)
+      }
+      else if (response.data.type === 'bottleneck') {
+        const existingBottleneck = panelBottlenecks.value.get(response.data.id)
+        if (existingBottleneck) {
+          const routes = Array.from(new Set(existingBottleneck.data.map(d => d.route)))
+          await fetchBottleneckForPanel(response.data, routes, existingBottleneck.statistic)
+        }
       }
       else {
         await fetchMetricsForPanel(response.data)
@@ -505,6 +582,9 @@ export const usePanelsStore = defineStore('panels', () => {
     isLogsLoading,
     getLogsHasMore,
     getLogsOffset,
+    fetchBottleneckForPanel,
+    getBottleneckForPanel,
+    isBottleneckLoading,
     createPanel,
     updatePanel,
     deletePanel,

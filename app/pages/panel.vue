@@ -171,6 +171,20 @@
               @load-page="(offset) => panelsStore.fetchLogsForPanel(panel, offset)"
             />
 
+            <BottleneckPanelCard
+              v-else-if="panel.type === 'bottleneck'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              :metrics="panelsStore.getBottleneckForPanel(panel.id)"
+              :loading="panelsStore.isBottleneckLoading(panel.id)"
+              :disabled="isEditMode"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchBottleneckForPanel(panel, [], 'avg')"
+              @update="(routes, statistic) => panelsStore.fetchBottleneckForPanel(panel, routes, statistic)"
+              @update-panel="(routes, statistic) => updateBottleneckPanel(panel, routes, statistic)"
+            />
+
             <PanelCard
               v-else
               :panel="panel"
@@ -211,7 +225,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import type { BottleneckStatistic, Panel, PanelType, TimeRangePreset } from '~/types/panel'
 import type { Project } from '~/types/project'
 
 definePageMeta({
@@ -237,6 +251,7 @@ const panelTypeOptions = [
   { label: 'Errors', value: 'errors' },
   { label: 'Metrics', value: 'metrics' },
   { label: 'Error List', value: 'error_list' },
+  { label: 'Bottleneck Analysis', value: 'bottleneck' },
 ]
 
 const projectOptions = computed(() => projectsStore.projects.map(p => ({
@@ -382,9 +397,25 @@ async function handlePanelCreated(panel: Panel) {
   else if (panel.type === 'logs') {
     await panelsStore.fetchLogsForPanel(panel)
   }
+  else if (panel.type === 'bottleneck') {
+    if (panel.routes && panel.routes.length > 0 && panel.statistic) {
+      await panelsStore.fetchBottleneckForPanel(panel, panel.routes, panel.statistic)
+    }
+  }
   else {
     await panelsStore.fetchMetricsForPanel(panel)
   }
+}
+
+async function updateBottleneckPanel(
+  panel: Panel,
+  routes: string[],
+  statistic: BottleneckStatistic,
+) {
+  await panelsStore.updatePanel(panel.id, {
+    routes,
+    statistic,
+  })
 }
 
 function fetchAllMetrics() {
@@ -394,6 +425,11 @@ function fetchAllMetrics() {
     }
     else if (panel.type === 'logs') {
       panelsStore.fetchLogsForPanel(panel)
+    }
+    else if (panel.type === 'bottleneck') {
+      if (panel.routes && panel.routes.length > 0 && panel.statistic) {
+        panelsStore.fetchBottleneckForPanel(panel, panel.routes, panel.statistic)
+      }
     }
     else {
       panelsStore.fetchMetricsForPanel(panel)
@@ -430,7 +466,7 @@ function loadFiltersFromUrl() {
     filters.value.projectId = query.project
   }
 
-  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list'].includes(query.type)) {
+  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list', 'bottleneck'].includes(query.type)) {
     filters.value.panelType = query.type as PanelType
   }
 }

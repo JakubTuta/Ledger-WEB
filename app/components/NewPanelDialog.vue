@@ -24,7 +24,6 @@
             :rules="nameRules"
             validate-on="input"
             hint="A descriptive name for your panel"
-            persistent-hint
             class="mb-4"
           >
             <template #append-inner>
@@ -55,7 +54,6 @@
             item-value="id"
             :rules="projectRules"
             hint="Select the project to monitor"
-            persistent-hint
             class="mb-4"
           >
             <template #item="{'props': itemProps, item}">
@@ -92,7 +90,6 @@
             item-value="value"
             :rules="panelTypeRules"
             hint="Choose what data to display"
-            persistent-hint
             class="mb-4"
           >
             <template #item="{'props': itemProps, item}">
@@ -126,7 +123,6 @@
             :hint="availableRoutes.length > 0
               ? 'Select from discovered routes or type a custom path'
               : 'Type an endpoint path (e.g., /api/users)'"
-            persistent-hint
             class="mb-4"
             placeholder="/api/..."
             clearable
@@ -139,6 +135,52 @@
               </v-list-item>
             </template>
           </v-combobox>
+
+          <!-- Bottleneck Routes Select (conditional) -->
+          <v-select
+            v-if="form.panelType === 'bottleneck'"
+            v-model="form.selectedRoutes"
+            label="Routes to Analyze"
+            variant="outlined"
+            :disabled="loading || !form.projectId"
+            :items="availableRoutes"
+            :rules="routesRules"
+            hint="Select one or more routes to monitor"
+            class="mb-4"
+            multiple
+            chips
+            closable-chips
+          >
+            <template #no-data>
+              <v-list-item>
+                <v-list-item-title>
+                  No routes available for this project
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+          </v-select>
+
+          <!-- Bottleneck Statistic Select (conditional) -->
+          <v-select
+            v-if="form.panelType === 'bottleneck'"
+            v-model="form.selectedStatistic"
+            label="Statistic"
+            variant="outlined"
+            :disabled="loading"
+            :items="statisticOptions"
+            item-title="label"
+            item-value="value"
+            :rules="statisticRules"
+            hint="Choose the metric to analyze"
+            class="mb-4"
+          >
+            <template #item="{'props': itemProps, item}">
+              <v-list-item
+                v-bind="itemProps"
+                :subtitle="item.raw.description"
+              />
+            </template>
+          </v-select>
 
           <!-- Time Range Button -->
           <div class="mb-4">
@@ -215,7 +257,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CreatePanelRequest, Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import type { BottleneckStatistic, CreatePanelRequest, Panel, PanelType, TimeRangePreset } from '~/types/panel'
 
 const props = defineProps<{
   modelValue: boolean
@@ -241,6 +283,8 @@ const form = ref<{
   projectId: string | null
   panelType: PanelType | null
   endpointUrl: string
+  selectedRoutes: string[]
+  selectedStatistic: BottleneckStatistic | null
   period: TimeRangePreset | null
   periodFrom: string
   periodTo: string
@@ -249,6 +293,8 @@ const form = ref<{
   projectId: null,
   panelType: null,
   endpointUrl: '',
+  selectedRoutes: [],
+  selectedStatistic: null,
   period: null,
   periodFrom: '',
   periodTo: '',
@@ -283,6 +329,15 @@ const panelTypeOptions = [
   { label: 'Errors', value: 'errors', icon: 'mdi-alert-circle' },
   { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line' },
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted' },
+  { label: 'Bottleneck Analysis', value: 'bottleneck', icon: 'mdi-speedometer' },
+]
+
+const statisticOptions = [
+  { label: 'Average', value: 'avg', description: 'Average response time in milliseconds' },
+  { label: 'Minimum', value: 'min', description: 'Fastest response time' },
+  { label: 'Maximum', value: 'max', description: 'Slowest response time' },
+  { label: 'Median', value: 'median', description: 'Middle response time value' },
+  { label: 'Count', value: 'count', description: 'Number of requests (traffic volume)' },
 ]
 
 const nameRules = [
@@ -302,6 +357,14 @@ const panelTypeRules = [
 const endpointUrlRules = [
   (v: string) => !v || v.startsWith('/') || 'Endpoint must start with /',
   (v: string) => !v || v.length <= 500 || 'Endpoint URL is too long',
+]
+
+const routesRules = [
+  (v: string[]) => (v && v.length > 0) || 'At least one route is required',
+]
+
+const statisticRules = [
+  (v: BottleneckStatistic | null) => !!v || 'Statistic is required',
 ]
 
 const hasTimeRange = computed(() => form.value.period || (form.value.periodFrom && form.value.periodTo))
@@ -336,7 +399,14 @@ const timeRangeLabel = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return isFormValid.value && hasTimeRange.value
+  if (!isFormValid.value || !hasTimeRange.value)
+    return false
+
+  if (form.value.panelType === 'bottleneck') {
+    return form.value.selectedRoutes.length > 0 && !!form.value.selectedStatistic
+  }
+
+  return true
 })
 
 watch(() => props.modelValue, (newValue) => {
@@ -345,12 +415,23 @@ watch(() => props.modelValue, (newValue) => {
   }
 })
 
+watch(() => form.value.projectId, () => {
+  form.value.selectedRoutes = []
+})
+
+watch(() => form.value.panelType, () => {
+  form.value.selectedRoutes = []
+  form.value.selectedStatistic = null
+})
+
 function resetForm() {
   form.value = {
     name: '',
     projectId: null,
     panelType: null,
     endpointUrl: '',
+    selectedRoutes: [],
+    selectedStatistic: null,
     period: null,
     periodFrom: '',
     periodTo: '',
@@ -391,6 +472,12 @@ async function handleCreate() {
       type: form.value.panelType,
       endpoint: form.value.panelType === 'metrics'
         ? form.value.endpointUrl || undefined
+        : undefined,
+      routes: form.value.panelType === 'bottleneck' && form.value.selectedRoutes.length > 0
+        ? form.value.selectedRoutes
+        : undefined,
+      statistic: form.value.panelType === 'bottleneck' && form.value.selectedStatistic
+        ? form.value.selectedStatistic
         : undefined,
       index: panelsStore.panels.length,
       period: form.value.period || null,

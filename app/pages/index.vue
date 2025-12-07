@@ -320,6 +320,12 @@ const features = [
     title: 'Analytics & Metrics',
     description: 'Visualize trends, track performance, and gain insights from your log data.',
   },
+  {
+    icon: 'mdi-speedometer',
+    color: 'warning',
+    title: 'Bottleneck Detection',
+    description: 'Identify slow endpoints and performance issues with automated analysis.',
+  },
 ]
 
 const ecosystem = [

@@ -87,7 +87,7 @@
         <span class="text-caption ml-1">{{ project?.name || 'Unknown Project' }}</span>
 
         <span
-          v-if="panel.type === 'metrics' && panel.endpoint"
+          v-if="(panel.type === 'metrics' || panel.type === 'bottleneck') && panel.endpoint"
           class="text-caption text-grey ml-1"
         >
           {{ panel.endpoint }}
