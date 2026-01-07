@@ -160,7 +160,9 @@
             <v-card
               class="ecosystem-card h-100"
               elevation="2"
-              :to="item.link"
+              :href="item.link"
+              target="_blank"
+              rel="noopener noreferrer"
               hover
             >
               <v-card-text class="pa-6 text-center">
@@ -251,7 +253,9 @@
           >
             <v-btn
               variant="text"
-              to="https://github.com/JakubTuta/Ledger-WEB"
+              href="https://github.com/JakubTuta/Ledger-WEB"
+              target="_blank"
+              rel="noopener noreferrer"
               class="mr-2"
             >
               <v-icon start>
@@ -262,7 +266,9 @@
 
             <v-btn
               variant="text"
-              to="https://bump.sh/tuta-corp/doc/ledger-api/"
+              href="https://bump.sh/tuta-corp/doc/ledger-api/"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <v-icon start>
                 mdi-file-document
