@@ -232,6 +232,11 @@ definePageMeta({
   middleware: 'auth',
 })
 
+useSeoMeta({
+  title: 'Dashboard',
+  robots: 'noindex, nofollow',
+})
+
 const panelsStore = usePanelsStore()
 const projectsStore = useProjectsStore()
 const route = useRoute()

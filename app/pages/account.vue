@@ -188,6 +188,11 @@ definePageMeta({
   middleware: 'auth',
 })
 
+useSeoMeta({
+  title: 'Account Settings',
+  robots: 'noindex, nofollow',
+})
+
 const quotaStore = useQuotaStore()
 const projectsStore = useProjectsStore()
 const { projects } = storeToRefs(projectsStore)

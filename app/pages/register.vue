@@ -204,6 +204,11 @@ definePageMeta({
   middleware: 'guest',
 })
 
+useSeoMeta({
+  title: 'Register',
+  robots: 'noindex, nofollow',
+})
+
 const authStore = useAuthStore()
 
 const formRef = ref()

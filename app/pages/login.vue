@@ -172,6 +172,11 @@ definePageMeta({
   middleware: 'guest',
 })
 
+useSeoMeta({
+  title: 'Login',
+  robots: 'noindex, nofollow',
+})
+
 const authStore = useAuthStore()
 
 const formRef = ref()

@@ -1,2 +1,13 @@
+# Ledger - robots.txt
+# Only the landing page should be indexed
+
 User-Agent: *
-Disallow:
+Allow: /$
+Disallow: /login
+Disallow: /register
+Disallow: /panel
+Disallow: /account
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://ledger.jtuta.cloud/sitemap.xml

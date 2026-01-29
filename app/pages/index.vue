@@ -13,14 +13,22 @@
             lg="6"
             class="text-center"
           >
+            <v-chip
+              color="white"
+              variant="outlined"
+              class="hero-badge mb-4"
+            >
+              For Python developers using FastAPI, Django & Flask
+            </v-chip>
+
             <h1 class="hero-title mb-6">
-              Beautiful log analytics
-              <span class="gradient-text">in your browser</span>
+              See every request, error & log
+              <span class="gradient-text">from your Python backend</span>
             </h1>
 
             <p class="hero-subtitle mb-8">
-              The web interface that makes log management actually enjoyable.
-              Monitor, analyze, and debug your applications with real-time insights.
+              Add 3 lines of code to your app. Get instant visibility into every HTTP request,
+              exception, and custom log — all in a real-time dashboard you'll actually enjoy using.
             </p>
 
             <div class="hero-actions">
@@ -53,21 +61,21 @@
             <div class="hero-stats mt-8">
               <div class="stat-item">
                 <div class="stat-number">
-                  10,000
+                  3 lines
                 </div>
 
                 <div class="stat-label">
-                  Logs Per Second
+                  To integrate
                 </div>
               </div>
 
               <div class="stat-item">
                 <div class="stat-number">
-                  <v-icon>mdi-lightning-bolt</v-icon>
+                  &lt;0.1ms
                 </div>
 
                 <div class="stat-label">
-                  Lightning Fast
+                  Overhead per request
                 </div>
               </div>
 
@@ -86,16 +94,64 @@
       </v-container>
     </section>
 
+    <!-- How it Works Section -->
+    <section class="how-it-works-section">
+      <v-container class="py-16">
+        <div class="section-header mb-12 text-center">
+          <h2 class="section-title">
+            Start monitoring in under 5 minutes
+          </h2>
+
+          <p class="section-subtitle">
+            No complex setup. No infrastructure to manage. Just install, configure, and go.
+          </p>
+        </div>
+
+        <v-row justify="center">
+          <v-col
+            v-for="(step, index) in howItWorks"
+            :key="step.title"
+            cols="12"
+            md="4"
+          >
+            <div class="step-card text-center">
+              <div class="step-number mb-4">
+                {{ index + 1 }}
+              </div>
+
+              <h3 class="step-title mb-3">
+                {{ step.title }}
+              </h3>
+
+              <p class="step-description mb-4">
+                {{ step.description }}
+              </p>
+
+              <v-card
+                v-if="step.code"
+                class="code-card"
+                color="grey-darken-4"
+              >
+                <v-card-text class="pa-4">
+                  <pre class="code-block"><code>{{ step.code }}</code></pre>
+                </v-card-text>
+              </v-card>
+            </div>
+          </v-col>
+        </v-row>
+      </v-container>
+    </section>
+
     <!-- Features Section -->
     <section class="features-section">
       <v-container class="py-16">
         <div class="section-header mb-12 text-center">
           <h2 class="section-title">
-            Everything you need to monitor your applications
+            Everything captured, nothing missed
           </h2>
 
           <p class="section-subtitle">
-            Powerful features designed for modern development teams
+            The SDK automatically captures requests and exceptions. You focus on building — we handle the observability.
           </p>
         </div>
 
@@ -141,11 +197,11 @@
       <v-container class="py-16">
         <div class="section-header mb-12 text-center">
           <h2 class="section-title">
-            Complete observability ecosystem
+            Open source, top to bottom
           </h2>
 
           <p class="section-subtitle">
-            Seamlessly integrate with your workflow
+            Every component is open source. Use our hosted version or self-host everything.
           </p>
         </div>
 
@@ -198,11 +254,11 @@
             class="text-center"
           >
             <h2 class="cta-title mb-6">
-              Ready to transform your logging experience?
+              Stop guessing what your backend is doing
             </h2>
 
             <p class="cta-subtitle mb-8">
-              Join developers who are already using Ledger to monitor their applications
+              Create a free account, grab your API key, and see your first logs in under 5 minutes.
             </p>
 
             <v-btn
@@ -291,46 +347,124 @@
 </template>
 
 <script setup lang="ts">
+const runtimeConfig = useRuntimeConfig()
+const siteUrl = runtimeConfig.public.siteUrl as string
+
 definePageMeta({
   middleware: 'guest',
 })
+
+useSeoMeta({
+  title: 'Log Analytics for Python Backends',
+  description: 'Open source log monitoring for FastAPI, Django, and Flask. Add 3 lines of code to see every request, error, and custom log in a real-time dashboard.',
+  keywords: 'log analytics, python logging, fastapi monitoring, django logging, flask monitoring, error tracking, application monitoring, open source logging',
+
+  ogType: 'website',
+  ogTitle: 'Ledger — Log Analytics for Python Backends',
+  ogDescription: 'Open source log monitoring for FastAPI, Django, and Flask. See every request, error, and custom log in real-time.',
+  ogUrl: siteUrl,
+  ogSiteName: 'Ledger',
+  ogLocale: 'en_US',
+
+  twitterCard: 'summary_large_image',
+  twitterTitle: 'Ledger — Log Analytics for Python Backends',
+  twitterDescription: 'Open source log monitoring for FastAPI, Django, and Flask. Add 3 lines of code to get started.',
+})
+
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        'name': 'Ledger',
+        'applicationCategory': 'DeveloperApplication',
+        'operatingSystem': 'Web',
+        'description': 'Open source log analytics platform for Python backends. Monitor FastAPI, Django, and Flask applications with automatic request logging, exception tracking, and real-time dashboards.',
+        'url': siteUrl,
+        'author': {
+          '@type': 'Organization',
+          'name': 'Ledger Team',
+          'url': siteUrl,
+        },
+        'offers': {
+          '@type': 'Offer',
+          'price': '0',
+          'priceCurrency': 'USD',
+        },
+        'featureList': [
+          'Automatic HTTP request logging',
+          'Exception tracking with stack traces',
+          'Custom log messages with attributes',
+          'Real-time dashboard',
+          'Per-project API keys',
+          'FastAPI, Django, Flask support',
+        ],
+        'license': 'https://opensource.org/licenses/MIT',
+      }),
+    },
+  ],
+})
+
+const howItWorks = [
+  {
+    title: 'Install the SDK',
+    description: 'One command to add Ledger to your Python project. Supports Python 3.10+.',
+    code: 'pip install ledger-sdk',
+  },
+  {
+    title: 'Add the middleware',
+    description: 'Drop in our middleware for FastAPI, Django, or Flask. Auto-captures all requests.',
+    code: `from ledger import LedgerClient
+from ledger.integrations.fastapi import LedgerMiddleware
+
+ledger = LedgerClient(api_key="your_key")
+app.add_middleware(LedgerMiddleware, ledger_client=ledger)`,
+  },
+  {
+    title: 'See your logs',
+    description: 'Every request, response, and exception appears in your dashboard instantly.',
+    code: null,
+  },
+]
 
 const features = [
   {
     icon: 'mdi-clock-fast',
     color: 'primary',
-    title: 'Real-time Monitoring',
-    description: 'Watch logs appear instantly as your application runs. No delays, no waiting.',
-  },
-  {
-    icon: 'mdi-view-dashboard',
-    color: 'info',
-    title: 'Custom Dashboards',
-    description: 'Drag-and-drop panels to create personalized layouts that fit your workflow.',
+    title: 'Automatic Request Logging',
+    description: 'Every HTTP request is captured automatically — method, path, status code, duration, and headers. No manual instrumentation needed.',
   },
   {
     icon: 'mdi-bug',
     color: 'error',
-    title: 'Error Tracking',
-    description: 'Automatically group similar errors with stack traces and occurrence tracking.',
+    title: 'Exception Tracking',
+    description: 'Exceptions are caught with full stack traces, grouped by type, and tracked over time. Know exactly what broke and when.',
+  },
+  {
+    icon: 'mdi-text-box-outline',
+    color: 'info',
+    title: 'Custom Log Messages',
+    description: 'Add context with ledger.log_info() and ledger.log_error(). Attach custom attributes like user IDs, order amounts, or any metadata.',
   },
   {
     icon: 'mdi-key',
     color: 'warning',
-    title: 'API Key Management',
-    description: 'Secure per-project access control with instant key generation and revocation.',
-  },
-  {
-    icon: 'mdi-chart-line',
-    color: 'purple',
-    title: 'Analytics & Metrics',
-    description: 'Visualize trends, track performance, and gain insights from your log data.',
+    title: 'Per-Project API Keys',
+    description: 'Create separate API keys for each project or environment. Revoke access instantly without affecting other projects.',
   },
   {
     icon: 'mdi-speedometer',
-    color: 'warning',
-    title: 'Bottleneck Detection',
-    description: 'Identify slow endpoints and performance issues with automated analysis.',
+    color: 'purple',
+    title: 'Performance Insights',
+    description: 'Identify slow endpoints with response time tracking. See which routes are bottlenecks and need optimization.',
+  },
+  {
+    icon: 'mdi-filter-variant',
+    color: 'success',
+    title: 'Powerful Filtering',
+    description: 'Filter logs by level, endpoint, time range, or custom attributes. Find the needle in the haystack in seconds.',
   },
 ]
 
@@ -339,21 +473,21 @@ const ecosystem = [
     icon: 'mdi-language-python',
     color: 'info',
     title: 'Python SDK',
-    description: 'Official client library',
+    description: 'pip install ledger-sdk — supports FastAPI, Django, Flask',
     link: 'https://github.com/JakubTuta/Ledger-SDK',
   },
   {
     icon: 'mdi-server',
     color: 'success',
-    title: 'Backend API',
-    description: 'FastAPI-based server',
+    title: 'Self-host the Server',
+    description: 'Run your own Ledger instance — full control over your data',
     link: 'https://github.com/JakubTuta/Ledger-APP',
   },
   {
     icon: 'mdi-file-document',
     color: 'warning',
-    title: 'API Docs',
-    description: 'Complete REST reference',
+    title: 'REST API Docs',
+    description: 'Build custom integrations with our documented API',
     link: 'https://bump.sh/tuta-corp/doc/ledger-api/',
   },
 ]
@@ -443,9 +577,56 @@ const ecosystem = [
   letter-spacing: 1px;
 }
 
+/* How it Works Section */
+.how-it-works-section {
+  background: rgb(var(--v-theme-surface));
+}
+
+.step-card {
+  padding: 1.5rem;
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgb(var(--v-theme-primary));
+  color: white;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.step-description {
+  color: rgb(var(--v-theme-on-surface-variant));
+  line-height: 1.6;
+}
+
+.code-card {
+  text-align: left;
+  border-radius: 8px;
+}
+
+.code-block {
+  margin: 0;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #e0e0e0;
+}
+
 /* Features Section */
 .features-section {
-  background: rgb(var(--v-theme-surface));
+  background: rgb(var(--v-theme-background));
 }
 
 .section-header {
