@@ -25,7 +25,7 @@ logs
 
 .github/copilot-instructions.md
 .vscode/
-bun.lock
+# bun.lock should be committed for reproducible builds
 CLAUDE.md
 UI_OVERVIEW.md
 .claude/

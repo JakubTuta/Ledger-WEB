@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware(async (_to, _from) => {
   }
 
   // If authenticated, redirect to panel
-  // if (authStore.isAuthenticated) {
-  //   return navigateTo('/panel')
-  // }
+  if (authStore.isAuthenticated) {
+    return navigateTo('/panel')
+  }
 })

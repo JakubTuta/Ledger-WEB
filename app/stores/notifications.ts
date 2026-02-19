@@ -2,8 +2,7 @@ import { defineStore } from 'pinia'
 import type { NotificationPreferencesResponse, NotificationPreferencesUpdate } from '~/types/notifications'
 
 export const useNotificationsStore = defineStore('notifications', () => {
-  const apiStore = useApiStore()
-  const { client } = storeToRefs(apiStore)
+  const { client } = useApiStore()
 
   const preferences = ref<NotificationPreferencesResponse | null>(null)
   const isLoading = ref(false)
@@ -21,7 +20,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     isLoading.value = true
 
     try {
-      const response = await client.value.get<NotificationPreferencesResponse>('/api/v1/notifications/preferences')
+      const response = await client.get<NotificationPreferencesResponse>('/api/v1/notifications/preferences')
 
       preferences.value = response.data
       lastFetchTime.value = new Date()
@@ -41,7 +40,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     isLoading.value = true
 
     try {
-      const response = await client.value.put<NotificationPreferencesResponse>(
+      const response = await client.put<NotificationPreferencesResponse>(
         '/api/v1/notifications/preferences',
         updates,
       )

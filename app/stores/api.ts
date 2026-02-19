@@ -1,27 +1,32 @@
 import type { AxiosInstance } from 'axios'
 import axios from 'axios'
-import { defineStore } from 'pinia'
 
-export const useApiStore = defineStore('api', () => {
+let _client: AxiosInstance | null = null
+
+export const useApiStore = () => {
+  if (_client) {
+    return { client: _client }
+  }
+
   const config = useRuntimeConfig()
 
-  const client = ref<AxiosInstance>(axios.create({
+  const client = axios.create({
     baseURL: config.public.serverUrl,
     headers: {
       'Content-Type': 'application/json',
     },
-  }))
-
-  client.value.interceptors.request.use((config) => {
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
-    }
-
-    return config
   })
 
-  client.value.interceptors.response.use(
+  client.interceptors.request.use((reqConfig) => {
+    const authStore = useAuthStore()
+    if (authStore.token) {
+      reqConfig.headers.Authorization = `Bearer ${authStore.token}`
+    }
+
+    return reqConfig
+  })
+
+  client.interceptors.response.use(
     response => response,
     async (error) => {
       if (error.response?.status === 401) {
@@ -33,16 +38,12 @@ export const useApiStore = defineStore('api', () => {
         if (!isAuthEndpoint) {
           const authStore = useAuthStore()
 
-          // Try to refresh the token
           const refreshed = await authStore.refreshAccessToken()
 
           if (refreshed && error.config) {
-            // Retry the original request with the new token
             error.config.headers.Authorization = `Bearer ${authStore.token}`
-            return client.value.request(error.config)
+            return client.request(error.config)
           }
-
-          // If refresh failed, logout is already handled in refreshAccessToken
         }
       }
 
@@ -50,7 +51,7 @@ export const useApiStore = defineStore('api', () => {
     },
   )
 
-  return {
-    client,
-  }
-})
+  _client = client
+
+  return { client }
+}

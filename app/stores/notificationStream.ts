@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 export const useNotificationStreamStore = defineStore('notificationStream', () => {
   const authStore = useAuthStore()
+  const runtimeConfig = useRuntimeConfig()
 
   const notifications = ref<NotificationItem[]>([])
   const isConnected = ref(false)
@@ -86,7 +87,7 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     try {
       abortController = new AbortController()
 
-      const baseUrl = 'https://ledger-server.jtuta.cloud'
+      const baseUrl = runtimeConfig.public.serverUrl as string
       const url = `${baseUrl}/api/v1/notifications/stream`
 
       const response = await fetch(url, {

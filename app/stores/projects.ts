@@ -2,8 +2,7 @@ import { defineStore } from 'pinia'
 import type { CreateProjectRequest, Project, ProjectListResponse } from '~/types/project'
 
 export const useProjectsStore = defineStore('projects', () => {
-  const apiStore = useApiStore()
-  const { client } = storeToRefs(apiStore)
+  const { client } = useApiStore()
 
   const projects = ref<Project[]>([])
   const total = ref(0)
@@ -21,7 +20,7 @@ export const useProjectsStore = defineStore('projects', () => {
     isLoading.value = true
 
     try {
-      const response = await client.value.get<ProjectListResponse>('/api/v1/projects')
+      const response = await client.get<ProjectListResponse>('/api/v1/projects')
 
       projects.value = response.data.projects
       total.value = response.data.total
@@ -42,7 +41,7 @@ export const useProjectsStore = defineStore('projects', () => {
 
   const createProject = async (data: CreateProjectRequest) => {
     try {
-      const response = await client.value.post<Project>('/api/v1/projects', data)
+      const response = await client.post<Project>('/api/v1/projects', data)
 
       projects.value.push(response.data)
       total.value += 1

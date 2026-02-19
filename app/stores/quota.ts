@@ -2,8 +2,7 @@ import { defineStore } from 'pinia'
 import type { ProjectQuotaResponse } from '~/types/quota'
 
 export const useQuotaStore = defineStore('quota', () => {
-  const apiStore = useApiStore()
-  const { client } = storeToRefs(apiStore)
+  const { client } = useApiStore()
 
   const quotasByProject = ref<Record<number, ProjectQuotaResponse>>({})
   const loadingStates = ref<Record<number, boolean>>({})
@@ -41,7 +40,7 @@ export const useQuotaStore = defineStore('quota', () => {
     loadingStates.value[projectId] = true
 
     try {
-      const response = await client.value.get<ProjectQuotaResponse>(`/api/v1/projects/${projectId}/quota`)
+      const response = await client.get<ProjectQuotaResponse>(`/api/v1/projects/${projectId}/quota`)
 
       quotasByProject.value[projectId] = response.data
       lastFetchTimes.value[projectId] = new Date()

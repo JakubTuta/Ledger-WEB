@@ -355,7 +355,7 @@ definePageMeta({
 })
 
 useSeoMeta({
-  title: 'Log Analytics for Python Backends',
+  title: 'Ledger — Log Analytics for Python Backends',
   description: 'Open source log monitoring for FastAPI, Django, and Flask. Add 3 lines of code to see every request, error, and custom log in a real-time dashboard.',
   keywords: 'log analytics, python logging, fastapi monitoring, django logging, flask monitoring, error tracking, application monitoring, open source logging',
 
@@ -365,13 +365,22 @@ useSeoMeta({
   ogUrl: siteUrl,
   ogSiteName: 'Ledger',
   ogLocale: 'en_US',
+  ogImage: `${siteUrl}/og-image.png`,
 
   twitterCard: 'summary_large_image',
   twitterTitle: 'Ledger — Log Analytics for Python Backends',
   twitterDescription: 'Open source log monitoring for FastAPI, Django, and Flask. Add 3 lines of code to get started.',
+  twitterImage: `${siteUrl}/og-image.png`,
 })
 
 useHead({
+  titleTemplate: '',
+})
+
+useHead({
+  link: [
+    { rel: 'canonical', href: siteUrl },
+  ],
   script: [
     {
       type: 'application/ld+json',

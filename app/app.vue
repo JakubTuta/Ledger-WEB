@@ -16,14 +16,16 @@
 const authStore = useAuthStore()
 const streamStore = useNotificationStreamStore()
 
-watch(() => authStore.isAuthenticated, (isAuthenticated) => {
-  if (isAuthenticated) {
-    streamStore.connect()
-  }
-  else {
-    streamStore.disconnect()
-  }
-}, { immediate: true })
+if (import.meta.client) {
+  watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+    if (isAuthenticated) {
+      streamStore.connect()
+    }
+    else {
+      streamStore.disconnect()
+    }
+  }, { immediate: true })
+}
 
 onMounted(async () => {
   await authStore.autoLogin()

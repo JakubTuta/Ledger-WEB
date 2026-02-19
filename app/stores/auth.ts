@@ -6,8 +6,7 @@ const REFRESH_TOKEN_KEY = 'ledger_refresh_token'
 const TOKEN_EXPIRY_KEY = 'ledger_token_expiry'
 
 export const useAuthStore = defineStore('auth', () => {
-  const apiStore = useApiStore()
-  const { client } = storeToRefs(apiStore)
+  const { client } = useApiStore()
 
   const router = useRouter()
 
@@ -61,7 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
       return false
 
     try {
-      const response = await client.value.get<User>('/api/v1/accounts/me')
+      const response = await client.get<User>('/api/v1/accounts/me')
 
       user.value = response.data
 
@@ -78,7 +77,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const login = async (credentials: LoginRequest) => {
     try {
-      const response = await client.value.post<LoginResponse>('/api/v1/accounts/login', credentials)
+      const response = await client.post<LoginResponse>('/api/v1/accounts/login', credentials)
 
       saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
 
@@ -107,7 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const register = async (data: RegisterRequest) => {
     try {
-      const response = await client.value.post<RegisterResponse>('/api/v1/accounts/register', data)
+      const response = await client.post<RegisterResponse>('/api/v1/accounts/register', data)
 
       saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
 
@@ -137,7 +136,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     try {
       if (token.value) {
-        await client.value.post('/api/v1/accounts/logout')
+        await client.post('/api/v1/accounts/logout')
       }
     }
     catch (error) {
@@ -169,7 +168,7 @@ export const useAuthStore = defineStore('auth', () => {
     isRefreshing.value = true
 
     try {
-      const response = await client.value.post<RefreshTokenResponse>('/api/v1/accounts/refresh', {
+      const response = await client.post<RefreshTokenResponse>('/api/v1/accounts/refresh', {
         refresh_token: refreshToken.value,
       } as RefreshTokenRequest)
 
@@ -231,7 +230,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const updateName = async (name: string) => {
     try {
-      const response = await client.value.put<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
+      const response = await client.put<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
 
       if (user.value) {
         user.value.name = response.data.name
@@ -253,7 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const changePassword = async (data: ChangePasswordRequest) => {
     try {
-      const response = await client.value.post<ChangePasswordResponse>('/api/v1/accounts/me/password', data)
+      const response = await client.post<ChangePasswordResponse>('/api/v1/accounts/me/password', data)
 
       return { success: true, message: response.data.detail }
     }

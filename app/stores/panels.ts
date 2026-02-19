@@ -12,8 +12,7 @@ import type {
 import { defineStore } from 'pinia'
 
 export const usePanelsStore = defineStore('panels', () => {
-  const apiStore = useApiStore()
-  const { client } = storeToRefs(apiStore)
+  const { client } = useApiStore()
 
   const panels = ref<Panel[]>([])
   const total = ref(0)
@@ -50,7 +49,7 @@ export const usePanelsStore = defineStore('panels', () => {
     isLoading.value = true
 
     try {
-      const response = await client.value.get<PanelListResponse>('/api/v1/dashboard/panels')
+      const response = await client.get<PanelListResponse>('/api/v1/dashboard/panels')
 
       panels.value = response.data.panels
       total.value = response.data.total
@@ -117,7 +116,7 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
-      const response = await client.value.get<AggregatedMetricsResponse>(
+      const response = await client.get<AggregatedMetricsResponse>(
         `/api/v1/metrics/aggregated?${searchParams.toString()}`,
       )
 
@@ -163,7 +162,7 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
-      const response = await client.value.get<any>(
+      const response = await client.get<any>(
         `/api/v1/errors/list?${searchParams.toString()}`,
       )
 
@@ -254,7 +253,7 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
-      const response = await client.value.get<any>(
+      const response = await client.get<any>(
         `/api/v1/logs?${searchParams.toString()}`,
       )
 
@@ -335,7 +334,7 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
-      const response = await client.value.get<BottleneckMetricsResponse>(
+      const response = await client.get<BottleneckMetricsResponse>(
         `/api/v1/metrics/bottleneck?${searchParams.toString()}`,
       )
 
@@ -359,7 +358,7 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const createPanel = async (data: CreatePanelRequest) => {
     try {
-      const response = await client.value.post<Panel>('/api/v1/dashboard/panels', data)
+      const response = await client.post<Panel>('/api/v1/dashboard/panels', data)
 
       panels.value.push(response.data)
       total.value += 1
@@ -407,7 +406,7 @@ export const usePanelsStore = defineStore('panels', () => {
           : panel.periodTo || null,
       }
 
-      const response = await client.value.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, updateData)
+      const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, updateData)
 
       const index = panels.value.findIndex(p => p.id === panelId)
       if (index !== -1) {
@@ -427,7 +426,7 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const deletePanel = async (panelId: number) => {
     try {
-      await client.value.delete(`/api/v1/dashboard/panels/${panelId}`)
+      await client.delete(`/api/v1/dashboard/panels/${panelId}`)
 
       panels.value = panels.value.filter(p => p.id !== panelId)
       total.value -= 1
@@ -472,7 +471,7 @@ export const usePanelsStore = defineStore('panels', () => {
             periodTo: panel.periodTo || null,
           }
 
-          return client.value.put(`/api/v1/dashboard/panels/${id}`, updateData)
+          return client.put(`/api/v1/dashboard/panels/${id}`, updateData)
         }),
       )
 
@@ -523,7 +522,7 @@ export const usePanelsStore = defineStore('panels', () => {
           : null,
       }
 
-      const response = await client.value.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, updateData)
+      const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, updateData)
 
       const index = panels.value.findIndex(p => p.id === panelId)
       if (index !== -1) {

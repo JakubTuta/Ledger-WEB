@@ -2,8 +2,7 @@ import { defineStore } from 'pinia'
 import type { ApiKey, CreateApiKeyResponse, ListApiKeysResponse } from '~/types/apiKey'
 
 export const useApiKeysStore = defineStore('apiKeys', () => {
-  const apiStore = useApiStore()
-  const { client } = storeToRefs(apiStore)
+  const { client } = useApiStore()
 
   const apiKeys = ref<ApiKey[]>([])
   const total = ref(0)
@@ -21,7 +20,7 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
     isLoading.value = true
 
     try {
-      const response = await client.value.get<ListApiKeysResponse>(`/api/v1/projects/${projectId}/api-keys`)
+      const response = await client.get<ListApiKeysResponse>(`/api/v1/projects/${projectId}/api-keys`)
 
       apiKeys.value = response.data.api_keys
       total.value = response.data.total
@@ -42,7 +41,7 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
 
   const createApiKey = async (projectId: number, data?: { name?: string }) => {
     try {
-      const response = await client.value.post<CreateApiKeyResponse>(`/api/v1/projects/${projectId}/api-keys`, data || {})
+      const response = await client.post<CreateApiKeyResponse>(`/api/v1/projects/${projectId}/api-keys`, data || {})
 
       const newKey: ApiKey = {
         key_id: response.data.key_id,
@@ -70,7 +69,7 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
 
   const revokeApiKey = async (keyId: number) => {
     try {
-      await client.value.delete(`/api/v1/api-keys/${keyId}`)
+      await client.delete(`/api/v1/api-keys/${keyId}`)
 
       apiKeys.value = apiKeys.value.filter(key => key.key_id !== keyId)
       total.value -= 1
