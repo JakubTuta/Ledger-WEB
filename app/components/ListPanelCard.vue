@@ -54,9 +54,6 @@
           >
             <v-card-title
               class="d-flex align-center justify-space-between cursor-pointer pa-2"
-              :class="type === 'errors'
-                ? 'min-h-50px'
-                : ''"
               @click="toggleExpanded(item)"
             >
               <div class="d-flex align-center flex-grow-1 gap-1">
@@ -70,21 +67,30 @@
                 <!-- Error type display -->
                 <div
                   v-if="type === 'errors'"
-                  class="d-flex align-center gap-1"
+                  class="d-flex flex-column flex-grow-1"
                 >
                   <span class="text-body-2 font-weight-bold">
-                    {{ item.error_type }}
+                    {{ item.message }}
                   </span>
 
-                  <v-chip
-                    v-if="item.isNew"
-                    size="x-small"
-                    color="success"
-                    variant="flat"
-                    class="ml-1"
-                  >
-                    NEW
-                  </v-chip>
+                  <div class="d-flex align-center gap-1">
+                    <v-chip
+                      size="x-small"
+                      color="error"
+                      variant="flat"
+                    >
+                      {{ item.error_type || 'error' }}
+                    </v-chip>
+
+                    <v-chip
+                      v-if="item.isNew"
+                      size="x-small"
+                      color="success"
+                      variant="flat"
+                    >
+                      NEW
+                    </v-chip>
+                  </div>
                 </div>
 
                 <!-- Log message display -->
@@ -514,6 +520,6 @@ onUnmounted(() => {
 }
 
 .context-data {
-  max-height: 250px;
+  max-height: 300px;
 }
 </style>

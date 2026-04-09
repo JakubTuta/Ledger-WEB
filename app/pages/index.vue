@@ -350,9 +350,7 @@
 const runtimeConfig = useRuntimeConfig()
 const siteUrl = runtimeConfig.public.siteUrl as string
 
-definePageMeta({
-  middleware: 'guest',
-})
+definePageMeta({})
 
 useSeoMeta({
   title: 'Ledger — Log Analytics for Python Backends',

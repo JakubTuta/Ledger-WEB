@@ -16,6 +16,7 @@
               :color="getIconColor(notification.level)"
               class="mr-2"
             />
+
             <span class="text-subtitle-1 font-weight-bold">
               {{ notification.error_type }}
             </span>
@@ -32,7 +33,7 @@
         <v-divider />
 
         <v-card-text class="pa-3">
-          <div class="d-flex align-center gap-2 text-caption text-medium-emphasis">
+          <div class="d-flex align-center text-caption text-medium-emphasis gap-2">
             <span v-if="notification.timestamp">
               {{ formatTimestamp(notification.timestamp) }}
             </span>
@@ -46,6 +47,7 @@
                 <div class="text-caption font-weight-bold mb-1">
                   Message:
                 </div>
+
                 <div class="text-body-2">
                   {{ notification.message }}
                 </div>
@@ -55,6 +57,7 @@
                 <div class="text-caption font-weight-bold mb-1">
                   Details:
                 </div>
+
                 <div class="d-flex align-center gap-2">
                   <v-chip
                     :color="getNotificationColor(notification.level)"
@@ -81,6 +84,7 @@
                 <div class="text-caption font-weight-bold mb-1">
                   Stack Trace:
                 </div>
+
                 <pre class="stack-trace text-caption">{{ notification.stack_trace }}</pre>
               </div>
 
@@ -91,6 +95,7 @@
                 <div class="text-caption font-weight-bold mb-1">
                   Context:
                 </div>
+
                 <pre class="context-data text-caption">{{ JSON.stringify(notification.context, null, 2) }}</pre>
               </div>
             </div>
@@ -101,12 +106,16 @@
 
         <v-card-actions class="pa-2">
           <v-btn
-            :prepend-icon="notification.expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+            :prepend-icon="notification.expanded
+              ? 'mdi-chevron-up'
+              : 'mdi-chevron-down'"
             variant="text"
             size="small"
             @click="handleToggleExpand(notification.id)"
           >
-            {{ notification.expanded ? 'Hide Details' : 'Show Details' }}
+            {{ notification.expanded
+              ? 'Hide Details'
+              : 'Show Details' }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -133,6 +142,7 @@
         >
           Retry
         </v-btn>
+
         <v-btn
           icon="mdi-close"
           variant="text"

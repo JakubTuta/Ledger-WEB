@@ -326,7 +326,6 @@ const availableRoutes = computed(() => {
 
 const panelTypeOptions = [
   { label: 'Logs', value: 'logs', icon: 'mdi-text-box-outline' },
-  { label: 'Errors', value: 'errors', icon: 'mdi-alert-circle' },
   { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line' },
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted' },
   { label: 'Bottleneck Analysis', value: 'bottleneck', icon: 'mdi-speedometer' },

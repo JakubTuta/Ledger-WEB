@@ -1,8 +1,5 @@
 <template>
-  <v-container
-    fluid
-    class="pa-6"
-  >
+  <div class="pa-4">
     <!-- Filters Section -->
     <v-card class="mb-4">
       <v-card-text
@@ -128,7 +125,7 @@
         v-model="draggablePanels"
         :disabled="!isEditMode"
         item-key="id"
-        class="d-flex w-100 flex-wrap"
+        class="d-flex ma-6 w-100 flex-wrap"
         :animation="200"
         ghost-class="ghost-panel"
         chosen-class="chosen-panel"
@@ -137,7 +134,8 @@
         <template #item="{'element': panel}">
           <v-col
             cols="12"
-            lg="6"
+            md="6"
+            lg="4"
           >
             <ListPanelCard
               v-if="panel.type === 'error_list'"
@@ -221,7 +219,7 @@
       :panel="timeOptionsDialog.panel"
       @apply="handleTimeOptionsApply"
     />
-  </v-container>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -253,7 +251,6 @@ const filters = ref<{
 
 const panelTypeOptions = [
   { label: 'Logs', value: 'logs' },
-  { label: 'Errors', value: 'errors' },
   { label: 'Metrics', value: 'metrics' },
   { label: 'Error List', value: 'error_list' },
   { label: 'Bottleneck Analysis', value: 'bottleneck' },
