@@ -18,9 +18,12 @@ export const useApiStore = () => {
   })
 
   client.interceptors.request.use((reqConfig) => {
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      reqConfig.headers.Authorization = `Bearer ${authStore.token}`
+    const isRefreshEndpoint = reqConfig.url?.includes('/accounts/refresh')
+    if (!isRefreshEndpoint) {
+      const authStore = useAuthStore()
+      if (authStore.token) {
+        reqConfig.headers.Authorization = `Bearer ${authStore.token}`
+      }
     }
 
     return reqConfig
@@ -29,20 +32,22 @@ export const useApiStore = () => {
   client.interceptors.response.use(
     response => response,
     async (error) => {
-      if (error.response?.status === 401) {
-        const requestUrl = error.config?.url || ''
+      const original = error.config
+      if (error.response?.status === 401 && original && !original._retry) {
+        const requestUrl = original.url || ''
         const isAuthEndpoint = requestUrl.includes('/accounts/login')
           || requestUrl.includes('/accounts/register')
           || requestUrl.includes('/accounts/refresh')
+          || requestUrl.includes('/accounts/logout')
 
         if (!isAuthEndpoint) {
+          original._retry = true
           const authStore = useAuthStore()
-
           const refreshed = await authStore.refreshAccessToken()
 
-          if (refreshed && error.config) {
-            error.config.headers.Authorization = `Bearer ${authStore.token}`
-            return client.request(error.config)
+          if (refreshed) {
+            original.headers.Authorization = `Bearer ${authStore.token}`
+            return client.request(original)
           }
         }
       }

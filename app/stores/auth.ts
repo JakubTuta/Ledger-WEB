@@ -16,7 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const tokenExpiryTime = ref<number | null>(null)
   const isAuthenticated = computed(() => !!user.value && !!token.value)
   const authInitialized = ref(false)
-  const isRefreshing = ref(false)
+  const refreshPromise = ref<Promise<boolean> | null>(null)
 
   const saveToken = (newToken: string, newRefreshToken: string, expiresIn: number) => {
     token.value = newToken
@@ -160,40 +160,40 @@ export const useAuthStore = defineStore('auth', () => {
     return Date.now() + refreshThreshold >= tokenExpiryTime.value
   }
 
-  const refreshAccessToken = async () => {
-    if (!refreshToken.value || isRefreshing.value) {
-      return false
-    }
+  const refreshAccessToken = async (): Promise<boolean> => {
+    if (!refreshToken.value) return false
+    if (refreshPromise.value) return refreshPromise.value
 
-    isRefreshing.value = true
+    refreshPromise.value = (async () => {
+      try {
+        const response = await client.post<RefreshTokenResponse>(
+          '/api/v1/accounts/refresh',
+          { refresh_token: refreshToken.value } as RefreshTokenRequest,
+        )
 
-    try {
-      const response = await client.post<RefreshTokenResponse>('/api/v1/accounts/refresh', {
-        refresh_token: refreshToken.value,
-      } as RefreshTokenRequest)
+        saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
 
-      saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
-
-      // Update user data if available
-      if (response.data.account_id && response.data.email) {
-        user.value = {
-          account_id: response.data.account_id,
-          email: response.data.email,
-          name: user.value?.name,
+        if (response.data.account_id && response.data.email) {
+          user.value = {
+            account_id: response.data.account_id,
+            email: response.data.email,
+            name: user.value?.name,
+          }
         }
-      }
 
-      return true
-    }
-    catch (error) {
-      console.error('Token refresh failed:', error)
-      // Refresh token expired or invalid, logout user
-      await logout()
-      return false
-    }
-    finally {
-      isRefreshing.value = false
-    }
+        return true
+      }
+      catch (error) {
+        console.error('Token refresh failed:', error)
+        await logout()
+        return false
+      }
+      finally {
+        refreshPromise.value = null
+      }
+    })()
+
+    return refreshPromise.value
   }
 
   const autoLogin = async () => {
@@ -273,7 +273,6 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     refreshToken,
     isAuthenticated,
-    isRefreshing,
     login,
     register,
     logout,
