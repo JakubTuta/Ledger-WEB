@@ -228,16 +228,26 @@ const chartData = computed(() => {
   return props.metrics.data
 })
 
-const timePoints = computed(() => {
-  const points = new Set<string>()
-  chartData.value.forEach((item) => {
-    const key = `${item.date}${item.hour !== null && item.hour !== undefined
-      ? `-${item.hour}`
-      : ''}`
-    points.add(key)
-  })
+const isHourly = computed(() => props.metrics?.granularity === 'hourly')
 
-  return Array.from(points).sort()
+const timePoints = computed(() => {
+  const dates = new Set<string>()
+  chartData.value.forEach(item => dates.add(item.date))
+
+  const sortedDates = Array.from(dates).sort()
+
+  if (isHourly.value) {
+    const points: string[] = []
+    sortedDates.forEach((date) => {
+      for (let h = 0; h < 24; h++) {
+        points.push(`${date}-${h}`)
+      }
+    })
+
+    return points
+  }
+
+  return sortedDates
 })
 
 const maxValue = computed(() => {
@@ -272,12 +282,18 @@ const chartStartLabel = computed(() => {
   if (timePoints.value.length === 0)
     return ''
 
+  if (isHourly.value)
+    return '00:00'
+
   return formatDateLabel(timePoints.value[0]!)
 })
 
 const chartEndLabel = computed(() => {
   if (timePoints.value.length === 0)
     return ''
+
+  if (isHourly.value)
+    return '23:00'
 
   return formatDateLabel(timePoints.value[timePoints.value.length - 1]!)
 })

@@ -199,7 +199,7 @@ function cancelNameEdit() {
 
 <style scoped>
 .panel-card {
-  height: 500px;
+  height: var(--panel-card-height, 500px);
 }
 
 .panel-card--disabled {

@@ -84,6 +84,43 @@
       </v-card-text>
     </v-card>
 
+    <!-- Column Size Slider -->
+    <v-row
+      class="d-none d-md-flex mb-2"
+      align="center"
+      justify="end"
+    >
+      <v-col
+        cols="auto"
+        class="align-center d-flex ga-3"
+      >
+        <v-icon
+          size="small"
+          color="medium-emphasis"
+        >
+          mdi-view-grid
+        </v-icon>
+
+        <v-slider
+          v-model="safePanelSizeIndex"
+          :min="0"
+          :max="3"
+          :step="1"
+          show-ticks="always"
+          tick-size="4"
+          hide-details
+          style="width: 180px"
+        />
+
+        <v-icon
+          size="small"
+          color="medium-emphasis"
+        >
+          mdi-view-grid-outline
+        </v-icon>
+      </v-col>
+    </v-row>
+
     <!-- Loading State -->
     <v-row v-if="panelsStore.isLoading && !panelsStore.hasData">
       <v-col
@@ -120,7 +157,10 @@
     </v-row>
 
     <!-- Panels Grid -->
-    <v-row v-if="panelsStore.hasData && !panelsStore.isLoading">
+    <v-row
+      v-if="panelsStore.hasData && !panelsStore.isLoading"
+      :style="panelHeightStyle"
+    >
       <Draggable
         v-model="draggablePanels"
         :disabled="!isEditMode"
@@ -134,8 +174,7 @@
         <template #item="{'element': panel}">
           <v-col
             cols="12"
-            md="6"
-            lg="4"
+            :md="gridCols"
           >
             <ListPanelCard
               v-if="panel.type === 'error_list'"
@@ -261,6 +300,30 @@ const projectOptions = computed(() => projectsStore.projects.map(p => ({
   name: p.name,
   environment: p.environment,
 })))
+
+// Panel size slider
+const panelSizeSteps = [
+  { cols: 3, height: 280 },
+  { cols: 4, height: 360 },
+  { cols: 6, height: 460 },
+  { cols: 12, height: 580 },
+]
+const panelSizeIndex = useCookie<number>('panel-size-index', { default: () => 1 })
+const safePanelSizeIndex = computed({
+  get: () => {
+    const i = Number(panelSizeIndex.value)
+    if (Number.isNaN(i) || i < 0 || i >= panelSizeSteps.length)
+      return 1
+
+    return i
+  },
+  set: (v: number) => {
+    panelSizeIndex.value = v
+  },
+})
+const currentSize = computed(() => panelSizeSteps[safePanelSizeIndex.value]!)
+const gridCols = computed(() => currentSize.value.cols)
+const panelHeightStyle = computed(() => ({ '--panel-card-height': `${currentSize.value.height}px` }))
 
 // Edit Mode
 const isEditMode = ref(false)
