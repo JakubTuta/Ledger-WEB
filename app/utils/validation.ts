@@ -33,3 +33,8 @@ export const apiKeyNameRules = [
   (v: string) => v.length >= 1 || 'API key name must be at least 1 character',
   (v: string) => v.length <= 255 || 'API key name must be at most 255 characters',
 ]
+
+export const inviteCodeRules = [
+  (v: string) => !!v || 'Invite code is required',
+  (v: string) => /^[A-Z0-9]{4}-?[A-Z0-9]{4}-?[A-Z0-9]{4}$/i.test(v) || 'Format: XXXX-XXXX-XXXX',
+]

@@ -51,6 +51,13 @@
             />
 
             <v-list-item
+              :active="activeSection === 'sharing'"
+              title="Project sharing"
+              prepend-icon="mdi-account-group"
+              @click="scrollToSection('sharing')"
+            />
+
+            <v-list-item
               :active="activeSection === 'account'"
               title="Account settings"
               prepend-icon="mdi-account"
@@ -159,6 +166,47 @@
               </v-card>
             </div>
 
+            <!-- Project Sharing Section -->
+            <div
+              ref="sharingSection"
+              style="min-height: calc(100vh - 120px);"
+            >
+              <v-card flat>
+                <v-card-title class="align-center d-flex font-weight-bold mb-4 text-h5">
+                  Project Sharing
+
+                  <v-spacer />
+
+                  <v-btn
+                    color="primary"
+                    variant="tonal"
+                    prepend-icon="mdi-link-plus"
+                    @click="showJoinDialog = true"
+                  >
+                    Join project
+                  </v-btn>
+                </v-card-title>
+
+                <v-card-text>
+                  <div
+                    v-for="(project, index) in projects"
+                    :key="project.project_id"
+                    :class="{'mb-4': index < projects.length - 1}"
+                  >
+                    <ProjectSharing :project="project" />
+                  </div>
+
+                  <v-alert
+                    v-if="projects.length === 0 && !projectsStore.isLoading"
+                    type="info"
+                    class="mt-4"
+                  >
+                    No projects to share. Create or join one first.
+                  </v-alert>
+                </v-card-text>
+              </v-card>
+            </div>
+
             <!-- Account Settings Section -->
             <div
               ref="accountSection"
@@ -178,6 +226,11 @@
         </v-col>
       </v-row>
     </v-card>
+
+  <JoinProjectDialog
+    v-model="showJoinDialog"
+    @joined="fetchData"
+  />
   </v-container>
 </template>
 
@@ -199,18 +252,20 @@ const { projects } = storeToRefs(projectsStore)
 
 const apiKeysStore = useApiKeysStore()
 
-const activeSection = ref<'projects' | 'notifications' | 'quota' | 'apiKeys' | 'account'>('projects')
+const activeSection = ref<'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'account'>('projects')
 const selectedProjectId = ref<number | null>(null)
+const showJoinDialog = ref(false)
 const scrollContainer = ref<HTMLElement | null>(null)
 const projectsSection = ref<HTMLElement | null>(null)
 const notificationsSection = ref<HTMLElement | null>(null)
 const quotaSection = ref<HTMLElement | null>(null)
 const apiKeysSection = ref<HTMLElement | null>(null)
+const sharingSection = ref<HTMLElement | null>(null)
 const accountSection = ref<HTMLElement | null>(null)
 
 let isScrolling = false
 
-function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'account') {
+function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'account') {
   if (!scrollContainer.value)
     return
 
@@ -228,6 +283,9 @@ function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiK
       break
     case 'apiKeys':
       targetElement = apiKeysSection.value
+      break
+    case 'sharing':
+      targetElement = sharingSection.value
       break
     case 'account':
       targetElement = accountSection.value
@@ -264,6 +322,7 @@ function handleScroll() {
   const notificationsOffset = notificationsSection.value?.offsetTop ?? 0
   const quotaOffset = quotaSection.value?.offsetTop ?? 0
   const apiKeysOffset = apiKeysSection.value?.offsetTop ?? 0
+  const sharingOffset = sharingSection.value?.offsetTop ?? 0
   const accountOffset = accountSection.value?.offsetTop ?? 0
 
   if (scrollTop < notificationsOffset - offset) {
@@ -275,8 +334,11 @@ function handleScroll() {
   else if (scrollTop < apiKeysOffset - offset) {
     activeSection.value = 'quota'
   }
-  else if (scrollTop < accountOffset - offset) {
+  else if (scrollTop < sharingOffset - offset) {
     activeSection.value = 'apiKeys'
+  }
+  else if (scrollTop < accountOffset - offset) {
+    activeSection.value = 'sharing'
   }
   else {
     activeSection.value = 'account'
