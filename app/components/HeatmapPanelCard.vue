@@ -45,7 +45,6 @@
         <HeatmapChart
           v-else
           :metrics="metrics"
-          :height="chartHeight"
         />
       </v-card-text>
     </template>
@@ -102,8 +101,6 @@ const emit = defineEmits<{
   timeOptions: []
   refresh: []
 }>()
-
-const chartHeight = ref(200)
 
 const data = computed(() => props.metrics?.data ?? [])
 const totalLogs = computed(() => data.value.reduce((s, d) => s + d.log_count, 0))

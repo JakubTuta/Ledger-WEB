@@ -46,7 +46,6 @@
           v-else
           :metrics="metrics"
           :mode="chartMode"
-          :height="chartHeight"
         />
       </v-card-text>
     </template>
@@ -125,9 +124,6 @@ const panelTypeColor = computed(() => {
 
 const chartMode = computed(() => props.panel.type === 'metrics' ? 'latency' : 'volume')
 
-const chartHeight = ref(200)
-const containerRef = ref<HTMLElement | null>(null)
-
 const chartData = computed(() => props.metrics?.data ?? [])
 
 const totalLogs = computed(() => chartData.value.reduce((s, d) => s + d.log_count, 0))
@@ -138,12 +134,5 @@ const avgDuration = computed(() => {
   if (durations.length === 0) return '-'
   const avg = durations.reduce((s, d) => s + d.avg_duration_ms, 0) / durations.length
   return `${avg.toFixed(0)}ms`
-})
-
-onMounted(() => {
-  containerRef.value = document.querySelector('.panel-content-container')
-  if (containerRef.value) {
-    chartHeight.value = Math.max(containerRef.value.clientHeight - 16, 100)
-  }
 })
 </script>

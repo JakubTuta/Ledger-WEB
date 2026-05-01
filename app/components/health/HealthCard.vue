@@ -2,7 +2,8 @@
   <v-card
     class="health-card"
     :class="`health-card--${summary.status}`"
-    variant="outlined"
+    variant="elevated"
+    elevation="2"
     hover
     @click="emit('click', summary.project_id)"
   >
@@ -15,7 +16,7 @@
     <v-card-text class="pa-3">
       <!-- Header -->
       <div class="d-flex align-center justify-space-between mb-2">
-        <div class="text-subtitle-2 font-weight-medium text-truncate">
+        <div class="text-subtitle-2 font-weight-bold text-truncate text-on-surface">
           {{ projectName }}
         </div>
         <v-chip
@@ -40,45 +41,84 @@
 
       <!-- Metrics -->
       <div class="d-flex justify-space-between mb-2">
-        <div class="text-center">
-          <div
-            class="text-body-2 font-weight-bold"
-            :class="errorRateClass"
-          >
-            {{ errorRateDisplay }}
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            Error Rate
-          </div>
-        </div>
+        <v-tooltip
+          location="top"
+          text="Error Rate — percentage of requests that resulted in an error over the selected period."
+        >
+          <template #activator="{ props: tipProps }">
+            <div
+              v-bind="tipProps"
+              class="text-center metric-cell"
+            >
+              <div
+                class="text-body-1 font-weight-bold"
+                :class="errorRateClass"
+              >
+                {{ errorRateDisplay }}
+              </div>
+              <div class="text-caption text-on-surface">
+                Error Rate
+              </div>
+            </div>
+          </template>
+        </v-tooltip>
 
-        <div class="text-center">
-          <div
-            class="text-body-2 font-weight-bold"
-            :class="p95Class"
-          >
-            {{ p95Display }}
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            p95
-          </div>
-        </div>
+        <v-tooltip
+          location="top"
+          text="p95 latency — 95% of requests completed faster than this value (response time)."
+        >
+          <template #activator="{ props: tipProps }">
+            <div
+              v-bind="tipProps"
+              class="text-center metric-cell"
+            >
+              <div
+                class="text-body-1 font-weight-bold"
+                :class="p95Class"
+              >
+                {{ p95Display }}
+              </div>
+              <div class="text-caption text-on-surface">
+                p95
+              </div>
+            </div>
+          </template>
+        </v-tooltip>
 
-        <div class="text-center">
-          <div class="text-body-2 font-weight-bold">
-            {{ rpsDisplay }}
-          </div>
-          <div class="text-caption text-medium-emphasis">
-            RPS
-          </div>
-        </div>
+        <v-tooltip
+          location="top"
+          text="RPS — average requests per second over the selected period."
+        >
+          <template #activator="{ props: tipProps }">
+            <div
+              v-bind="tipProps"
+              class="text-center metric-cell"
+            >
+              <div class="text-body-1 font-weight-bold text-on-surface">
+                {{ rpsDisplay }}
+              </div>
+              <div class="text-caption text-on-surface">
+                RPS
+              </div>
+            </div>
+          </template>
+        </v-tooltip>
       </div>
 
       <!-- Sparkline -->
-      <Sparkline
-        :points="summary.sparkline"
-        :color="sparklineColor"
-      />
+      <v-tooltip
+        location="bottom"
+        text="Request volume per hour for the last 24 hours."
+      >
+        <template #activator="{ props: tipProps }">
+          <div v-bind="tipProps">
+            <Sparkline
+              :points="summary.sparkline"
+              :color="sparklineColor"
+            />
+          </div>
+        </template>
+      </v-tooltip>
     </v-card-text>
   </v-card>
 </template>
@@ -134,21 +174,21 @@ const errorRateClass = computed(() => {
   const t = props.summary.thresholds
   if (props.summary.error_rate >= t.error_rate_crit) return 'text-error'
   if (props.summary.error_rate >= t.error_rate_warn) return 'text-warning'
-  return ''
+  return 'text-success'
 })
 
 const p95Class = computed(() => {
   const t = props.summary.thresholds
   if (props.summary.p95_ms >= t.p95_crit_ms) return 'text-error'
   if (props.summary.p95_ms >= t.p95_warn_ms) return 'text-warning'
-  return ''
+  return 'text-on-surface'
 })
 </script>
 
 <style scoped>
 .health-card {
-  min-width: 180px;
-  max-width: 220px;
+  min-width: 200px;
+  max-width: 240px;
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.15s;
   position: relative;
@@ -160,7 +200,13 @@ const p95Class = computed(() => {
 }
 
 .health-status-bar {
-  height: 3px;
+  height: 4px;
   width: 100%;
+}
+
+.metric-cell {
+  cursor: help;
+  flex: 1;
+  padding: 0 4px;
 }
 </style>

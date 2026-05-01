@@ -1,8 +1,8 @@
 <template>
-  <VChart
+  <EChart
     class="heatmap-chart"
     :option="chartOption"
-    :style="{ height: `${height}px` }"
+    :style="{ height: heightStyle }"
     :theme="isDark ? 'dark' : undefined"
     autoresize
   />
@@ -14,10 +14,12 @@ import { useTheme } from 'vuetify'
 
 const props = withDefaults(defineProps<{
   metrics?: AggregatedMetricsResponse
-  height?: number
+  height?: number | string
 }>(), {
-  height: 220,
+  height: '100%',
 })
+
+const heightStyle = computed(() => typeof props.height === 'number' ? `${props.height}px` : props.height)
 
 const vuetifyTheme = useTheme()
 const isDark = computed(() => vuetifyTheme.current.value.dark)

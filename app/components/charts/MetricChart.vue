@@ -1,9 +1,9 @@
 <template>
   <div
     class="metric-chart-wrapper"
-    :style="{ height: `${height}px` }"
+    :style="{ height: heightStyle }"
   >
-    <VChart
+    <EChart
       class="metric-chart"
       :option="chartOption"
       :theme="isDark ? 'dark' : undefined"
@@ -48,11 +48,22 @@ import { useTheme } from 'vuetify'
 const props = withDefaults(defineProps<{
   metrics?: AggregatedMetricsResponse
   mode?: 'volume' | 'latency' | 'errors'
-  height?: number
+  height?: number | string
 }>(), {
   mode: 'volume',
-  height: 200,
+  height: '100%',
 })
+
+const heightStyle = computed(() => typeof props.height === 'number' ? `${props.height}px` : props.height)
+
+function axisInterval(len: number): number {
+  if (len <= 12) return 0
+  if (len <= 24) return 1
+  if (len <= 48) return 3
+  if (len <= 96) return 5
+  if (len <= 168) return 11
+  return Math.floor(len / 12)
+}
 
 const vuetifyTheme = useTheme()
 const isDark = computed(() => vuetifyTheme.current.value.dark)
@@ -98,7 +109,7 @@ function buildVolumeOption() {
 
   return {
     backgroundColor: 'transparent',
-    grid: { top: 8, right: 8, bottom: 40, left: 48, containLabel: false },
+    grid: { top: 8, right: 8, bottom: 56, left: 48, containLabel: true },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -113,7 +124,13 @@ function buildVolumeOption() {
     xAxis: {
       type: 'category',
       data: xAxisData.value,
-      axisLabel: { color: textColor.value, fontSize: 10, rotate: xAxisData.value.length > 20 ? 45 : 0 },
+      axisLabel: {
+        color: textColor.value,
+        fontSize: 10,
+        rotate: xAxisData.value.length > 20 ? 45 : 0,
+        interval: axisInterval(xAxisData.value.length),
+        hideOverlap: true,
+      },
       axisLine: { lineStyle: { color: surfaceColor.value } },
       axisTick: { show: false },
     },
@@ -154,15 +171,16 @@ function buildVolumeOption() {
 }
 
 function buildLatencyOption() {
-  const avgData = data.value.map(d => d.avg_duration_ms > 0 ? Math.round(d.avg_duration_ms) : null)
-  const p95Data = data.value.map(d => d.p95_duration_ms > 0 ? Math.round(d.p95_duration_ms) : null)
-  const p99Data = data.value.map(d => d.p99_duration_ms > 0 ? Math.round(d.p99_duration_ms) : null)
-  const minData = data.value.map(d => d.min_duration_ms > 0 ? Math.round(d.min_duration_ms) : null)
-  const maxData = data.value.map(d => d.max_duration_ms > 0 ? Math.round(d.max_duration_ms) : null)
+  const toNum = (v: number | undefined | null) => (v == null || Number.isNaN(v) ? null : Math.round(v))
+  const avgData = data.value.map(d => toNum(d.avg_duration_ms))
+  const p95Data = data.value.map(d => toNum(d.p95_duration_ms))
+  const p99Data = data.value.map(d => toNum(d.p99_duration_ms))
+  const minData = data.value.map(d => toNum(d.min_duration_ms))
+  const maxData = data.value.map(d => toNum(d.max_duration_ms))
 
   return {
     backgroundColor: 'transparent',
-    grid: { top: 8, right: 8, bottom: 40, left: 52, containLabel: false },
+    grid: { top: 8, right: 8, bottom: 56, left: 52, containLabel: true },
     tooltip: {
       trigger: 'axis',
       formatter: (params: any[]) => {
@@ -177,7 +195,13 @@ function buildLatencyOption() {
     xAxis: {
       type: 'category',
       data: xAxisData.value,
-      axisLabel: { color: textColor.value, fontSize: 10, rotate: xAxisData.value.length > 20 ? 45 : 0 },
+      axisLabel: {
+        color: textColor.value,
+        fontSize: 10,
+        rotate: xAxisData.value.length > 20 ? 45 : 0,
+        interval: axisInterval(xAxisData.value.length),
+        hideOverlap: true,
+      },
       axisLine: { lineStyle: { color: surfaceColor.value } },
       axisTick: { show: false },
     },
@@ -197,7 +221,10 @@ function buildLatencyOption() {
         data: minData,
         lineStyle: { color: '#66bb6a', width: 1, type: 'dashed' },
         itemStyle: { color: '#66bb6a' },
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: true,
+        connectNulls: true,
       },
       {
         name: 'Avg',
@@ -205,7 +232,10 @@ function buildLatencyOption() {
         data: avgData,
         lineStyle: { color: '#42a5f5', width: 2 },
         itemStyle: { color: '#42a5f5' },
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 5,
+        showSymbol: true,
+        connectNulls: true,
         areaStyle: { color: '#42a5f5', opacity: 0.08 },
       },
       {
@@ -214,7 +244,10 @@ function buildLatencyOption() {
         data: p95Data,
         lineStyle: { color: '#ffa726', width: 1.5 },
         itemStyle: { color: '#ffa726' },
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: true,
+        connectNulls: true,
       },
       {
         name: 'p99',
@@ -222,7 +255,10 @@ function buildLatencyOption() {
         data: p99Data,
         lineStyle: { color: '#ef5350', width: 1.5 },
         itemStyle: { color: '#ef5350' },
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: true,
+        connectNulls: true,
       },
       {
         name: 'Max',
@@ -230,7 +266,10 @@ function buildLatencyOption() {
         data: maxData,
         lineStyle: { color: '#ab47bc', width: 1, type: 'dashed' },
         itemStyle: { color: '#ab47bc' },
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: true,
+        connectNulls: true,
       },
     ],
     legend: {

@@ -8,6 +8,7 @@ import {
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
+import 'vue-echarts/style.css'
 
 use([
   CanvasRenderer,
@@ -21,5 +22,5 @@ use([
 ])
 
 export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.component('VChart', VChart)
+  nuxtApp.vueApp.component('EChart', VChart)
 })

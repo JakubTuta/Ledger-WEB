@@ -8,11 +8,11 @@
 
     <!-- Sticky Filters Toolbar -->
     <v-card
-      class="mb-3 filters-toolbar"
+      class="filters-toolbar mb-3"
       elevation="1"
     >
       <v-card-text
-        class="d-flex align-center py-2 px-3"
+        class="d-flex align-center px-3 py-2"
       >
         <v-select
           v-model="filters.projectId"
@@ -160,7 +160,7 @@
       <v-col cols="12">
         <v-card
           variant="outlined"
-          class="text-center pa-10"
+          class="pa-10 text-center"
         >
           <v-icon
             icon="mdi-view-dashboard-outline"
@@ -351,16 +351,18 @@ const projectOptions = computed(() => projectsStore.projects.map(p => ({
 
 // Panel size slider
 const panelSizeSteps = [
-  { cols: 3, height: 280 },
-  { cols: 4, height: 360 },
-  { cols: 6, height: 460 },
-  { cols: 12, height: 580 },
+  { cols: 3, height: 360 },
+  { cols: 4, height: 440 },
+  { cols: 6, height: 540 },
+  { cols: 12, height: 680 },
 ]
 const panelSizeIndex = useCookie<number>('panel-size-index', { default: () => 1 })
 const safePanelSizeIndex = computed({
   get: () => {
     const i = Number(panelSizeIndex.value)
-    if (Number.isNaN(i) || i < 0 || i >= panelSizeSteps.length) return 1
+    if (Number.isNaN(i) || i < 0 || i >= panelSizeSteps.length)
+      return 1
+
     return i
   },
   set: (v: number) => { panelSizeIndex.value = v },
@@ -372,8 +374,11 @@ const panelHeightStyle = computed(() => ({ '--panel-card-height': `${currentSize
 // Adaptive skeleton count
 const skeletonCount = computed(() => {
   const cols = gridCols.value
-  if (cols <= 3) return 4
-  if (cols <= 4) return 3
+  if (cols <= 3)
+    return 4
+  if (cols <= 4)
+    return 3
+
   return 2
 })
 
@@ -420,9 +425,12 @@ const filteredPanels = computed(() => {
 })
 
 const draggablePanels = computed({
-  get: () => (isEditMode.value ? editingPanels.value : filteredPanels.value),
+  get: () => (isEditMode.value
+    ? editingPanels.value
+    : filteredPanels.value),
   set: (newOrder) => {
-    if (isEditMode.value) editingPanels.value = newOrder
+    if (isEditMode.value)
+      editingPanels.value = newOrder
   },
 })
 
@@ -460,7 +468,8 @@ function openDeleteDialog(panel: Panel) {
 }
 
 async function confirmDelete() {
-  if (!deleteDialog.value.panel) return
+  if (!deleteDialog.value.panel)
+    return
 
   deleteDialog.value.loading = true
 
@@ -479,7 +488,8 @@ function openTimeOptionsDialog(panel: Panel) {
 }
 
 async function handleTimeOptionsApply(params: { period?: TimeRangePreset, periodFrom?: string, periodTo?: string }) {
-  if (!timeOptionsDialog.value.panel) return
+  if (!timeOptionsDialog.value.panel)
+    return
 
   const timeRange = {
     period: params.period || null,
@@ -541,7 +551,9 @@ function fetchAllMetrics() {
 useDashboardShortcuts({
   onNewPanel: () => { newPanelDialog.value = true },
   onRefresh: () => fetchAllMetrics(),
-  onToggleEdit: () => isEditMode.value ? cancelEditMode() : enterEditMode(),
+  onToggleEdit: () => (isEditMode.value
+    ? cancelEditMode()
+    : enterEditMode()),
   onShowHelp: () => { shortcutsDialog.value = true },
 })
 
@@ -550,8 +562,10 @@ watch(() => filters.value.panelType, () => updateUrlParams())
 
 function updateUrlParams() {
   const query: Record<string, string> = {}
-  if (filters.value.projectId) query.project = filters.value.projectId
-  if (filters.value.panelType) query.type = filters.value.panelType
+  if (filters.value.projectId)
+    query.project = filters.value.projectId
+  if (filters.value.panelType)
+    query.type = filters.value.panelType
   router.replace({ query })
 }
 

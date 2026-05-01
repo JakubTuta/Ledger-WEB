@@ -1,5 +1,5 @@
 <template>
-  <VChart
+  <EChart
     class="sparkline"
     :option="option"
     :theme="isDark ? 'dark' : undefined"

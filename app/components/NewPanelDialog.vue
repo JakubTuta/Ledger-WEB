@@ -89,11 +89,16 @@
             item-title="label"
             item-value="value"
             :rules="panelTypeRules"
-            hint="Choose what data to display"
+            :hint="selectedPanelTypeDescription || 'Choose what data to display'"
+            persistent-hint
             class="mb-4"
           >
             <template #item="{'props': itemProps, item}">
-              <v-list-item v-bind="itemProps">
+              <v-list-item
+                v-bind="itemProps"
+                :subtitle="item.raw.description"
+                lines="two"
+              >
                 <template #prepend>
                   <v-icon :icon="item.raw.icon" />
                 </template>
@@ -324,12 +329,41 @@ const availableRoutes = computed(() => {
   return selectedProject.value?.available_routes || []
 })
 
+const selectedPanelTypeDescription = computed(() => {
+  return panelTypeOptions.find(o => o.value === form.value.panelType)?.description || ''
+})
+
 const panelTypeOptions = [
-  { label: 'Logs', value: 'logs', icon: 'mdi-text-box-outline' },
-  { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line' },
-  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted' },
-  { label: 'Bottleneck Analysis', value: 'bottleneck', icon: 'mdi-speedometer' },
-  { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid' },
+  {
+    label: 'Logs',
+    value: 'logs',
+    icon: 'mdi-text-box-outline',
+    description: 'Stacked bar chart of log volume vs errors over time. Best for spotting traffic patterns and error spikes.',
+  },
+  {
+    label: 'Metrics',
+    value: 'metrics',
+    icon: 'mdi-chart-line',
+    description: 'Latency lines (min, avg, p95, p99, max) for a specific endpoint. Best for tracking response time SLAs.',
+  },
+  {
+    label: 'Error List',
+    value: 'error_list',
+    icon: 'mdi-format-list-bulleted',
+    description: 'Paginated list of recent errors with stack traces and metadata. Best for triage and debugging.',
+  },
+  {
+    label: 'Bottleneck Analysis',
+    value: 'bottleneck',
+    icon: 'mdi-speedometer',
+    description: 'Grouped bars comparing route latency or request count. Best for finding slow or hot routes.',
+  },
+  {
+    label: 'Error Heatmap',
+    value: 'error_heatmap',
+    icon: 'mdi-grid',
+    description: 'Hour-by-day grid colored by error rate. Best for spotting recurring failure windows.',
+  },
 ]
 
 const statisticOptions = [

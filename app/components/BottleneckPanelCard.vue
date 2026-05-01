@@ -85,7 +85,7 @@
           :metrics="metrics"
           :selected-routes="selectedRoutes"
           :statistic="selectedStatistic"
-          :height="chartHeight"
+          height="calc(100% - 56px)"
         />
       </v-card-text>
     </template>
@@ -133,8 +133,6 @@ const emit = defineEmits<{
 
 const selectedRoutes = ref<string[]>([])
 const selectedStatistic = ref<BottleneckStatistic>('avg')
-const chartHeight = ref(160)
-
 const statisticOptions = [
   { title: 'Average', value: 'avg' },
   { title: 'Minimum', value: 'min' },

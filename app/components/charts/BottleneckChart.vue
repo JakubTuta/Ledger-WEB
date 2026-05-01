@@ -1,9 +1,9 @@
 <template>
   <div
     class="bottleneck-chart-wrapper"
-    :style="{ height: `${height}px` }"
+    :style="{ height: heightStyle }"
   >
-    <VChart
+    <EChart
       class="bottleneck-chart"
       :option="chartOption"
       :theme="isDark ? 'dark' : undefined"
@@ -45,10 +45,21 @@ const props = withDefaults(defineProps<{
   metrics?: BottleneckMetricsResponse
   selectedRoutes: string[]
   statistic: BottleneckStatistic
-  height?: number
+  height?: number | string
 }>(), {
-  height: 200,
+  height: '100%',
 })
+
+const heightStyle = computed(() => typeof props.height === 'number' ? `${props.height}px` : props.height)
+
+function axisInterval(len: number): number {
+  if (len <= 12) return 0
+  if (len <= 24) return 1
+  if (len <= 48) return 3
+  if (len <= 96) return 5
+  if (len <= 168) return 11
+  return Math.floor(len / 12)
+}
 
 const vuetifyTheme = useTheme()
 const isDark = computed(() => vuetifyTheme.current.value.dark)
@@ -145,7 +156,7 @@ const chartOption = computed(() => {
 
   return {
     backgroundColor: 'transparent',
-    grid: { top: 8, right: 8, bottom: 40, left: 52, containLabel: false },
+    grid: { top: 8, right: 8, bottom: 56, left: 52, containLabel: true },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -164,7 +175,13 @@ const chartOption = computed(() => {
     xAxis: {
       type: 'category',
       data: categories,
-      axisLabel: { color: textColor.value, fontSize: 10, rotate: categories.length > 15 ? 45 : 0 },
+      axisLabel: {
+        color: textColor.value,
+        fontSize: 10,
+        rotate: categories.length > 15 ? 45 : 0,
+        interval: axisInterval(categories.length),
+        hideOverlap: true,
+      },
       axisLine: { lineStyle: { color: surfaceColor.value } },
       axisTick: { show: false },
     },
