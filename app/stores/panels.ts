@@ -356,6 +356,41 @@ export const usePanelsStore = defineStore('panels', () => {
     return bottlenecksLoading.value.has(panelId)
   }
 
+  const fetchHeatmapForPanel = async (panel: Panel) => {
+    if (metricsLoading.value.has(panel.id)) return
+
+    metricsLoading.value.add(panel.id)
+
+    try {
+      const searchParams = new URLSearchParams()
+      searchParams.set('project_id', panel.project_id)
+      searchParams.set('type', 'exception')
+
+      if (panel.period) {
+        searchParams.set('period', panel.period)
+      }
+      else if (panel.periodFrom && panel.periodTo) {
+        searchParams.set('periodFrom', panel.periodFrom)
+        searchParams.set('periodTo', panel.periodTo)
+      }
+      else {
+        searchParams.set('period', 'last7days')
+      }
+
+      const response = await client.get<AggregatedMetricsResponse>(
+        `/api/v1/metrics/aggregated?${searchParams.toString()}`,
+      )
+
+      panelMetrics.value.set(panel.id, response.data)
+    }
+    catch (error) {
+      console.error(`Error fetching heatmap for panel ${panel.id}:`, error)
+    }
+    finally {
+      metricsLoading.value.delete(panel.id)
+    }
+  }
+
   const createPanel = async (data: CreatePanelRequest) => {
     try {
       const response = await client.post<Panel>('/api/v1/dashboard/panels', data)
@@ -584,6 +619,7 @@ export const usePanelsStore = defineStore('panels', () => {
     fetchBottleneckForPanel,
     getBottleneckForPanel,
     isBottleneckLoading,
+    fetchHeatmapForPanel,
     createPanel,
     updatePanel,
     deletePanel,

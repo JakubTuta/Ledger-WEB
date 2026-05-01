@@ -1,4 +1,4 @@
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 

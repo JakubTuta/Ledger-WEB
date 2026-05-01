@@ -1,0 +1,263 @@
+<template>
+  <div
+    class="metric-chart-wrapper"
+    :style="{ height: `${height}px` }"
+  >
+    <VChart
+      class="metric-chart"
+      :option="chartOption"
+      :theme="isDark ? 'dark' : undefined"
+      autoresize
+    />
+
+    <!-- Toggle only for bar modes -->
+    <div
+      v-if="mode !== 'latency'"
+      class="chart-toggle"
+    >
+      <v-btn-toggle
+        v-model="isCumulative"
+        density="compact"
+        variant="outlined"
+        mandatory
+        rounded="lg"
+      >
+        <v-btn
+          :value="false"
+          size="x-small"
+          title="Separate values per time bucket"
+        >
+          Separate
+        </v-btn>
+        <v-btn
+          :value="true"
+          size="x-small"
+          title="Running cumulative total"
+        >
+          Cumulative
+        </v-btn>
+      </v-btn-toggle>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { AggregatedMetricData, AggregatedMetricsResponse } from '~/types/panel'
+import { useTheme } from 'vuetify'
+
+const props = withDefaults(defineProps<{
+  metrics?: AggregatedMetricsResponse
+  mode?: 'volume' | 'latency' | 'errors'
+  height?: number
+}>(), {
+  mode: 'volume',
+  height: 200,
+})
+
+const vuetifyTheme = useTheme()
+const isDark = computed(() => vuetifyTheme.current.value.dark)
+const isCumulative = ref(false)
+
+const data = computed<AggregatedMetricData[]>(() => props.metrics?.data ?? [])
+const isHourly = computed(() => props.metrics?.granularity === 'hourly')
+
+const xAxisData = computed(() =>
+  data.value.map((d) => {
+    const y = d.date.substring(0, 4)
+    const m = d.date.substring(4, 6)
+    const day = d.date.substring(6, 8)
+    if (isHourly.value && d.hour !== undefined && d.hour !== null) {
+      return `${day}/${m} ${String(d.hour).padStart(2, '0')}:00`
+    }
+    return `${day}/${m}/${y}`
+  }),
+)
+
+function cumulate(arr: number[]): number[] {
+  let sum = 0
+  return arr.map(v => (sum += v))
+}
+
+const surfaceColor = computed(() => isDark.value ? '#424242' : '#e0e0e0')
+const textColor = computed(() => isDark.value ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')
+
+const chartOption = computed(() => {
+  if (props.mode === 'latency') return buildLatencyOption()
+  return buildVolumeOption()
+})
+
+function buildVolumeOption() {
+  const rawLogs = data.value.map(d => d.log_count)
+  const rawErrors = data.value.map(d => d.error_count)
+
+  const errorData = isCumulative.value ? cumulate(rawErrors) : rawErrors
+  const logData = isCumulative.value ? cumulate(rawLogs) : rawLogs
+  const logOnlyData = logData.map((v, i) => v - errorData[i]!)
+
+  const suffix = isCumulative.value ? ' (cumulative)' : ''
+
+  return {
+    backgroundColor: 'transparent',
+    grid: { top: 8, right: 8, bottom: 40, left: 48, containLabel: false },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any[]) => {
+        const label = params[0]?.axisValue ?? ''
+        const logs = params.find((p: any) => p.seriesName === `Logs${suffix}`)?.value ?? 0
+        const errors = params.find((p: any) => p.seriesName === `Errors${suffix}`)?.value ?? 0
+        const totalLogs = (Number(logs) + Number(errors)).toLocaleString()
+        return `<b>${label}</b><br/>Logs: ${totalLogs}${isCumulative.value ? ' cumul.' : ''}<br/>Errors: ${Number(errors).toLocaleString()}${isCumulative.value ? ' cumul.' : ''}`
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: xAxisData.value,
+      axisLabel: { color: textColor.value, fontSize: 10, rotate: xAxisData.value.length > 20 ? 45 : 0 },
+      axisLine: { lineStyle: { color: surfaceColor.value } },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: textColor.value,
+        fontSize: 10,
+        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v),
+      },
+      splitLine: { lineStyle: { color: surfaceColor.value, type: 'dashed' } },
+    },
+    series: [
+      {
+        name: `Errors${suffix}`,
+        type: 'bar',
+        stack: 'total',
+        data: errorData,
+        itemStyle: { color: '#ef5350' },
+        emphasis: { itemStyle: { color: '#e53935' } },
+      },
+      {
+        name: `Logs${suffix}`,
+        type: 'bar',
+        stack: 'total',
+        data: logOnlyData,
+        itemStyle: { color: '#42a5f5', borderRadius: [2, 2, 0, 0] },
+        emphasis: { itemStyle: { opacity: 0.8 } },
+      },
+    ],
+    legend: {
+      bottom: 0,
+      textStyle: { color: textColor.value, fontSize: 11 },
+      itemWidth: 12,
+      itemHeight: 8,
+    },
+  }
+}
+
+function buildLatencyOption() {
+  const avgData = data.value.map(d => d.avg_duration_ms > 0 ? Math.round(d.avg_duration_ms) : null)
+  const p95Data = data.value.map(d => d.p95_duration_ms > 0 ? Math.round(d.p95_duration_ms) : null)
+  const p99Data = data.value.map(d => d.p99_duration_ms > 0 ? Math.round(d.p99_duration_ms) : null)
+  const minData = data.value.map(d => d.min_duration_ms > 0 ? Math.round(d.min_duration_ms) : null)
+  const maxData = data.value.map(d => d.max_duration_ms > 0 ? Math.round(d.max_duration_ms) : null)
+
+  return {
+    backgroundColor: 'transparent',
+    grid: { top: 8, right: 8, bottom: 40, left: 52, containLabel: false },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any[]) => {
+        const label = params[0]?.axisValue ?? ''
+        let html = `<b>${label}</b>`
+        for (const p of params) {
+          if (p.value != null) html += `<br/>${p.seriesName}: ${p.value}ms`
+        }
+        return html
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: xAxisData.value,
+      axisLabel: { color: textColor.value, fontSize: 10, rotate: xAxisData.value.length > 20 ? 45 : 0 },
+      axisLine: { lineStyle: { color: surfaceColor.value } },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: textColor.value,
+        fontSize: 10,
+        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${v}ms`,
+      },
+      splitLine: { lineStyle: { color: surfaceColor.value, type: 'dashed' } },
+    },
+    series: [
+      {
+        name: 'Min',
+        type: 'line',
+        data: minData,
+        lineStyle: { color: '#66bb6a', width: 1, type: 'dashed' },
+        itemStyle: { color: '#66bb6a' },
+        symbol: 'none',
+      },
+      {
+        name: 'Avg',
+        type: 'line',
+        data: avgData,
+        lineStyle: { color: '#42a5f5', width: 2 },
+        itemStyle: { color: '#42a5f5' },
+        symbol: 'none',
+        areaStyle: { color: '#42a5f5', opacity: 0.08 },
+      },
+      {
+        name: 'p95',
+        type: 'line',
+        data: p95Data,
+        lineStyle: { color: '#ffa726', width: 1.5 },
+        itemStyle: { color: '#ffa726' },
+        symbol: 'none',
+      },
+      {
+        name: 'p99',
+        type: 'line',
+        data: p99Data,
+        lineStyle: { color: '#ef5350', width: 1.5 },
+        itemStyle: { color: '#ef5350' },
+        symbol: 'none',
+      },
+      {
+        name: 'Max',
+        type: 'line',
+        data: maxData,
+        lineStyle: { color: '#ab47bc', width: 1, type: 'dashed' },
+        itemStyle: { color: '#ab47bc' },
+        symbol: 'none',
+      },
+    ],
+    legend: {
+      bottom: 0,
+      textStyle: { color: textColor.value, fontSize: 11 },
+      itemWidth: 16,
+      itemHeight: 4,
+    },
+  }
+}
+</script>
+
+<style scoped>
+.metric-chart-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.metric-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+}
+</style>

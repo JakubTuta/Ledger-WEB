@@ -1,10 +1,18 @@
 <template>
   <div class="pa-4">
-    <!-- Filters Section -->
-    <v-card class="mb-4">
+    <!-- Health Strip -->
+    <HealthStrip
+      class="mb-4"
+      @project-click="filters.projectId = $event"
+    />
+
+    <!-- Sticky Filters Toolbar -->
+    <v-card
+      class="mb-3 filters-toolbar"
+      elevation="1"
+    >
       <v-card-text
-        class="align-center"
-        flex
+        class="d-flex align-center py-2 px-3"
       >
         <v-select
           v-model="filters.projectId"
@@ -16,8 +24,8 @@
           item-value="id"
           clearable
           hide-details
-          max-width="250px"
-          class="mx-2"
+          max-width="230px"
+          class="mr-2"
         >
           <template #item="{'props': itemProps, item}">
             <v-list-item
@@ -37,17 +45,27 @@
           item-value="value"
           clearable
           hide-details
-          max-width="250px"
-          class="mx-2"
+          max-width="200px"
+          class="mr-2"
         />
 
         <v-spacer />
+
+        <v-btn
+          icon="mdi-keyboard"
+          variant="text"
+          size="small"
+          class="mr-1"
+          title="Keyboard shortcuts (?)"
+          @click="shortcutsDialog = true"
+        />
 
         <div v-if="!isEditMode">
           <v-btn
             color="primary"
             prepend-icon="mdi-plus"
-            class="mx-2"
+            size="small"
+            class="mr-2"
             @click="newPanelDialog = true"
           >
             Add Panel
@@ -56,7 +74,7 @@
           <v-btn
             variant="outlined"
             prepend-icon="mdi-pencil"
-            class="mx-2"
+            size="small"
             @click="enterEditMode"
           >
             Edit Layout
@@ -66,7 +84,8 @@
         <div v-else>
           <v-btn
             variant="outlined"
-            class="mx-2"
+            size="small"
+            class="mr-2"
             @click="cancelEditMode"
           >
             Cancel
@@ -74,8 +93,8 @@
 
           <v-btn
             color="primary"
+            size="small"
             :loading="isSavingOrder"
-            class="mx-2"
             @click="saveOrder"
           >
             Save Order
@@ -86,13 +105,13 @@
 
     <!-- Column Size Slider -->
     <v-row
-      class="d-none d-md-flex mb-2"
+      class="d-none d-md-flex mb-1"
       align="center"
       justify="end"
     >
       <v-col
         cols="auto"
-        class="align-center d-flex ga-3"
+        class="align-center d-flex ga-2 py-0"
       >
         <v-icon
           size="small"
@@ -109,7 +128,7 @@
           show-ticks="always"
           tick-size="4"
           hide-details
-          style="width: 180px"
+          style="width: 160px"
         />
 
         <v-icon
@@ -124,15 +143,14 @@
     <!-- Loading State -->
     <v-row v-if="panelsStore.isLoading && !panelsStore.hasData">
       <v-col
-        v-for="n in 3"
+        v-for="n in skeletonCount"
         :key="n"
         cols="12"
-        md="6"
-        lg="4"
+        :md="gridCols"
       >
         <v-skeleton-loader
           type="card"
-          :height="300"
+          :height="currentSize.height"
         />
       </v-col>
     </v-row>
@@ -140,19 +158,33 @@
     <!-- Empty State -->
     <v-row v-else-if="!panelsStore.hasData && !panelsStore.isLoading">
       <v-col cols="12">
-        <v-alert
-          type="info"
-          variant="flat"
-          class="mb-4"
+        <v-card
+          variant="outlined"
+          class="text-center pa-10"
         >
+          <v-icon
+            icon="mdi-view-dashboard-outline"
+            size="64"
+            color="medium-emphasis"
+            class="mb-4"
+          />
+
           <div class="text-h6 mb-2">
             No panels yet
           </div>
 
-          <div class="text-body-2">
+          <div class="text-body-2 text-medium-emphasis mb-6">
             Create your first panel to start monitoring your logs and metrics.
           </div>
-        </v-alert>
+
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-plus"
+            @click="newPanelDialog = true"
+          >
+            Create First Panel
+          </v-btn>
+        </v-card>
       </v-col>
     </v-row>
 
@@ -165,7 +197,7 @@
         v-model="draggablePanels"
         :disabled="!isEditMode"
         item-key="id"
-        class="d-flex ma-6 w-100 flex-wrap"
+        class="d-flex ma-2 w-100 flex-wrap"
         :animation="200"
         ghost-class="ghost-panel"
         chosen-class="chosen-panel"
@@ -222,6 +254,18 @@
               @update-panel="(routes, statistic) => updateBottleneckPanel(panel, routes, statistic)"
             />
 
+            <HeatmapPanelCard
+              v-else-if="panel.type === 'error_heatmap'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              :metrics="panelsStore.getMetricsForPanel(panel.id)"
+              :loading="panelsStore.isMetricsLoading(panel.id)"
+              :disabled="isEditMode"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
+            />
+
             <PanelCard
               v-else
               :panel="panel"
@@ -258,6 +302,8 @@
       :panel="timeOptionsDialog.panel"
       @apply="handleTimeOptionsApply"
     />
+
+    <ShortcutsHelp v-model="shortcutsDialog" />
   </div>
 </template>
 
@@ -276,6 +322,7 @@ useSeoMeta({
 
 const panelsStore = usePanelsStore()
 const projectsStore = useProjectsStore()
+const healthStore = useHealthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -293,6 +340,7 @@ const panelTypeOptions = [
   { label: 'Metrics', value: 'metrics' },
   { label: 'Error List', value: 'error_list' },
   { label: 'Bottleneck Analysis', value: 'bottleneck' },
+  { label: 'Error Heatmap', value: 'error_heatmap' },
 ]
 
 const projectOptions = computed(() => projectsStore.projects.map(p => ({
@@ -312,18 +360,22 @@ const panelSizeIndex = useCookie<number>('panel-size-index', { default: () => 1 
 const safePanelSizeIndex = computed({
   get: () => {
     const i = Number(panelSizeIndex.value)
-    if (Number.isNaN(i) || i < 0 || i >= panelSizeSteps.length)
-      return 1
-
+    if (Number.isNaN(i) || i < 0 || i >= panelSizeSteps.length) return 1
     return i
   },
-  set: (v: number) => {
-    panelSizeIndex.value = v
-  },
+  set: (v: number) => { panelSizeIndex.value = v },
 })
 const currentSize = computed(() => panelSizeSteps[safePanelSizeIndex.value]!)
 const gridCols = computed(() => currentSize.value.cols)
 const panelHeightStyle = computed(() => ({ '--panel-card-height': `${currentSize.value.height}px` }))
+
+// Adaptive skeleton count
+const skeletonCount = computed(() => {
+  const cols = gridCols.value
+  if (cols <= 3) return 4
+  if (cols <= 4) return 3
+  return 2
+})
 
 // Edit Mode
 const isEditMode = ref(false)
@@ -332,6 +384,7 @@ const editingPanels = ref<Panel[]>([])
 
 // Dialogs
 const newPanelDialog = ref(false)
+const shortcutsDialog = ref(false)
 
 const deleteDialog = ref<{
   open: boolean
@@ -367,13 +420,9 @@ const filteredPanels = computed(() => {
 })
 
 const draggablePanels = computed({
-  get: () => (isEditMode.value
-    ? editingPanels.value
-    : filteredPanels.value),
+  get: () => (isEditMode.value ? editingPanels.value : filteredPanels.value),
   set: (newOrder) => {
-    if (isEditMode.value) {
-      editingPanels.value = newOrder
-    }
+    if (isEditMode.value) editingPanels.value = newOrder
   },
 })
 
@@ -395,11 +444,7 @@ function cancelEditMode() {
 async function saveOrder() {
   isSavingOrder.value = true
 
-  const updates = editingPanels.value.map((panel, index) => ({
-    id: panel.id,
-    index,
-  }))
-
+  const updates = editingPanels.value.map((panel, index) => ({ id: panel.id, index }))
   const result = await panelsStore.updatePanelIndexes(updates)
 
   if (result.success) {
@@ -411,16 +456,11 @@ async function saveOrder() {
 }
 
 function openDeleteDialog(panel: Panel) {
-  deleteDialog.value = {
-    open: true,
-    panel,
-    loading: false,
-  }
+  deleteDialog.value = { open: true, panel, loading: false }
 }
 
 async function confirmDelete() {
-  if (!deleteDialog.value.panel)
-    return
+  if (!deleteDialog.value.panel) return
 
   deleteDialog.value.loading = true
 
@@ -435,15 +475,11 @@ async function confirmDelete() {
 }
 
 function openTimeOptionsDialog(panel: Panel) {
-  timeOptionsDialog.value = {
-    open: true,
-    panel,
-  }
+  timeOptionsDialog.value = { open: true, panel }
 }
 
 async function handleTimeOptionsApply(params: { period?: TimeRangePreset, periodFrom?: string, periodTo?: string }) {
-  if (!timeOptionsDialog.value.panel)
-    return
+  if (!timeOptionsDialog.value.panel) return
 
   const timeRange = {
     period: params.period || null,
@@ -467,20 +503,16 @@ async function handlePanelCreated(panel: Panel) {
       await panelsStore.fetchBottleneckForPanel(panel, panel.routes, panel.statistic)
     }
   }
+  else if (panel.type === 'error_heatmap') {
+    await panelsStore.fetchHeatmapForPanel(panel)
+  }
   else {
     await panelsStore.fetchMetricsForPanel(panel)
   }
 }
 
-async function updateBottleneckPanel(
-  panel: Panel,
-  routes: string[],
-  statistic: BottleneckStatistic,
-) {
-  await panelsStore.updatePanel(panel.id, {
-    routes,
-    statistic,
-  })
+async function updateBottleneckPanel(panel: Panel, routes: string[], statistic: BottleneckStatistic) {
+  await panelsStore.updatePanel(panel.id, { routes, statistic })
 }
 
 function fetchAllMetrics() {
@@ -496,42 +528,39 @@ function fetchAllMetrics() {
         panelsStore.fetchBottleneckForPanel(panel, panel.routes, panel.statistic)
       }
     }
+    else if (panel.type === 'error_heatmap') {
+      panelsStore.fetchHeatmapForPanel(panel)
+    }
     else {
       panelsStore.fetchMetricsForPanel(panel)
     }
   }
 }
 
-watch(() => filters.value.projectId, () => {
-  updateUrlParams()
+// Keyboard shortcuts
+useDashboardShortcuts({
+  onNewPanel: () => { newPanelDialog.value = true },
+  onRefresh: () => fetchAllMetrics(),
+  onToggleEdit: () => isEditMode.value ? cancelEditMode() : enterEditMode(),
+  onShowHelp: () => { shortcutsDialog.value = true },
 })
 
-watch(() => filters.value.panelType, () => {
-  updateUrlParams()
-})
+watch(() => filters.value.projectId, () => updateUrlParams())
+watch(() => filters.value.panelType, () => updateUrlParams())
 
 function updateUrlParams() {
   const query: Record<string, string> = {}
-
-  if (filters.value.projectId) {
-    query.project = filters.value.projectId
-  }
-
-  if (filters.value.panelType) {
-    query.type = filters.value.panelType
-  }
-
+  if (filters.value.projectId) query.project = filters.value.projectId
+  if (filters.value.panelType) query.type = filters.value.panelType
   router.replace({ query })
 }
 
 function loadFiltersFromUrl() {
   const query = route.query
-
   if (query.project && typeof query.project === 'string') {
     filters.value.projectId = query.project
   }
-
-  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list', 'bottleneck'].includes(query.type)) {
+  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap'].includes(query.type)) {
     filters.value.panelType = query.type as PanelType
   }
 }
@@ -546,10 +575,26 @@ onMounted(async () => {
   ])
 
   await fetchAllMetrics()
+
+  const projectIds = projectsStore.projects.map(p => String(p.project_id))
+  if (projectIds.length > 0) {
+    await healthStore.fetchHealthSummary(projectIds, 'today')
+    healthStore.startAutoRefresh(projectIds, 'today')
+  }
+})
+
+onUnmounted(() => {
+  healthStore.stopAutoRefresh()
 })
 </script>
 
 <style scoped>
+.filters-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 .ghost-panel {
   opacity: 0.4;
 }

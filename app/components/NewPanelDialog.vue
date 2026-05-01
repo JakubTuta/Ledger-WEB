@@ -329,6 +329,7 @@ const panelTypeOptions = [
   { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line' },
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted' },
   { label: 'Bottleneck Analysis', value: 'bottleneck', icon: 'mdi-speedometer' },
+  { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid' },
 ]
 
 const statisticOptions = [

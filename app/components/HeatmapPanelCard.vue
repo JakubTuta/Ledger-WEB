@@ -3,8 +3,8 @@
     :panel="panel"
     :project="project"
     :disabled="disabled"
-    :icon="panelTypeIcon"
-    :icon-color="panelTypeColor"
+    icon="mdi-grid"
+    icon-color="error"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
@@ -25,13 +25,13 @@
 
         <!-- No Data State -->
         <div
-          v-else-if="!metrics || chartData.length === 0"
+          v-else-if="!metrics || metrics.data.length === 0"
           class="text-grey d-flex align-center justify-center"
           style="height: 100%;"
         >
           <div class="text-center">
             <v-icon
-              icon="mdi-chart-bar"
+              icon="mdi-grid"
               size="48"
               class="mb-2"
             />
@@ -41,11 +41,10 @@
           </div>
         </div>
 
-        <!-- Chart -->
-        <MetricChart
+        <!-- Heatmap -->
+        <HeatmapChart
           v-else
           :metrics="metrics"
-          :mode="chartMode"
           :height="chartHeight"
         />
       </v-card-text>
@@ -74,10 +73,10 @@
 
           <div class="text-center">
             <div class="text-body-2 font-weight-medium">
-              {{ avgDuration }}
+              {{ errorRateDisplay }}
             </div>
             <div class="text-caption text-grey">
-              Avg Duration
+              Error Rate
             </div>
           </div>
         </div>
@@ -104,46 +103,13 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
-const panelTypeIcon = computed(() => {
-  switch (props.panel.type) {
-    case 'logs': return 'mdi-text-box-outline'
-    case 'errors': return 'mdi-alert-circle'
-    case 'metrics': return 'mdi-chart-line'
-    case 'error_list': return 'mdi-format-list-bulleted'
-    default: return 'mdi-view-dashboard'
-  }
-})
-
-const panelTypeColor = computed(() => {
-  switch (props.panel.type) {
-    case 'errors':
-    case 'error_list': return 'error'
-    case 'metrics': return 'success'
-    default: return 'primary'
-  }
-})
-
-const chartMode = computed(() => props.panel.type === 'metrics' ? 'latency' : 'volume')
-
 const chartHeight = ref(200)
-const containerRef = ref<HTMLElement | null>(null)
 
-const chartData = computed(() => props.metrics?.data ?? [])
-
-const totalLogs = computed(() => chartData.value.reduce((s, d) => s + d.log_count, 0))
-const totalErrors = computed(() => chartData.value.reduce((s, d) => s + d.error_count, 0))
-
-const avgDuration = computed(() => {
-  const durations = chartData.value.filter(d => d.avg_duration_ms > 0)
-  if (durations.length === 0) return '-'
-  const avg = durations.reduce((s, d) => s + d.avg_duration_ms, 0) / durations.length
-  return `${avg.toFixed(0)}ms`
-})
-
-onMounted(() => {
-  containerRef.value = document.querySelector('.panel-content-container')
-  if (containerRef.value) {
-    chartHeight.value = Math.max(containerRef.value.clientHeight - 16, 100)
-  }
+const data = computed(() => props.metrics?.data ?? [])
+const totalLogs = computed(() => data.value.reduce((s, d) => s + d.log_count, 0))
+const totalErrors = computed(() => data.value.reduce((s, d) => s + d.error_count, 0))
+const errorRateDisplay = computed(() => {
+  if (totalLogs.value === 0) return '-'
+  return `${((totalErrors.value / totalLogs.value) * 100).toFixed(1)}%`
 })
 </script>
