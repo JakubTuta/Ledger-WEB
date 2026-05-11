@@ -2,6 +2,7 @@
   <v-dialog
     v-model="isOpen"
     max-width="380"
+    :fullscreen="$vuetify.display.smAndDown"
   >
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">

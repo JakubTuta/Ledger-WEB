@@ -53,10 +53,10 @@
             class="item-card mb-2"
           >
             <v-card-title
-              class="d-flex align-center justify-space-between cursor-pointer pa-2"
+              class="d-flex align-start justify-space-between cursor-pointer pa-2 flex-wrap"
               @click="toggleExpanded(item)"
             >
-              <div class="d-flex align-center flex-grow-1 gap-1">
+              <div class="d-flex align-center flex-grow-1 gap-1" style="min-width: 0">
                 <v-icon
                   :icon="getItemIcon(item)"
                   :color="getIconColorForItem(item)"
@@ -69,7 +69,7 @@
                   v-if="type === 'errors'"
                   class="d-flex flex-column flex-grow-1"
                 >
-                  <span class="text-body-2 font-weight-bold">
+                  <span class="text-body-2 font-weight-bold text-truncate">
                     {{ item.message }}
                   </span>
 
@@ -98,7 +98,7 @@
                   v-else
                   class="d-flex flex-column flex-grow-1"
                 >
-                  <span class="text-body-2 font-weight-bold">
+                  <span class="text-body-2 font-weight-bold text-truncate">
                     {{ item.message }}
                   </span>
 
@@ -123,7 +123,7 @@
 
               <span
                 v-if="item.timestamp"
-                class="text-caption text-medium-emphasis ml-2"
+                class="text-caption text-medium-emphasis ml-2 flex-shrink-0"
               >
                 {{ formatTimestamp(item.timestamp) }}
               </span>

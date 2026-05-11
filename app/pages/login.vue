@@ -1,8 +1,8 @@
 <template>
   <v-container class="fill-height d-flex align-center justify-center">
     <v-card
-      width="400"
-      class="pa-4"
+      class="pa-4 w-100"
+      style="max-width: 400px;"
     >
       <v-card-title class="d-flex flex-column align-center mb-4 justify-center">
         <v-img

@@ -22,7 +22,7 @@
               {{ errorDescription }}
             </p>
 
-            <div class="d-flex ga-4 justify-center">
+            <div class="d-flex flex-column flex-sm-row ga-4 justify-center">
               <v-btn
                 size="large"
                 color="white"

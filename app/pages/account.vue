@@ -1,21 +1,74 @@
 <template>
+  <!-- Mobile nav drawer -->
+  <v-navigation-drawer
+    v-if="mobile"
+    v-model="mobileNavDrawer"
+    temporary
+  >
+    <v-list-subheader>Settings</v-list-subheader>
+
+    <v-list density="compact">
+      <v-list-item
+        :active="activeSection === 'projects'"
+        title="Projects"
+        prepend-icon="mdi-folder-multiple"
+        @click="mobileSectionClick('projects')"
+      />
+
+      <v-list-item
+        :active="activeSection === 'notifications'"
+        title="Notifications"
+        prepend-icon="mdi-bell"
+        @click="mobileSectionClick('notifications')"
+      />
+
+      <v-list-item
+        :active="activeSection === 'quota'"
+        title="Quota usage"
+        prepend-icon="mdi-chart-line"
+        @click="mobileSectionClick('quota')"
+      />
+
+      <v-list-item
+        :active="activeSection === 'apiKeys'"
+        title="API keys"
+        prepend-icon="mdi-key"
+        @click="mobileSectionClick('apiKeys')"
+      />
+
+      <v-list-item
+        :active="activeSection === 'sharing'"
+        title="Project sharing"
+        prepend-icon="mdi-account-group"
+        @click="mobileSectionClick('sharing')"
+      />
+
+      <v-list-item
+        :active="activeSection === 'account'"
+        title="Account settings"
+        prepend-icon="mdi-account"
+        @click="mobileSectionClick('account')"
+      />
+    </v-list>
+  </v-navigation-drawer>
+
   <v-container
     fluid
     class="pa-4"
-    style="height: calc(100vh - 64px);"
+    :style="mobile ? '' : 'height: calc(100vh - 64px);'"
   >
     <v-card
       class="w-100"
-      style="height: 100%;"
+      :style="mobile ? '' : 'height: 100%;'"
     >
       <v-row
         class="ma-0"
         no-gutters
-        style="height: 100%;"
+        :style="mobile ? '' : 'height: 100%;'"
       >
-        <!-- Left Column: Navigation -->
+        <!-- Left Column: Navigation (desktop only) -->
         <v-col
-          cols="12"
+          v-if="!mobile"
           md="3"
           class="border-e"
         >
@@ -69,14 +122,31 @@
         <!-- Right Column: Scrollable Content -->
         <v-col
           cols="12"
-          md="9"
+          :md="mobile ? 12 : 9"
           class="pa-0"
-          style="height: 100%;"
+          :style="mobile ? '' : 'height: 100%;'"
         >
+          <!-- Mobile section header -->
+          <div
+            v-if="mobile"
+            class="d-flex align-center pa-3 border-b"
+          >
+            <v-btn
+              icon="mdi-menu"
+              variant="text"
+              size="small"
+              @click="mobileNavDrawer = true"
+            />
+
+            <span class="text-subtitle-1 font-weight-medium ml-2 text-capitalize">
+              {{ activeSection === 'apiKeys' ? 'API Keys' : activeSection }}
+            </span>
+          </div>
+
           <div
             ref="scrollContainer"
             class="overflow-y-auto pa-6"
-            style="height: 100%;"
+            :style="mobile ? '' : 'height: 100%;'"
             @scroll="handleScroll"
           >
             <!-- Projects Section -->
@@ -246,6 +316,7 @@ useSeoMeta({
   robots: 'noindex, nofollow',
 })
 
+const { mobile } = useDisplay()
 const quotaStore = useQuotaStore()
 const projectsStore = useProjectsStore()
 const { projects } = storeToRefs(projectsStore)
@@ -255,6 +326,7 @@ const apiKeysStore = useApiKeysStore()
 const activeSection = ref<'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'account'>('projects')
 const selectedProjectId = ref<number | null>(null)
 const showJoinDialog = ref(false)
+const mobileNavDrawer = ref(false)
 const scrollContainer = ref<HTMLElement | null>(null)
 const projectsSection = ref<HTMLElement | null>(null)
 const notificationsSection = ref<HTMLElement | null>(null)
@@ -264,6 +336,11 @@ const sharingSection = ref<HTMLElement | null>(null)
 const accountSection = ref<HTMLElement | null>(null)
 
 let isScrolling = false
+
+function mobileSectionClick(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'account') {
+  mobileNavDrawer.value = false
+  nextTick(() => scrollToSection(section))
+}
 
 function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'account') {
   if (!scrollContainer.value)

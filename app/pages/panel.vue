@@ -11,134 +11,179 @@
       class="filters-toolbar mb-3"
       elevation="1"
     >
-      <v-card-text
-        class="d-flex align-center px-3 py-2"
-      >
-        <v-select
-          v-model="filters.projectId"
-          label="Project"
-          variant="outlined"
-          density="compact"
-          :items="projectOptions"
-          item-title="name"
-          item-value="id"
-          clearable
-          hide-details
-          max-width="230px"
-          class="mr-2"
-        >
-          <template #item="{'props': itemProps, item}">
-            <v-list-item
-              v-bind="itemProps"
-              :subtitle="item.raw.environment"
-            />
-          </template>
-        </v-select>
-
-        <v-select
-          v-model="filters.panelType"
-          label="Panel Type"
-          variant="outlined"
-          density="compact"
-          :items="panelTypeOptions"
-          item-title="label"
-          item-value="value"
-          clearable
-          hide-details
-          max-width="200px"
-          class="mr-2"
-        />
-
-        <v-spacer />
-
-        <v-btn
-          icon="mdi-keyboard"
-          variant="text"
-          size="small"
-          class="mr-1"
-          title="Keyboard shortcuts (?)"
-          @click="shortcutsDialog = true"
-        />
-
-        <div v-if="!isEditMode">
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-plus"
-            size="small"
-            class="mr-2"
-            @click="newPanelDialog = true"
-          >
-            Add Panel
-          </v-btn>
-
-          <v-btn
+      <v-card-text class="px-3 py-2">
+        <div class="d-flex align-center flex-wrap ga-2">
+          <v-select
+            v-model="filters.projectId"
+            label="Project"
             variant="outlined"
-            prepend-icon="mdi-pencil"
-            size="small"
-            @click="enterEditMode"
+            density="compact"
+            :items="projectOptions"
+            item-title="name"
+            item-value="id"
+            clearable
+            hide-details
+            :style="mobile ? 'flex: 1; min-width: 0' : 'max-width: 230px'"
           >
-            Edit Layout
-          </v-btn>
+            <template #item="{'props': itemProps, item}">
+              <v-list-item
+                v-bind="itemProps"
+                :subtitle="item.raw.environment"
+              />
+            </template>
+          </v-select>
+
+          <v-select
+            v-model="filters.panelType"
+            label="Panel Type"
+            variant="outlined"
+            density="compact"
+            :items="panelTypeOptions"
+            item-title="label"
+            item-value="value"
+            clearable
+            hide-details
+            :style="mobile ? 'flex: 1; min-width: 0' : 'max-width: 200px'"
+          />
+
+          <v-spacer v-if="!mobile" />
+
+          <!-- Desktop actions -->
+          <template v-if="!mobile">
+            <v-btn
+              icon="mdi-keyboard"
+              variant="text"
+              size="small"
+              title="Keyboard shortcuts (?)"
+              @click="shortcutsDialog = true"
+            />
+
+            <template v-if="!isEditMode">
+              <v-btn
+                color="primary"
+                prepend-icon="mdi-plus"
+                size="small"
+                @click="newPanelDialog = true"
+              >
+                Add Panel
+              </v-btn>
+
+              <v-btn
+                variant="outlined"
+                prepend-icon="mdi-pencil"
+                size="small"
+                @click="enterEditMode"
+              >
+                Edit Layout
+              </v-btn>
+            </template>
+
+            <template v-else>
+              <v-btn
+                variant="outlined"
+                size="small"
+                @click="cancelEditMode"
+              >
+                Cancel
+              </v-btn>
+
+              <v-btn
+                color="primary"
+                size="small"
+                :loading="isSavingOrder"
+                @click="saveOrder"
+              >
+                Save Order
+              </v-btn>
+            </template>
+          </template>
+
+          <!-- Mobile actions overflow menu -->
+          <template v-else>
+            <template v-if="isEditMode">
+              <v-btn
+                variant="outlined"
+                size="small"
+                @click="cancelEditMode"
+              >
+                Cancel
+              </v-btn>
+
+              <v-btn
+                color="primary"
+                size="small"
+                :loading="isSavingOrder"
+                @click="saveOrder"
+              >
+                Save
+              </v-btn>
+            </template>
+
+            <v-menu v-else>
+              <template #activator="{ props: menuProps }">
+                <v-btn
+                  v-bind="menuProps"
+                  icon="mdi-dots-vertical"
+                  variant="text"
+                  size="small"
+                />
+              </template>
+
+              <v-list density="compact">
+                <v-list-item
+                  prepend-icon="mdi-plus"
+                  title="Add Panel"
+                  @click="newPanelDialog = true"
+                />
+
+                <v-list-item
+                  prepend-icon="mdi-pencil"
+                  title="Edit Layout"
+                  @click="enterEditMode"
+                />
+
+                <v-list-item
+                  prepend-icon="mdi-keyboard"
+                  title="Keyboard shortcuts"
+                  @click="shortcutsDialog = true"
+                />
+              </v-list>
+            </v-menu>
+          </template>
         </div>
 
-        <div v-else>
-          <v-btn
-            variant="outlined"
+        <!-- Column Size Slider (all screen sizes, desktop-only columns) -->
+        <div
+          v-if="!mobile"
+          class="d-flex align-center ga-2 mt-2 justify-end"
+        >
+          <v-icon
             size="small"
-            class="mr-2"
-            @click="cancelEditMode"
+            color="medium-emphasis"
           >
-            Cancel
-          </v-btn>
+            mdi-view-grid
+          </v-icon>
 
-          <v-btn
-            color="primary"
+          <v-slider
+            v-model="safePanelSizeIndex"
+            :min="0"
+            :max="3"
+            :step="1"
+            show-ticks="always"
+            tick-size="4"
+            hide-details
+            style="width: 160px"
+          />
+
+          <v-icon
             size="small"
-            :loading="isSavingOrder"
-            @click="saveOrder"
+            color="medium-emphasis"
           >
-            Save Order
-          </v-btn>
+            mdi-view-grid-outline
+          </v-icon>
         </div>
       </v-card-text>
     </v-card>
-
-    <!-- Column Size Slider -->
-    <v-row
-      class="d-none d-md-flex mb-1"
-      align="center"
-      justify="end"
-    >
-      <v-col
-        cols="auto"
-        class="align-center d-flex ga-2 py-0"
-      >
-        <v-icon
-          size="small"
-          color="medium-emphasis"
-        >
-          mdi-view-grid
-        </v-icon>
-
-        <v-slider
-          v-model="safePanelSizeIndex"
-          :min="0"
-          :max="3"
-          :step="1"
-          show-ticks="always"
-          tick-size="4"
-          hide-details
-          style="width: 160px"
-        />
-
-        <v-icon
-          size="small"
-          color="medium-emphasis"
-        >
-          mdi-view-grid-outline
-        </v-icon>
-      </v-col>
-    </v-row>
 
     <!-- Loading State -->
     <v-row v-if="panelsStore.isLoading && !panelsStore.hasData">
@@ -146,6 +191,7 @@
         v-for="n in skeletonCount"
         :key="n"
         cols="12"
+        :sm="gridCols >= 6 ? 12 : 6"
         :md="gridCols"
       >
         <v-skeleton-loader
@@ -206,6 +252,7 @@
         <template #item="{'element': panel}">
           <v-col
             cols="12"
+            :sm="gridCols >= 6 ? 12 : 6"
             :md="gridCols"
           >
             <ListPanelCard
@@ -320,6 +367,7 @@ useSeoMeta({
   robots: 'noindex, nofollow',
 })
 
+const { mobile } = useDisplay()
 const panelsStore = usePanelsStore()
 const projectsStore = useProjectsStore()
 const healthStore = useHealthStore()

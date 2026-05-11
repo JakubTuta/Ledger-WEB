@@ -41,7 +41,11 @@
         />
       </div>
 
-      <div class="d-flex align-center gap-1">
+      <!-- Desktop: inline actions -->
+      <div
+        v-if="!mobile"
+        class="d-flex align-center gap-1"
+      >
         <v-btn
           variant="text"
           size="small"
@@ -69,6 +73,40 @@
           @click="emit('delete')"
         />
       </div>
+
+      <!-- Mobile: overflow menu -->
+      <v-menu v-else>
+        <template #activator="{ props: menuProps }">
+          <v-btn
+            v-bind="menuProps"
+            icon="mdi-dots-vertical"
+            variant="text"
+            size="small"
+            :disabled="disabled"
+          />
+        </template>
+
+        <v-list density="compact">
+          <v-list-item
+            prepend-icon="mdi-clock-outline"
+            :title="timeRangeText"
+            @click="emit('timeOptions')"
+          />
+
+          <v-list-item
+            prepend-icon="mdi-refresh"
+            title="Refresh"
+            @click="emit('refresh')"
+          />
+
+          <v-list-item
+            prepend-icon="mdi-delete"
+            title="Delete"
+            base-color="error"
+            @click="emit('delete')"
+          />
+        </v-list>
+      </v-menu>
     </v-card-title>
 
     <!-- Project Info -->
@@ -129,6 +167,7 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
+const { mobile } = useDisplay()
 const panelsStore = usePanelsStore()
 
 const isEditingName = ref(false)
@@ -214,6 +253,7 @@ function cancelNameEdit() {
 
 .panel-name-input {
   max-width: 300px;
+  min-width: 0;
 }
 
 .panel-content-wrapper {

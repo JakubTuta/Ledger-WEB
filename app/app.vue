@@ -45,7 +45,9 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 80px;
   right: 16px;
+  left: 16px;
   max-width: 400px;
+  margin-left: auto;
   z-index: 9999;
   pointer-events: none;
 }

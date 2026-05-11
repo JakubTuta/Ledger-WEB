@@ -31,12 +31,11 @@
               exception, and custom log — all in a real-time dashboard you'll actually enjoy using.
             </p>
 
-            <div class="hero-actions">
+            <div class="d-flex flex-column flex-sm-row justify-center ga-3 hero-actions">
               <v-btn
                 size="x-large"
                 color="primary"
                 variant="flat"
-                class="mb-4 mr-4"
                 to="/register"
               >
                 Get Started Free
@@ -48,7 +47,6 @@
               <v-btn
                 size="x-large"
                 variant="outlined"
-                class="mb-4"
                 to="/login"
               >
                 Sign In

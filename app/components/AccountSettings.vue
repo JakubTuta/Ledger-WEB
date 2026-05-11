@@ -1,5 +1,5 @@
 <template>
-  <div style="max-width: 50%; min-width: 300px;">
+  <div style="max-width: 600px; width: 100%;">
     <v-form ref="nameFormRef">
       <v-text-field
         v-model="name"

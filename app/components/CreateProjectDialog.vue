@@ -2,6 +2,7 @@
   <v-dialog
     v-model="dialogModel"
     max-width="600"
+    :fullscreen="$vuetify.display.smAndDown"
   >
     <template #activator="{props}">
       <v-btn

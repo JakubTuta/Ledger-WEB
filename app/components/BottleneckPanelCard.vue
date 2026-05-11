@@ -12,7 +12,7 @@
     <template #content>
       <v-card-text class="panel-content-container pa-2">
         <!-- Controls -->
-        <div class="d-flex mb-2 gap-2">
+        <div class="d-flex flex-column flex-sm-row mb-2 gap-2">
           <v-select
             v-model="selectedRoutes"
             :items="availableRoutes"
@@ -45,7 +45,7 @@
             density="compact"
             hide-details
             :disabled="disabled || loading"
-            style="max-width: 140px;"
+            :style="mobile ? '' : 'max-width: 140px;'"
           />
         </div>
 
@@ -131,6 +131,7 @@ const emit = defineEmits<{
   updatePanel: [routes: string[], statistic: BottleneckStatistic]
 }>()
 
+const { mobile } = useDisplay()
 const selectedRoutes = ref<string[]>([])
 const selectedStatistic = ref<BottleneckStatistic>('avg')
 const statisticOptions = [

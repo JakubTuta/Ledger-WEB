@@ -13,7 +13,7 @@
           <v-form
             ref="passwordFormRef"
             v-model="isPasswordFormValid"
-            style="max-width: 50%; min-width: 300px;"
+            style="max-width: 600px; width: 100%;"
             @submit.prevent="handleChangePassword"
           >
             <v-text-field

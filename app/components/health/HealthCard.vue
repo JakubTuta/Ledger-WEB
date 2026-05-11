@@ -130,6 +130,7 @@ const props = defineProps<{
   summary: ProjectHealthSummary
   projectName?: string
   environment?: string
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -187,8 +188,8 @@ const p95Class = computed(() => {
 
 <style scoped>
 .health-card {
-  min-width: 200px;
-  max-width: 240px;
+  min-width: v-bind("compact ? '160px' : '200px'");
+  max-width: v-bind("compact ? '200px' : '240px'");
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.15s;
   position: relative;

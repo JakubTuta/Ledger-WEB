@@ -25,7 +25,8 @@
     <!-- Cards -->
     <div
       v-else
-      class="d-flex gap-3 pa-1 overflow-x-auto"
+      class="d-flex pa-1 overflow-x-auto"
+      :class="mobile ? 'gap-2' : 'gap-3'"
     >
       <HealthCard
         v-for="summary in summaries"
@@ -33,6 +34,7 @@
         :summary="summary"
         :project-name="getProjectName(summary.project_id)"
         :environment="getProjectEnvironment(summary.project_id)"
+        :compact="mobile"
         @click="emit('project-click', $event)"
       />
     </div>
@@ -46,6 +48,7 @@ const emit = defineEmits<{
   'project-click': [projectId: string]
 }>()
 
+const { mobile } = useDisplay()
 const healthStore = useHealthStore()
 const projectsStore = useProjectsStore()
 
