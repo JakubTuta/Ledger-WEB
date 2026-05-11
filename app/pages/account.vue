@@ -306,6 +306,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useDisplay } from 'vuetify'
 
 definePageMeta({
   middleware: 'auth',

@@ -152,6 +152,7 @@
 <script setup lang="ts">
 import type { Panel, TimeRangePreset } from '~/types/panel'
 import type { Project } from '~/types/project'
+import { useDisplay } from 'vuetify'
 
 const props = defineProps<{
   panel: Panel

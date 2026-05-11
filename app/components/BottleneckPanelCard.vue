@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import type { BottleneckMetricData, BottleneckMetricsResponse, BottleneckStatistic, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
+import { useDisplay } from 'vuetify'
 
 const props = defineProps<{
   panel: Panel

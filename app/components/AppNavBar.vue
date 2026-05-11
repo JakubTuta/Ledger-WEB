@@ -151,6 +151,8 @@
 </template>
 
 <script setup lang="ts">
+import { useDisplay } from 'vuetify'
+
 const { mobile } = useDisplay()
 const authStore = useAuthStore()
 const drawer = ref(false)

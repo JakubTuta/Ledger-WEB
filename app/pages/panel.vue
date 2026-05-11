@@ -357,6 +357,7 @@
 <script setup lang="ts">
 import type { BottleneckStatistic, Panel, PanelType, TimeRangePreset } from '~/types/panel'
 import type { Project } from '~/types/project'
+import { useDisplay } from 'vuetify'
 
 definePageMeta({
   middleware: 'auth',

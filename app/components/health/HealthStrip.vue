@@ -43,6 +43,7 @@
 
 <script setup lang="ts">
 import type { ProjectHealthSummary } from '~/types/health'
+import { useDisplay } from 'vuetify'
 
 const emit = defineEmits<{
   'project-click': [projectId: string]
