@@ -121,12 +121,25 @@
                 </div>
               </div>
 
-              <span
-                v-if="item.timestamp"
-                class="text-caption text-medium-emphasis ml-2 flex-shrink-0"
-              >
-                {{ formatTimestamp(item.timestamp) }}
-              </span>
+              <div class="d-flex align-center gap-1 flex-shrink-0 ml-2">
+                <span
+                  v-if="item.timestamp"
+                  class="text-caption text-medium-emphasis"
+                >
+                  {{ formatTimestamp(item.timestamp) }}
+                </span>
+
+                <v-chip
+                  v-if="item.trace_id"
+                  size="x-small"
+                  variant="tonal"
+                  color="info"
+                  prepend-icon="mdi-link-variant"
+                  @click.stop="openTrace(item.trace_id)"
+                >
+                  trace
+                </v-chip>
+              </div>
             </v-card-title>
 
             <v-expand-transition>
@@ -308,6 +321,8 @@
 import type { NotificationLevel } from '~/types/notifications'
 import type { Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
+
+const { openTrace } = useTraceDrawer()
 
 type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'critical'
 type LogType = 'console' | 'logger' | 'exception' | 'network' | 'database' | 'endpoint' | 'custom'

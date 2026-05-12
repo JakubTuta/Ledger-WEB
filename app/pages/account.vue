@@ -177,6 +177,13 @@
 
                 <v-card-text>
                   <NotificationPreferences />
+
+                  <v-divider class="my-6" />
+
+                  <div class="text-h6 font-weight-bold mb-4">
+                    Alert channel preferences
+                  </div>
+                  <AlertsPreferenceMatrix />
                 </v-card-text>
               </v-card>
             </div>

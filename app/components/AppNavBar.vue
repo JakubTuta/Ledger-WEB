@@ -52,6 +52,14 @@
             >
               Panel
             </v-btn>
+
+            <v-btn
+              to="/alerts"
+              variant="text"
+              prepend-icon="mdi-bell-alert"
+            >
+              Alerts
+            </v-btn>
           </template>
         </div>
 
@@ -75,6 +83,8 @@
           </template>
 
           <template v-else>
+            <NotificationsNotificationBell />
+
             <v-btn
               to="/account"
               variant="text"
@@ -130,6 +140,20 @@
           to="/panel"
           prepend-icon="mdi-view-dashboard"
           title="Panel"
+          @click="drawer = false"
+        />
+
+        <v-list-item
+          to="/alerts"
+          prepend-icon="mdi-bell-alert"
+          title="Alerts"
+          @click="drawer = false"
+        />
+
+        <v-list-item
+          to="/notifications"
+          prepend-icon="mdi-bell"
+          title="Notifications"
           @click="drawer = false"
         />
 

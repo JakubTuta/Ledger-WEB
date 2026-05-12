@@ -1,6 +1,8 @@
-export type NotificationLevel = 'error' | 'critical'
+export type NotificationLevel = 'error' | 'critical' | 'info' | 'warning'
 
 export type NotificationType = 'exception'
+
+export type NotificationKind = 'error_notification' | 'alert' | 'info'
 
 export interface ProjectNotificationSettings {
   enabled: boolean
@@ -37,4 +39,37 @@ export interface SSEErrorNotification {
 export interface NotificationItem extends SSEErrorNotification {
   id: string
   expanded: boolean
+  read_at?: string | null
+  kind?: NotificationKind
+}
+
+export interface InboxNotification {
+  id: string
+  kind: NotificationKind
+  level: NotificationLevel
+  message: string
+  error_type?: string
+  project_id?: number
+  project_name?: string
+  stack_trace?: string
+  context?: Record<string, any>
+  timestamp: string
+  read_at: string | null
+  expanded?: boolean
+}
+
+export interface NotificationsListResponse {
+  notifications: InboxNotification[]
+  total: number
+  has_more: boolean
+}
+
+export interface NotificationFilters {
+  unread?: boolean
+  kind?: NotificationKind
+  project_id?: number
+  from?: string
+  to?: string
+  limit?: number
+  offset?: number
 }

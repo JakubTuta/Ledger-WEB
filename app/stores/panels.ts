@@ -11,6 +11,36 @@ import type {
 } from '~/types/panel'
 import { defineStore } from 'pinia'
 
+// --- Tabs types ---
+interface DashboardTab {
+  id: string
+  name: string
+  templateId: string | null
+  panelIds: string[]
+}
+
+const TABS_STORAGE_KEY = 'ledger_dashboard_tabs'
+const ACTIVE_TAB_STORAGE_KEY = 'ledger_active_tab'
+const TABS_VERSION_KEY = 'ledger_tabs_migrated_v1'
+
+function loadTabsFromStorage(): DashboardTab[] {
+  try {
+    if (typeof localStorage === 'undefined') return []
+    const raw = localStorage.getItem(TABS_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  }
+  catch { return [] }
+}
+
+function saveTabsToStorage(tabs: DashboardTab[]) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(tabs))
+    }
+  }
+  catch { /* noop */ }
+}
+
 export const usePanelsStore = defineStore('panels', () => {
   const { client } = useApiStore()
 
@@ -20,21 +50,21 @@ export const usePanelsStore = defineStore('panels', () => {
   const lastFetchTime = ref<Date | null>(null)
   const hasData = computed(() => panels.value.length > 0)
 
-  const panelMetrics = ref<Map<number, AggregatedMetricsResponse>>(new Map())
-  const metricsLoading = ref<Set<number>>(new Set())
+  const panelMetrics = ref<Map<string, AggregatedMetricsResponse>>(new Map())
+  const metricsLoading = ref<Set<string>>(new Set())
 
-  const panelErrors = ref<Map<number, any[]>>(new Map())
-  const errorsLoading = ref<Set<number>>(new Set())
-  const errorsOffset = ref<Map<number, number>>(new Map())
-  const errorsHasMore = ref<Map<number, boolean>>(new Map())
+  const panelErrors = ref<Map<string, any[]>>(new Map())
+  const errorsLoading = ref<Set<string>>(new Set())
+  const errorsOffset = ref<Map<string, number>>(new Map())
+  const errorsHasMore = ref<Map<string, boolean>>(new Map())
 
-  const panelLogs = ref<Map<number, any[]>>(new Map())
-  const logsLoading = ref<Set<number>>(new Set())
-  const logsOffset = ref<Map<number, number>>(new Map())
-  const logsHasMore = ref<Map<number, boolean>>(new Map())
+  const panelLogs = ref<Map<string, any[]>>(new Map())
+  const logsLoading = ref<Set<string>>(new Set())
+  const logsOffset = ref<Map<string, number>>(new Map())
+  const logsHasMore = ref<Map<string, boolean>>(new Map())
 
-  const panelBottlenecks = ref<Map<number, BottleneckMetricsResponse>>(new Map())
-  const bottlenecksLoading = ref<Set<number>>(new Set())
+  const panelBottlenecks = ref<Map<string, BottleneckMetricsResponse>>(new Map())
+  const bottlenecksLoading = ref<Set<string>>(new Set())
 
   const sortedPanels = computed(() => [...panels.value].sort((a, b) => a.index - b.index),
   )
@@ -130,11 +160,11 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const getMetricsForPanel = (panelId: number) => {
+  const getMetricsForPanel = (panelId: string) => {
     return panelMetrics.value.get(panelId)
   }
 
-  const isMetricsLoading = (panelId: number) => {
+  const isMetricsLoading = (panelId: string) => {
     return metricsLoading.value.has(panelId)
   }
 
@@ -195,19 +225,19 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const getErrorsForPanel = (panelId: number) => {
+  const getErrorsForPanel = (panelId: string) => {
     return panelErrors.value.get(panelId) || []
   }
 
-  const isErrorsLoading = (panelId: number) => {
+  const isErrorsLoading = (panelId: string) => {
     return errorsLoading.value.has(panelId)
   }
 
-  const getErrorsHasMore = (panelId: number) => {
+  const getErrorsHasMore = (panelId: string) => {
     return errorsHasMore.value.get(panelId) || false
   }
 
-  const getErrorsOffset = (panelId: number) => {
+  const getErrorsOffset = (panelId: string) => {
     return errorsOffset.value.get(panelId) || 0
   }
 
@@ -286,19 +316,19 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const getLogsForPanel = (panelId: number) => {
+  const getLogsForPanel = (panelId: string) => {
     return panelLogs.value.get(panelId) || []
   }
 
-  const isLogsLoading = (panelId: number) => {
+  const isLogsLoading = (panelId: string) => {
     return logsLoading.value.has(panelId)
   }
 
-  const getLogsHasMore = (panelId: number) => {
+  const getLogsHasMore = (panelId: string) => {
     return logsHasMore.value.get(panelId) || false
   }
 
-  const getLogsOffset = (panelId: number) => {
+  const getLogsOffset = (panelId: string) => {
     return logsOffset.value.get(panelId) || 0
   }
 
@@ -348,11 +378,11 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const getBottleneckForPanel = (panelId: number) => {
+  const getBottleneckForPanel = (panelId: string) => {
     return panelBottlenecks.value.get(panelId)
   }
 
-  const isBottleneckLoading = (panelId: number) => {
+  const isBottleneckLoading = (panelId: string) => {
     return bottlenecksLoading.value.has(panelId)
   }
 
@@ -391,12 +421,33 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap']
+
+  function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
+    const payload: Record<string, any> = {}
+    const allowed = ['name', 'index', 'project_id', 'type', 'endpoint', 'routes', 'statistic', 'period', 'periodFrom', 'periodTo', 'layout']
+    for (const key of allowed) {
+      const value = (data as any)[key]
+      if (value !== undefined) payload[key] = value
+    }
+    return payload
+  }
+
   const createPanel = async (data: CreatePanelRequest) => {
+    if (!SERVER_PANEL_TYPES.includes(data.type)) {
+      return { success: false, error: `Panel type "${data.type}" not supported by server` }
+    }
     try {
-      const response = await client.post<Panel>('/api/v1/dashboard/panels', data)
+      const response = await client.post<Panel>('/api/v1/dashboard/panels', toServerPayload(data))
 
       panels.value.push(response.data)
       total.value += 1
+
+      // Add to active tab if one exists
+      if (activeTab.value) {
+        activeTab.value.panelIds.push(response.data.id)
+        saveTabsToStorage(tabs.value)
+      }
 
       return { success: true, panel: response.data }
     }
@@ -409,7 +460,7 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const updatePanel = async (panelId: number, data: Partial<UpdatePanelRequest>) => {
+  const updatePanel = async (panelId: string, data: Partial<UpdatePanelRequest>) => {
     try {
       const panel = panels.value.find(p => p.id === panelId)
       if (!panel) {
@@ -441,7 +492,7 @@ export const usePanelsStore = defineStore('panels', () => {
           : panel.periodTo || null,
       }
 
-      const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, updateData)
+      const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
 
       const index = panels.value.findIndex(p => p.id === panelId)
       if (index !== -1) {
@@ -459,7 +510,7 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const deletePanel = async (panelId: number) => {
+  const deletePanel = async (panelId: string) => {
     try {
       await client.delete(`/api/v1/dashboard/panels/${panelId}`)
 
@@ -474,6 +525,12 @@ export const usePanelsStore = defineStore('panels', () => {
       logsHasMore.value.delete(panelId)
       panelBottlenecks.value.delete(panelId)
 
+      // Remove from all tabs
+      tabs.value.forEach((tab) => {
+        tab.panelIds = tab.panelIds.filter(id => id !== panelId)
+      })
+      saveTabsToStorage(tabs.value)
+
       return { success: true }
     }
     catch (error: any) {
@@ -485,7 +542,7 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const updatePanelIndexes = async (updatedPanels: { id: number, index: number }[]) => {
+  const updatePanelIndexes = async (updatedPanels: { id: string, index: number }[]) => {
     try {
       await Promise.all(
         updatedPanels.map(({ id, index }) => {
@@ -506,7 +563,7 @@ export const usePanelsStore = defineStore('panels', () => {
             periodTo: panel.periodTo || null,
           }
 
-          return client.put(`/api/v1/dashboard/panels/${id}`, updateData)
+          return client.put(`/api/v1/dashboard/panels/${id}`, toServerPayload(updateData))
         }),
       )
 
@@ -529,7 +586,7 @@ export const usePanelsStore = defineStore('panels', () => {
   }
 
   const updatePanelTimeRange = async (
-    panelId: number,
+    panelId: string,
     timeRange: { period?: TimeRangePreset | null, periodFrom?: string | null, periodTo?: string | null },
   ) => {
     try {
@@ -557,7 +614,7 @@ export const usePanelsStore = defineStore('panels', () => {
           : null,
       }
 
-      const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, updateData)
+      const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
 
       const index = panels.value.findIndex(p => p.id === panelId)
       if (index !== -1) {
@@ -590,6 +647,120 @@ export const usePanelsStore = defineStore('panels', () => {
 
       return { success: false, error: errorMessage }
     }
+  }
+
+  // --- Tabs state ---
+  const tabs = ref<DashboardTab[]>(import.meta.client ? loadTabsFromStorage() : [])
+  const activeTabId = ref<string>(
+    import.meta.client ? (localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) ?? '') : '',
+  )
+
+  const activeTab = computed(() =>
+    tabs.value.find(t => t.id === activeTabId.value) ?? tabs.value[0] ?? null,
+  )
+
+  const activePanels = computed(() => {
+    if (!activeTab.value) return sortedPanels.value
+    return activeTab.value.panelIds
+      .map(id => panels.value.find(p => p.id === id))
+      .filter((p): p is Panel => !!p)
+  })
+
+  function setActiveTab(tabId: string) {
+    activeTabId.value = tabId
+    if (import.meta.client) localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabId)
+  }
+
+  function addTab(name: string, templateId: string | null = null): DashboardTab {
+    const tab: DashboardTab = {
+      id: `tab-${Date.now()}`,
+      name,
+      templateId,
+      panelIds: [],
+    }
+    tabs.value.push(tab)
+    saveTabsToStorage(tabs.value)
+    return tab
+  }
+
+  function renameTab(tabId: string, name: string) {
+    const tab = tabs.value.find(t => t.id === tabId)
+    if (tab) {
+      tab.name = name
+      saveTabsToStorage(tabs.value)
+    }
+  }
+
+  function deleteTab(tabId: string) {
+    tabs.value = tabs.value.filter(t => t.id !== tabId)
+    saveTabsToStorage(tabs.value)
+    if (activeTabId.value === tabId && tabs.value.length > 0) {
+      setActiveTab(tabs.value[0]!.id)
+    }
+  }
+
+  function reorderTabs(newOrder: string[]) {
+    const tabMap = new Map(tabs.value.map(t => [t.id, t]))
+    tabs.value = newOrder.map(id => tabMap.get(id)!).filter(Boolean)
+    saveTabsToStorage(tabs.value)
+  }
+
+  function addPanelToTab(tabId: string, panelId: string) {
+    const tab = tabs.value.find(t => t.id === tabId)
+    if (tab && !tab.panelIds.includes(panelId)) {
+      tab.panelIds.push(panelId)
+      saveTabsToStorage(tabs.value)
+    }
+  }
+
+  function removePanelFromTabs(panelId: string) {
+    tabs.value.forEach((tab) => {
+      tab.panelIds = tab.panelIds.filter(id => id !== panelId)
+    })
+    saveTabsToStorage(tabs.value)
+  }
+
+  // Run migration: if no tabs exist yet and we have panels, create "Default" tab
+  function migrateToTabs() {
+    if (!import.meta.client) return
+    if (localStorage.getItem(TABS_VERSION_KEY)) return
+    if (tabs.value.length > 0) {
+      localStorage.setItem(TABS_VERSION_KEY, '1')
+      return
+    }
+    if (panels.value.length > 0) {
+      const defaultTab = addTab('Default', null)
+      defaultTab.panelIds = panels.value.map(p => p.id)
+      saveTabsToStorage(tabs.value)
+      setActiveTab(defaultTab.id)
+    }
+    localStorage.setItem(TABS_VERSION_KEY, '1')
+  }
+
+  async function applyTemplate(templateId: string, projectId: string | number) {
+    const { templates } = await import('~/dashboards/templates')
+    const template = templates.find(t => t.id === templateId)
+    if (!template) return
+
+    const tab = addTab(template.name, templateId)
+    setActiveTab(tab.id)
+
+    const created: Panel[] = []
+    for (let i = 0; i < template.panels.length; i++) {
+      const seed = template.panels[i]!
+      const result = await createPanel({
+        ...seed,
+        project_id: String(projectId),
+        index: i,
+      } as CreatePanelRequest)
+      if (result.success && result.panel) {
+        created.push(result.panel)
+        tab.panelIds.push(result.panel.id)
+      }
+    }
+
+    saveTabsToStorage(tabs.value)
+    return { tab, panels: created }
   }
 
   return {
@@ -625,5 +796,19 @@ export const usePanelsStore = defineStore('panels', () => {
     deletePanel,
     updatePanelIndexes,
     updatePanelTimeRange,
+    // Tabs
+    tabs,
+    activeTabId,
+    activeTab,
+    activePanels,
+    setActiveTab,
+    addTab,
+    renameTab,
+    deleteTab,
+    reorderTabs,
+    addPanelToTab,
+    removePanelFromTabs,
+    migrateToTabs,
+    applyTemplate,
   }
 })

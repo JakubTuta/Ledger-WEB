@@ -331,41 +331,77 @@ const availableRoutes = computed(() => {
 })
 
 const selectedPanelTypeDescription = computed(() => {
-  return panelTypeOptions.find(o => o.value === form.value.panelType)?.description || ''
+  return panelTypeOptions.value.find(o => o.value === form.value.panelType)?.description || ''
 })
 
-const panelTypeOptions = [
+const { tracing, customMetrics } = useProjectFeatures(selectedProject)
+
+const allPanelTypeOptions = [
   {
     label: 'Logs',
     value: 'logs',
     icon: 'mdi-text-box-outline',
-    description: 'Stacked bar chart of log volume vs errors over time. Best for spotting traffic patterns and error spikes.',
+    description: 'Stacked bar chart of log volume vs errors over time.',
+    requires: null,
   },
   {
     label: 'Metrics',
     value: 'metrics',
     icon: 'mdi-chart-line',
-    description: 'Latency lines (min, avg, p95, p99, max) for a specific endpoint. Best for tracking response time SLAs.',
+    description: 'Latency lines (min, avg, p95, p99, max) for a specific endpoint.',
+    requires: null,
   },
   {
     label: 'Error List',
     value: 'error_list',
     icon: 'mdi-format-list-bulleted',
-    description: 'Paginated list of recent errors with stack traces and metadata. Best for triage and debugging.',
+    description: 'Paginated list of recent errors with stack traces and metadata.',
+    requires: null,
   },
   {
     label: 'Bottleneck Analysis',
     value: 'bottleneck',
     icon: 'mdi-speedometer',
-    description: 'Grouped bars comparing route latency or request count. Best for finding slow or hot routes.',
+    description: 'Grouped bars comparing route latency or request count.',
+    requires: null,
   },
   {
     label: 'Error Heatmap',
     value: 'error_heatmap',
     icon: 'mdi-grid',
-    description: 'Hour-by-day grid colored by error rate. Best for spotting recurring failure windows.',
+    description: 'Hour-by-day grid colored by error rate.',
+    requires: null,
+  },
+  {
+    label: 'Trace List',
+    value: 'trace_list',
+    icon: 'mdi-format-list-text',
+    description: 'List of recent traces filterable by service, operation, and duration.',
+    requires: 'tracing',
+  },
+  {
+    label: 'Single Trace',
+    value: 'trace',
+    icon: 'mdi-chart-timeline-variant',
+    description: 'Pinned waterfall view for a specific trace ID.',
+    requires: 'tracing',
+  },
+  {
+    label: 'Custom Metric',
+    value: 'custom_metric',
+    icon: 'mdi-chart-line-variant',
+    description: 'Line, bar, or single-stat panel for a custom metric.',
+    requires: 'custom_metrics',
   },
 ]
+
+const panelTypeOptions = computed(() =>
+  allPanelTypeOptions.filter((o) => {
+    if (o.requires === 'tracing') return tracing.value
+    if (o.requires === 'custom_metrics') return customMetrics.value
+    return true
+  }),
+)
 
 const statisticOptions = [
   { label: 'Average', value: 'avg', description: 'Average response time in milliseconds' },

@@ -6,6 +6,14 @@
       @project-click="filters.projectId = $event"
     />
 
+    <!-- Tab Bar -->
+    <DashboardsTabBar
+      v-if="panelsStore.tabs.length > 0"
+      :project-id="filters.projectId ?? (projectOptions[0]?.id ?? '')"
+      class="mb-2"
+      @template-applied="handlePanelsRefresh"
+    />
+
     <!-- Sticky Filters Toolbar -->
     <v-card
       class="filters-toolbar mb-3"
@@ -155,7 +163,8 @@
         <!-- Column Size Slider (all screen sizes, desktop-only columns) -->
         <div
           v-if="!mobile"
-          class="d-flex align-center ga-2 mt-2 justify-end"
+          class="d-flex align-center ga-2 mt-2"
+          style="margin-left: auto; width: fit-content;"
         >
           <v-icon
             size="small"
@@ -172,7 +181,7 @@
             show-ticks="always"
             tick-size="4"
             hide-details
-            style="width: 160px"
+            style="width: 120px"
           />
 
           <v-icon
@@ -313,6 +322,30 @@
               @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
             />
 
+            <PanelsCustomMetricPanelCard
+              v-else-if="panel.type === 'custom_metric'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+            />
+
+            <PanelsTracePanelCard
+              v-else-if="panel.type === 'trace'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+            />
+
+            <PanelsTraceListPanelCard
+              v-else-if="panel.type === 'trace_list'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+            />
+
             <PanelCard
               v-else
               :panel="panel"
@@ -390,6 +423,9 @@ const panelTypeOptions = [
   { label: 'Error List', value: 'error_list' },
   { label: 'Bottleneck Analysis', value: 'bottleneck' },
   { label: 'Error Heatmap', value: 'error_heatmap' },
+  { label: 'Trace List', value: 'trace_list' },
+  { label: 'Single Trace', value: 'trace' },
+  { label: 'Custom Metric', value: 'custom_metric' },
 ]
 
 const projectOptions = computed(() => projectsStore.projects.map(p => ({
@@ -460,7 +496,9 @@ const timeOptionsDialog = ref<{
 
 // Computed
 const filteredPanels = computed(() => {
-  let result = panelsStore.sortedPanels
+  let result = panelsStore.tabs.length > 0
+    ? panelsStore.activePanels
+    : panelsStore.sortedPanels
 
   if (filters.value.projectId) {
     result = result.filter(p => p.project_id === filters.value.projectId)
@@ -596,6 +634,11 @@ function fetchAllMetrics() {
   }
 }
 
+async function handlePanelsRefresh() {
+  await panelsStore.fetchPanels(true)
+  await fetchAllMetrics()
+}
+
 // Keyboard shortcuts
 useDashboardShortcuts({
   onNewPanel: () => { newPanelDialog.value = true },
@@ -623,7 +666,7 @@ function loadFiltersFromUrl() {
   if (query.project && typeof query.project === 'string') {
     filters.value.projectId = query.project
   }
-  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap'].includes(query.type)) {
+  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'custom_metric'].includes(query.type)) {
     filters.value.panelType = query.type as PanelType
   }
 }
@@ -638,6 +681,9 @@ onMounted(async () => {
   ])
 
   await fetchAllMetrics()
+
+  // Migrate legacy single-array panels to first tab
+  panelsStore.migrateToTabs()
 
   const projectIds = projectsStore.projects.map(p => String(p.project_id))
   if (projectIds.length > 0) {
