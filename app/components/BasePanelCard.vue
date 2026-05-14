@@ -3,26 +3,26 @@
     :class="{'panel-card--disabled': disabled}"
     class="d-flex flex-column panel-card"
   >
-    <!-- Header -->
-    <v-card-title class="d-flex align-center justify-space-between pa-3">
-      <div class="d-flex align-center flex-grow-1 gap-2">
+    <!-- Row 1: Icon + Name + Actions -->
+    <v-card-title class="d-flex align-center justify-space-between pa-3 pb-2">
+      <div class="d-flex align-center min-w-0 flex-grow-1 gap-2">
         <v-icon
           :icon="icon"
           :color="iconColor"
-          size="small"
+          size="x-small"
         />
 
         <div
           v-if="!isEditingName"
-          class="d-flex align-center cursor-pointer gap-1"
+          class="d-flex align-center min-w-0 cursor-pointer gap-1"
           @click="startEditingName"
         >
-          <span class="text-subtitle-1 font-weight-medium">{{ panel.name }}</span>
+          <span class="text-subtitle-2 font-weight-medium text-truncate">{{ panel.name }}</span>
 
           <v-icon
             icon="mdi-pencil"
             size="x-small"
-            class="text-grey"
+            class="text-grey flex-shrink-0"
           />
         </div>
 
@@ -44,13 +44,14 @@
       <!-- Desktop: inline actions -->
       <div
         v-if="!mobile"
-        class="d-flex align-center gap-1"
+        class="d-flex align-center flex-shrink-0 gap-1"
       >
         <v-btn
           variant="text"
-          size="small"
+          size="x-small"
           :disabled="disabled"
           prepend-icon="mdi-clock-outline"
+          class="text-caption"
           @click="emit('timeOptions')"
         >
           {{ timeRangeText }}
@@ -59,7 +60,7 @@
         <v-btn
           icon="mdi-refresh"
           variant="text"
-          size="small"
+          size="x-small"
           :disabled="disabled"
           @click="emit('refresh')"
         />
@@ -67,7 +68,7 @@
         <v-btn
           icon="mdi-delete"
           variant="text"
-          size="small"
+          size="x-small"
           color="error"
           :disabled="disabled"
           @click="emit('delete')"
@@ -81,7 +82,7 @@
             v-bind="menuProps"
             icon="mdi-dots-vertical"
             variant="text"
-            size="small"
+            size="x-small"
             :disabled="disabled"
           />
         </template>
@@ -109,29 +110,14 @@
       </v-menu>
     </v-card-title>
 
-    <!-- Project Info -->
-    <v-card-subtitle class="px-3 pb-2">
-      <div class="d-flex align-center gap-2">
-        <v-chip
-          size="x-small"
-          :color="project?.environment === 'production'
-            ? 'error'
-            : 'primary'"
-          variant="flat"
-        >
-          {{ project?.environment || 'Unknown' }}
-        </v-chip>
+    <!-- Row 2: Filters (hidden when slot empty) -->
+    <template v-if="$slots.filters">
+      <v-divider />
 
-        <span class="text-caption ml-1">{{ project?.name || 'Unknown Project' }}</span>
-
-        <span
-          v-if="(panel.type === 'metrics' || panel.type === 'bottleneck') && panel.endpoint"
-          class="text-caption text-grey ml-1"
-        >
-          {{ panel.endpoint }}
-        </span>
+      <div class="px-3 py-2">
+        <slot name="filters" />
       </div>
-    </v-card-subtitle>
+    </template>
 
     <v-divider />
 

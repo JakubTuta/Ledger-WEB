@@ -34,6 +34,9 @@ export interface Panel {
   min_duration_ms?: number
   has_error?: boolean
   limit?: number
+  // logs filter fields
+  statusClass?: '2xx' | '4xx' | '5xx'
+  search?: string
 }
 
 export interface PanelListResponse {
@@ -63,6 +66,8 @@ export interface CreatePanelRequest {
   min_duration_ms?: number
   has_error?: boolean
   limit?: number
+  statusClass?: '2xx' | '4xx' | '5xx'
+  search?: string
 }
 
 export interface UpdatePanelRequest {
@@ -87,6 +92,8 @@ export interface UpdatePanelRequest {
   min_duration_ms?: number | null
   has_error?: boolean | null
   limit?: number | null
+  statusClass?: '2xx' | '4xx' | '5xx' | null
+  search?: string | null
 }
 
 export interface AggregatedMetricData {

@@ -293,6 +293,13 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
+      if (panel.statusClass) {
+        searchParams.set('status_class', panel.statusClass)
+      }
+      if (panel.search) {
+        searchParams.set('search', panel.search)
+      }
+
       const response = await client.get<any>(
         `/api/v1/logs?${searchParams.toString()}`,
       )
@@ -459,6 +466,8 @@ export const usePanelsStore = defineStore('panels', () => {
       'agg',
       'viz',
       'step',
+      'statusClass',
+      'search',
     ]
     for (const key of allowed) {
       const value = (data as any)[key]
@@ -566,6 +575,12 @@ export const usePanelsStore = defineStore('panels', () => {
         limit: data.limit !== undefined
           ? data.limit
           : panel.limit ?? null,
+        statusClass: data.statusClass !== undefined
+          ? data.statusClass
+          : panel.statusClass ?? null,
+        search: data.search !== undefined
+          ? data.search
+          : panel.search ?? null,
       }
 
       const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
@@ -648,6 +663,8 @@ export const usePanelsStore = defineStore('panels', () => {
             min_duration_ms: panel.min_duration_ms ?? null,
             has_error: panel.has_error ?? null,
             limit: panel.limit ?? null,
+            statusClass: panel.statusClass ?? null,
+            search: panel.search ?? null,
           }
 
           return client.put(`/api/v1/dashboard/panels/${id}`, toServerPayload(updateData))
@@ -670,6 +687,27 @@ export const usePanelsStore = defineStore('panels', () => {
 
       return { success: false, error: errorMessage }
     }
+  }
+
+  const updateLogsFilter = async (
+    panelId: string,
+    statusClass: '2xx' | '4xx' | '5xx' | undefined,
+    search: string | undefined,
+  ) => {
+    const panel = panels.value.find(p => p.id === panelId)
+    if (!panel)
+      return
+
+    panel.statusClass = statusClass ?? undefined
+    panel.search = search ?? undefined
+
+    await updatePanel(panelId, {
+      statusClass: statusClass ?? null,
+      search: search ?? null,
+    })
+
+    logsOffset.value.set(panelId, 0)
+    await fetchLogsForPanel(panel)
   }
 
   const updatePanelTimeRange = async (
@@ -931,6 +969,7 @@ export const usePanelsStore = defineStore('panels', () => {
     isLogsLoading,
     getLogsHasMore,
     getLogsOffset,
+    updateLogsFilter,
     fetchBottleneckForPanel,
     getBottleneckForPanel,
     isBottleneckLoading,

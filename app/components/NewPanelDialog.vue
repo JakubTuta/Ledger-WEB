@@ -552,7 +552,7 @@ const selectedProject = computed(() => {
 const availableRoutes = computed(() => selectedProject.value?.available_routes || [])
 
 const allPanelTypeOptions = [
-  { label: 'Logs', value: 'logs', icon: 'mdi-text-box-outline', description: 'Stacked bar chart of log volume vs errors over time.', requires: null },
+  { label: 'HTTP Request Log', value: 'logs', icon: 'mdi-web', description: 'Live log of HTTP requests with status, method, path, and duration. Filter by status class (2xx/4xx/5xx) or path/method search.', requires: null },
   { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines for a specific endpoint.', requires: null },
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Paginated list of recent errors with stack traces.', requires: null },
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Grouped bars comparing route latency or request count.', requires: null },

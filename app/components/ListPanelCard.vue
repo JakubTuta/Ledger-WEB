@@ -9,8 +9,67 @@
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
   >
+    <!-- Filter row (logs panel only) -->
+    <template
+      v-if="type === 'logs'"
+      #filters
+    >
+      <div class="d-flex align-center flex-wrap gap-2">
+        <v-btn-toggle
+          v-model="statusClassFilter"
+          density="compact"
+          variant="outlined"
+          divided
+          mandatory
+          class="status-toggle mx-2"
+        >
+          <v-btn
+            value="all"
+            size="x-small"
+          >
+            All
+          </v-btn>
+
+          <v-btn
+            value="2xx"
+            size="x-small"
+            color="success"
+          >
+            2xx
+          </v-btn>
+
+          <v-btn
+            value="4xx"
+            size="x-small"
+            color="warning"
+          >
+            4xx
+          </v-btn>
+
+          <v-btn
+            value="5xx"
+            size="x-small"
+            color="error"
+          >
+            5xx
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-text-field
+          v-model="searchFilter"
+          density="compact"
+          variant="outlined"
+          hide-details
+          placeholder="Filter path, method, status..."
+          prepend-inner-icon="mdi-magnify"
+          clearable
+          class="search-input"
+        />
+      </div>
+    </template>
+
     <template #content>
-      <v-card-text class="panel-content-container pa-3">
+      <v-card-text class="panel-content-container pa-0">
         <!-- Loading State -->
         <div
           v-if="loading && (!items || items.length === 0)"
@@ -43,170 +102,140 @@
         </div>
 
         <!-- List -->
-        <div v-else>
-          <v-card
-            v-for="item in items"
-            :key="item.log_id"
-            :color="getItemColor(item)"
-            variant="elevated"
-            elevation="1"
-            class="item-card mb-2"
-          >
-            <v-card-title
-              class="d-flex justify-space-between flex-wrap cursor-pointer pa-2 align-start"
-              @click="toggleExpanded(item)"
+        <div
+          v-else
+          class="log-list"
+        >
+          <!-- Logs: compact HTTP request rows -->
+          <template v-if="type === 'logs'">
+            <div
+              v-for="item in items"
+              :key="item.log_id"
+              class="log-row"
             >
+              <!-- Collapsed row -->
               <div
-                class="d-flex align-center flex-grow-1 gap-1"
-                style="min-width: 0"
+                class="log-row-header d-flex align-center cursor-pointer"
+                @click="toggleExpanded(item)"
               >
-                <v-icon
-                  :icon="getItemIcon(item)"
-                  :color="getIconColorForItem(item)"
-                  size="x-small"
-                  class="mr-1"
+                <!-- Status bar -->
+                <div
+                  class="status-bar flex-shrink-0"
+                  :class="getStatusBarClass(item)"
                 />
 
-                <!-- Error type display -->
-                <div
-                  v-if="type === 'errors'"
-                  class="d-flex flex-column flex-grow-1"
+                <!-- Method chip -->
+                <v-chip
+                  :color="getMethodColor(item.method)"
+                  size="x-small"
+                  variant="flat"
+                  class="method-chip font-weight-bold mr-2 flex-shrink-0"
+                  label
                 >
-                  <span class="text-body-2 font-weight-bold text-truncate">
-                    {{ item.message }}
-                  </span>
+                  {{ item.method || '?' }}
+                </v-chip>
 
-                  <div class="d-flex align-center gap-1">
-                    <v-chip
-                      size="x-small"
-                      color="error"
-                      variant="flat"
-                    >
-                      {{ item.error_type || 'error' }}
-                    </v-chip>
+                <!-- Path -->
+                <span class="log-path text-caption text-mono mr-2 flex-grow-1 text-truncate">
+                  {{ item.path || item.message || '—' }}
+                </span>
 
-                    <v-chip
-                      v-if="item.isNew"
-                      size="x-small"
-                      color="success"
-                      variant="flat"
-                    >
-                      NEW
-                    </v-chip>
-                  </div>
-                </div>
-
-                <!-- Log message display -->
-                <div
-                  v-else
-                  class="d-flex flex-column flex-grow-1"
+                <!-- Status code -->
+                <span
+                  class="text-caption font-weight-medium mr-3 flex-shrink-0"
+                  :class="getStatusTextClass(item)"
                 >
-                  <span class="text-body-2 font-weight-bold text-truncate">
-                    {{ item.message }}
-                  </span>
+                  {{ item.status_code || '—' }}
+                </span>
 
-                  <div class="d-flex align-center gap-1">
+                <!-- Duration -->
+                <span class="text-caption text-medium-emphasis duration-col mr-3 flex-shrink-0">
+                  {{ formatDuration(item.duration_ms) }}
+                </span>
+
+                <!-- Relative time -->
+                <span class="text-caption text-medium-emphasis time-col flex-shrink-0">
+                  {{ formatTimestamp(item.timestamp) }}
+                </span>
+              </div>
+
+              <!-- Expanded details -->
+              <v-expand-transition>
+                <div
+                  v-if="item.expanded"
+                  class="log-row-detail pa-3"
+                >
+                  <div class="d-flex mb-2 flex-wrap gap-2">
                     <v-chip
+                      v-if="item.method"
                       size="x-small"
-                      :color="getLevelColor(item.level)"
+                      :color="getMethodColor(item.method)"
                       variant="flat"
+                      label
                     >
-                      {{ item.level.toUpperCase() }}
+                      {{ item.method }}
                     </v-chip>
 
                     <v-chip
+                      v-if="item.status_code"
+                      size="x-small"
+                      :color="getStatusChipColor(item)"
+                      variant="flat"
+                    >
+                      {{ item.status_code }}
+                    </v-chip>
+
+                    <v-chip
+                      v-if="item.duration_ms != null"
                       size="x-small"
                       variant="outlined"
                     >
-                      {{ item.log_type }}
+                      {{ formatDuration(item.duration_ms) }}
+                    </v-chip>
+
+                    <v-chip
+                      v-if="item.trace_id"
+                      size="x-small"
+                      variant="flat"
+                      color="info"
+                      prepend-icon="mdi-link-variant"
+                      @click.stop="openTrace(item.trace_id)"
+                    >
+                      trace
                     </v-chip>
                   </div>
-                </div>
-              </div>
-
-              <div class="d-flex align-center ml-2 flex-shrink-0 gap-1">
-                <span
-                  v-if="item.timestamp"
-                  class="text-caption text-medium-emphasis"
-                >
-                  {{ formatTimestamp(item.timestamp) }}
-                </span>
-
-                <v-chip
-                  v-if="item.trace_id"
-                  size="x-small"
-                  variant="flat"
-                  color="info"
-                  prepend-icon="mdi-link-variant"
-                  @click.stop="openTrace(item.trace_id)"
-                >
-                  trace
-                </v-chip>
-              </div>
-            </v-card-title>
-
-            <v-expand-transition>
-              <v-card-text
-                v-if="item.expanded"
-                class="pa-2 pt-0"
-              >
-                <!-- Error details -->
-                <template v-if="type === 'errors'">
-                  <div class="mb-2">
-                    <div class="text-caption font-weight-bold mb-1">
-                      Message:
-                    </div>
-
-                    <div class="text-caption">
-                      {{ item.message }}
-                    </div>
-                  </div>
 
                   <div
-                    v-if="item.attributes?.stack_trace"
+                    v-if="item.path"
                     class="mb-2"
                   >
                     <div class="text-caption font-weight-bold mb-1">
-                      Stack Trace:
+                      Path:
                     </div>
 
-                    <pre class="stack-trace text-caption">{{ item.attributes.stack_trace }}</pre>
+                    <code class="text-caption">{{ item.path }}</code>
                   </div>
 
                   <div
-                    v-if="item.attributes && Object.keys(item.attributes).length > 0"
-                  >
-                    <div class="text-caption font-weight-bold mb-1">
-                      Attributes:
-                    </div>
-
-                    <pre class="context-data text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
-                  </div>
-                </template>
-
-                <!-- Log details -->
-                <template v-else>
-                  <div
-                    v-if="item.error_type || item.error_message"
+                    v-if="item.attributes?.endpoint?.query_params"
                     class="mb-2"
                   >
                     <div class="text-caption font-weight-bold mb-1">
-                      Error Details:
+                      Query:
                     </div>
 
-                    <div
-                      v-if="item.error_type"
-                      class="text-caption"
-                    >
-                      <span class="font-weight-bold">Type:</span> {{ item.error_type }}
+                    <code class="text-caption">{{ item.attributes.endpoint.query_params }}</code>
+                  </div>
+
+                  <div
+                    v-if="item.attributes?.endpoint?.response_body"
+                    class="mb-2"
+                  >
+                    <div class="text-caption font-weight-bold mb-1">
+                      Response Body:
                     </div>
 
-                    <div
-                      v-if="item.error_message"
-                      class="text-caption"
-                    >
-                      <span class="font-weight-bold">Message:</span> {{ item.error_message }}
-                    </div>
+                    <pre class="detail-pre text-caption">{{ item.attributes.endpoint.response_body }}</pre>
                   </div>
 
                   <div
@@ -217,7 +246,7 @@
                       Stack Trace:
                     </div>
 
-                    <pre class="stack-trace text-caption">{{ item.stack_trace }}</pre>
+                    <pre class="detail-pre text-caption">{{ item.stack_trace }}</pre>
                   </div>
 
                   <div
@@ -228,7 +257,7 @@
                       Attributes:
                     </div>
 
-                    <pre class="attributes-data text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
+                    <pre class="detail-pre text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
                   </div>
 
                   <div class="d-flex mt-2 flex-wrap gap-2">
@@ -280,16 +309,128 @@
                       {{ item.platform }}
                     </v-chip>
                   </div>
-                </template>
-              </v-card-text>
-            </v-expand-transition>
-          </v-card>
+                </div>
+              </v-expand-transition>
+            </div>
+          </template>
+
+          <!-- Errors: original card style -->
+          <template v-else>
+            <v-card
+              v-for="item in items"
+              :key="item.log_id"
+              :color="getItemColor(item)"
+              variant="elevated"
+              elevation="1"
+              class="item-card mx-2 mb-2 mt-2"
+            >
+              <v-card-title
+                class="d-flex justify-space-between flex-wrap cursor-pointer pa-2 align-start"
+                @click="toggleExpanded(item)"
+              >
+                <div
+                  class="d-flex align-center flex-grow-1 gap-1"
+                  style="min-width: 0"
+                >
+                  <v-icon
+                    :icon="getItemIcon(item)"
+                    :color="getIconColorForItem(item)"
+                    size="x-small"
+                    class="mr-1"
+                  />
+
+                  <div class="d-flex flex-column flex-grow-1">
+                    <span class="text-body-2 font-weight-bold text-truncate">
+                      {{ item.message }}
+                    </span>
+
+                    <div class="d-flex align-center gap-1">
+                      <v-chip
+                        size="x-small"
+                        color="error"
+                        variant="flat"
+                      >
+                        {{ item.error_type || 'error' }}
+                      </v-chip>
+
+                      <v-chip
+                        v-if="item.isNew"
+                        size="x-small"
+                        color="success"
+                        variant="flat"
+                      >
+                        NEW
+                      </v-chip>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex align-center ml-2 flex-shrink-0 gap-1">
+                  <span
+                    v-if="item.timestamp"
+                    class="text-caption text-medium-emphasis"
+                  >
+                    {{ formatTimestamp(item.timestamp) }}
+                  </span>
+
+                  <v-chip
+                    v-if="item.trace_id"
+                    size="x-small"
+                    variant="flat"
+                    color="info"
+                    prepend-icon="mdi-link-variant"
+                    @click.stop="openTrace(item.trace_id)"
+                  >
+                    trace
+                  </v-chip>
+                </div>
+              </v-card-title>
+
+              <v-expand-transition>
+                <v-card-text
+                  v-if="item.expanded"
+                  class="pa-2 pt-0"
+                >
+                  <div class="mb-2">
+                    <div class="text-caption font-weight-bold mb-1">
+                      Message:
+                    </div>
+
+                    <div class="text-caption">
+                      {{ item.message }}
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="item.attributes?.stack_trace"
+                    class="mb-2"
+                  >
+                    <div class="text-caption font-weight-bold mb-1">
+                      Stack Trace:
+                    </div>
+
+                    <pre class="detail-pre text-caption">{{ item.attributes.stack_trace }}</pre>
+                  </div>
+
+                  <div
+                    v-if="item.attributes && Object.keys(item.attributes).length > 0"
+                  >
+                    <div class="text-caption font-weight-bold mb-1">
+                      Attributes:
+                    </div>
+
+                    <pre class="detail-pre text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
+                  </div>
+                </v-card-text>
+              </v-expand-transition>
+            </v-card>
+          </template>
 
           <!-- Load More Trigger -->
           <div
             v-if="hasMore"
             v-intersect="onIntersect"
-            class="d-flex align-center mt-4 justify-center"
+            class="d-flex align-center my-4 justify-center"
           >
             <v-progress-circular
               v-if="loading"
@@ -308,7 +449,7 @@
 
           <div
             v-else-if="items.length > 0"
-            class="d-flex align-center mt-4 justify-center"
+            class="d-flex align-center my-4 justify-center"
           >
             <span class="text-caption text-grey">
               No more {{ type }} to load
@@ -341,9 +482,11 @@ const emit = defineEmits<{
   timeOptions: []
   refresh: []
   loadPage: [offset: number]
+  filterChange: []
 }>()
 
 const { openTrace } = useTraceDrawer()
+const panelsStore = usePanelsStore()
 
 type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'critical'
 type LogType = 'console' | 'logger' | 'exception' | 'network' | 'database' | 'endpoint' | 'custom'
@@ -364,11 +507,40 @@ interface ListItem {
   release?: string
   sdk_version?: string
   platform?: string
+  trace_id?: string
   expanded?: boolean
   isNew?: boolean
+  // HTTP fields
+  method?: string
+  path?: string
+  status_code?: number
+  duration_ms?: number
 }
 
 const currentTime = ref(Date.now())
+
+// Filter state (logs panel)
+const statusClassFilter = ref<string>('all')
+const searchFilter = ref<string>('')
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(statusClassFilter, () => {
+  applyFilters()
+})
+
+watch(searchFilter, () => {
+  if (searchDebounceTimer)
+    clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(applyFilters, 300)
+})
+
+function applyFilters() {
+  const sc = statusClassFilter.value === 'all'
+    ? undefined
+    : statusClassFilter.value
+  panelsStore.updateLogsFilter(props.panel.id, sc, searchFilter.value || undefined)
+}
 
 const icon = computed(() => (props.type === 'errors'
   ? 'mdi-format-list-bulleted'
@@ -381,88 +553,89 @@ const emptyIcon = computed(() => (props.type === 'errors'
   : 'mdi-text-box-check'))
 const emptyMessage = computed(() => (props.type === 'errors'
   ? 'No errors found'
-  : 'No logs found'))
+  : 'No request logs found'))
 
-function getItemColor(item: ListItem): string {
-  if (props.type === 'errors') {
-    const colors: Record<NotificationLevel, string> = {
-      critical: 'error',
-      error: 'error',
-    }
+// HTTP status helpers
+function getStatusBarClass(item: ListItem): string {
+  const code = item.status_code
+  if (!code)
+    return 'status-bar--grey'
+  if (code < 300)
+    return 'status-bar--success'
+  if (code < 500)
+    return 'status-bar--warning'
 
-    return colors[item.level as NotificationLevel] || 'error'
-  }
-
-  const colors: Record<LogLevel, string> = {
-    critical: 'error',
-    error: 'error',
-    warning: 'warning',
-    info: 'info',
-    debug: 'grey-lighten-2',
-  }
-
-  return colors[item.level as LogLevel] || 'grey-lighten-2'
+  return 'status-bar--error'
 }
 
-function getIconColorForItem(item: ListItem): string {
-  if (props.type === 'errors') {
-    return 'white'
+function getStatusTextClass(item: ListItem): string {
+  const code = item.status_code
+  if (!code)
+    return 'text-medium-emphasis'
+  if (code < 300)
+    return 'text-success'
+  if (code < 500)
+    return 'text-warning'
+
+  return 'text-error'
+}
+
+function getStatusChipColor(item: ListItem): string {
+  const code = item.status_code
+  if (!code)
+    return 'grey'
+  if (code < 300)
+    return 'success'
+  if (code < 500)
+    return 'warning'
+
+  return 'error'
+}
+
+function getMethodColor(method?: string): string {
+  const colors: Record<string, string> = {
+    GET: 'success',
+    POST: 'info',
+    PUT: 'orange',
+    PATCH: 'purple',
+    DELETE: 'error',
+    HEAD: 'grey',
+    OPTIONS: 'grey',
   }
 
-  const colors: Record<LogLevel, string> = {
-    critical: 'white',
-    error: 'white',
-    warning: 'black',
-    info: 'white',
-    debug: 'black',
+  return colors[method?.toUpperCase() ?? ''] || 'grey'
+}
+
+function formatDuration(ms?: number): string {
+  if (ms == null)
+    return '—'
+  if (ms >= 1000)
+    return `${(ms / 1000).toFixed(1)}s`
+
+  return `${ms}ms`
+}
+
+// Error card helpers (for errors type)
+function getItemColor(item: ListItem): string {
+  const colors: Record<NotificationLevel, string> = {
+    critical: 'error',
+    error: 'error',
   }
 
-  return colors[item.level as LogLevel] || 'black'
+  return colors[item.level as NotificationLevel] || 'error'
+}
+
+function getIconColorForItem(_item: ListItem): string {
+  return 'white'
 }
 
 function getItemIcon(item: ListItem): string {
-  if (props.type === 'errors') {
-    const icons: Record<NotificationLevel, string> = {
-      critical: 'mdi-alert-circle',
-      error: 'mdi-alert',
-    }
-
-    return icons[item.level as NotificationLevel] || 'mdi-alert'
+  const icons: Record<NotificationLevel, string> = {
+    critical: 'mdi-alert-circle',
+    error: 'mdi-alert',
   }
 
-  const level = item.level as LogLevel
-  const logType = item.log_type as LogType
-
-  if (level === 'critical' || level === 'error') {
-    return 'mdi-alert-circle'
-  }
-  if (level === 'warning') {
-    return 'mdi-alert'
-  }
-
-  const typeIcons: Partial<Record<LogType, string>> = {
-    console: 'mdi-console',
-    logger: 'mdi-file-document',
-    exception: 'mdi-alert-octagon',
-    network: 'mdi-web',
-    database: 'mdi-database',
-    endpoint: 'mdi-api',
-    custom: 'mdi-cog',
-  }
-
-  return typeIcons[logType] || 'mdi-text-box'
-}
-
-function getLevelColor(level: LogLevel): string {
-  const colors: Record<LogLevel, string> = {
-    critical: 'error',
-    error: 'error',
-    warning: 'warning',
-    info: 'info',
-    debug: 'grey',
-  }
-
-  return colors[level] || 'grey'
+  return icons[item.level as NotificationLevel] || 'mdi-alert'
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -501,7 +674,7 @@ function onIntersect(isIntersecting: boolean) {
   }
 }
 
-let timeUpdateInterval: NodeJS.Timeout | null = null
+let timeUpdateInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   timeUpdateInterval = setInterval(() => {
@@ -513,23 +686,81 @@ onUnmounted(() => {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval)
   }
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
 })
 </script>
 
 <style scoped>
-.item-card {
-  transition: all 0.2s ease;
+/* Logs: compact row list */
+.log-list {
+  height: 100%;
+  overflow-y: auto;
 }
 
-.stack-trace,
-.context-data,
-.attributes-data {
+.log-row {
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.log-row:last-child {
+  border-bottom: none;
+}
+
+.log-row-header {
+  padding: 6px 12px 6px 0;
+  min-height: 36px;
+  gap: 0;
+}
+
+.log-row-header:hover {
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.status-bar {
+  width: 3px;
+  align-self: stretch;
+  min-height: 36px;
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
+.status-bar--success { background-color: rgb(var(--v-theme-success)); }
+.status-bar--warning { background-color: rgb(var(--v-theme-warning)); }
+.status-bar--error   { background-color: rgb(var(--v-theme-error)); }
+.status-bar--grey    { background-color: rgba(var(--v-border-color), 0.3); }
+
+.method-chip {
+  font-size: 10px;
+  min-width: 44px;
+  justify-content: center;
+}
+
+.log-path {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.duration-col {
+  min-width: 48px;
+  text-align: right;
+}
+
+.time-col {
+  min-width: 60px;
+  text-align: right;
+}
+
+.log-row-detail {
+  background: rgba(var(--v-theme-on-surface), 0.02);
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.detail-pre {
   background-color: rgba(0, 0, 0, 0.1);
   padding: 6px;
   border-radius: 4px;
   overflow-x: auto;
-  max-height: 150px;
-  overflow-y: auto;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   line-height: 1.3;
@@ -537,7 +768,24 @@ onUnmounted(() => {
   word-break: break-all;
 }
 
-.context-data {
-  max-height: 300px;
+/* Filter row */
+.status-toggle {
+  height: 28px !important;
+}
+
+.search-input {
+  max-width: 280px;
+  flex: 1;
+}
+
+/* Error cards (errors type) */
+.item-card {
+  transition: all 0.2s ease;
+}
+
+/* Content container for errors */
+:deep(.panel-content-container) {
+  height: 100%;
+  overflow-y: auto;
 }
 </style>
