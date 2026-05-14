@@ -72,7 +72,7 @@
                 :color="item.raw.environment === 'production'
                   ? 'error'
                   : 'primary'"
-                variant="tonal"
+                variant="flat"
                 class="ml-2"
               >
                 {{ item.raw.environment }}
@@ -116,6 +116,44 @@
             </template>
           </v-select>
 
+          <!-- Tracing requirement notice -->
+          <v-alert
+            v-if="needsTracing"
+            type="warning"
+            variant="flat"
+            density="compact"
+            class="mb-4"
+          >
+            <div class="mb-2">
+              <strong>Tracing must be enabled</strong>
+              for this project before you can create
+              <strong>{{ form.panelType === 'trace_list'
+                ? 'Trace List'
+                : 'Single Trace' }}</strong>
+              panels.
+            </div>
+
+            <v-alert
+              v-if="tracingError"
+              type="error"
+              density="compact"
+              class="mb-2"
+            >
+              {{ tracingError }}
+            </v-alert>
+
+            <v-btn
+              size="small"
+              color="warning"
+              variant="flat"
+              prepend-icon="mdi-toggle-switch"
+              :loading="enablingTracing"
+              @click="enableTracing"
+            >
+              Enable tracing
+            </v-btn>
+          </v-alert>
+
           <!-- Endpoint URL (conditional) -->
           <v-combobox
             v-if="form.panelType === 'metrics'"
@@ -132,6 +170,7 @@
             class="mb-4"
             placeholder="/api/..."
             clearable
+            @update:model-value="normalizeEndpointUrl"
           >
             <template #no-data>
               <v-list-item>
@@ -187,6 +226,186 @@
               />
             </template>
           </v-select>
+
+          <!-- Trace List config (conditional) -->
+          <template v-if="form.panelType === 'trace_list'">
+            <v-text-field
+              v-model="form.serviceFilter"
+              label="Service (optional)"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              clearable
+              placeholder="e.g. orders-api"
+            />
+
+            <v-text-field
+              v-model="form.operationFilter"
+              label="Operation (optional)"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              clearable
+              placeholder="e.g. GET /users/{id}"
+            />
+
+            <v-text-field
+              v-model.number="form.minDurationMs"
+              label="Min duration (ms, optional)"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              type="number"
+              min="0"
+              clearable
+              placeholder="e.g. 500"
+            />
+
+            <v-select
+              v-model="form.hasError"
+              label="Error filter"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              :items="errorFilterOptions"
+              item-title="label"
+              item-value="value"
+            />
+
+            <v-text-field
+              v-model.number="form.traceLimit"
+              label="Max results"
+              variant="outlined"
+              density="compact"
+              class="mb-4"
+              type="number"
+              min="1"
+              max="500"
+              :rules="traceLimitRules"
+            />
+          </template>
+
+          <!-- Single Trace config (conditional) -->
+          <v-text-field
+            v-if="form.panelType === 'trace'"
+            v-model="form.traceId"
+            label="Trace ID"
+            variant="outlined"
+            :disabled="loading"
+            :rules="traceIdRules"
+            validate-on="input"
+            hint="The specific trace ID to display"
+            class="mb-4"
+            clearable
+          />
+
+          <!-- Custom Metric config (conditional) -->
+          <template v-if="form.panelType === 'custom_metric'">
+            <v-autocomplete
+              v-model="form.metricName"
+              label="Metric name"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              :items="metricNames"
+              :loading="customMetricsStore.namesLoading"
+              :rules="metricNameRules"
+              clearable
+              @update:search="onMetricSearch"
+              @update:model-value="onMetricSelected"
+            />
+
+            <div
+              v-if="tagKeys.length > 0"
+              class="mb-3"
+            >
+              <div class="text-caption text-medium-emphasis mb-2">
+                Tag filters
+              </div>
+
+              <div
+                v-for="key in tagKeys"
+                :key="key"
+                class="d-flex align-center mb-2 gap-2"
+              >
+                <span class="text-body-2 w-25">{{ key }}</span>
+
+                <v-select
+                  v-model="tagFilter[key]"
+                  :items="tagValues(key)"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  clearable
+                  placeholder="Any"
+                  style="flex: 1;"
+                />
+              </div>
+            </div>
+
+            <v-select
+              v-model="form.metricAgg"
+              label="Aggregation"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              :items="aggOptions"
+              item-title="label"
+              item-value="value"
+            />
+
+            <v-btn-toggle
+              v-model="form.metricViz"
+              mandatory
+              density="compact"
+              color="primary"
+              variant="outlined"
+              class="mb-3"
+            >
+              <v-btn
+                value="line"
+                size="small"
+              >
+                <v-icon
+                  icon="mdi-chart-line"
+                  class="mr-1"
+                />
+                Line
+              </v-btn>
+
+              <v-btn
+                value="bar"
+                size="small"
+              >
+                <v-icon
+                  icon="mdi-chart-bar"
+                  class="mr-1"
+                />
+                Bar
+              </v-btn>
+
+              <v-btn
+                value="single_stat"
+                size="small"
+              >
+                <v-icon
+                  icon="mdi-numeric"
+                  class="mr-1"
+                />
+                Single Stat
+              </v-btn>
+            </v-btn-toggle>
+
+            <v-select
+              v-model="form.metricStep"
+              label="Step (auto)"
+              variant="outlined"
+              density="compact"
+              class="mb-4"
+              clearable
+              :items="stepOptions"
+            />
+          </template>
 
           <!-- Time Range Button -->
           <div class="mb-4">
@@ -263,7 +482,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BottleneckStatistic, CreatePanelRequest, Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import type { BottleneckStatistic, CreatePanelRequest, CustomMetricAgg, CustomMetricViz, Panel, PanelType, TimeRangePreset } from '~/types/panel'
 
 const props = defineProps<{
   modelValue: boolean
@@ -276,6 +495,7 @@ const emit = defineEmits<{
 
 const panelsStore = usePanelsStore()
 const projectsStore = useProjectsStore()
+const customMetricsStore = useCustomMetricsStore()
 
 const formRef = ref()
 const isFormValid = ref(false)
@@ -294,6 +514,19 @@ const form = ref<{
   period: TimeRangePreset | null
   periodFrom: string
   periodTo: string
+  // trace_list
+  serviceFilter: string
+  operationFilter: string
+  minDurationMs: number | null
+  hasError: boolean | null
+  traceLimit: number
+  // trace
+  traceId: string
+  // custom_metric
+  metricName: string
+  metricAgg: CustomMetricAgg
+  metricViz: CustomMetricViz
+  metricStep: string
 }>({
   name: '',
   projectId: null,
@@ -304,7 +537,19 @@ const form = ref<{
   period: null,
   periodFrom: '',
   periodTo: '',
+  serviceFilter: '',
+  operationFilter: '',
+  minDurationMs: null,
+  hasError: null,
+  traceLimit: 50,
+  traceId: '',
+  metricName: '',
+  metricAgg: 'avg',
+  metricViz: 'line',
+  metricStep: '',
 })
+
+const tagFilter = reactive<Record<string, string>>({})
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -395,13 +640,33 @@ const allPanelTypeOptions = [
   },
 ]
 
-const panelTypeOptions = computed(() =>
-  allPanelTypeOptions.filter((o) => {
-    if (o.requires === 'tracing') return tracing.value
-    if (o.requires === 'custom_metrics') return customMetrics.value
-    return true
-  }),
+const panelTypeOptions = computed(() => allPanelTypeOptions.filter((o) => {
+  if (o.requires === 'custom_metrics')
+    return customMetrics.value
+
+  return true
+}),
 )
+
+const needsTracing = computed(() => (form.value.panelType === 'trace' || form.value.panelType === 'trace_list')
+  && !!selectedProject.value
+  && !tracing.value,
+)
+
+const enablingTracing = ref(false)
+const tracingError = ref('')
+
+async function enableTracing() {
+  if (!selectedProject.value)
+    return
+  enablingTracing.value = true
+  tracingError.value = ''
+  const result = await projectsStore.updateFeature(selectedProject.value.project_id, 'tracing', true)
+  if (!result.success) {
+    tracingError.value = result.error || 'Failed to enable tracing'
+  }
+  enablingTracing.value = false
+}
 
 const statisticOptions = [
   { label: 'Average', value: 'avg', description: 'Average response time in milliseconds' },
@@ -410,6 +675,45 @@ const statisticOptions = [
   { label: 'Median', value: 'median', description: 'Middle response time value' },
   { label: 'Count', value: 'count', description: 'Number of requests (traffic volume)' },
 ]
+
+const errorFilterOptions = [
+  { label: 'All traces', value: null },
+  { label: 'Errors only', value: true },
+  { label: 'Success only', value: false },
+]
+
+const aggOptions = [
+  { label: 'Sum', value: 'sum' },
+  { label: 'Average', value: 'avg' },
+  { label: 'Rate', value: 'rate' },
+  { label: 'P50', value: 'p50' },
+  { label: 'P95', value: 'p95' },
+  { label: 'P99', value: 'p99' },
+]
+
+const stepOptions = ['1m', '5m', '15m', '1h', '1d']
+
+const metricNames = computed(() => customMetricsStore.names)
+
+const tagInfo = computed(() => (form.value.metricName
+  ? customMetricsStore.tagsByMetric.get(form.value.metricName)
+  : null),
+)
+
+const tagKeys = computed(() => tagInfo.value?.keys ?? [])
+
+function tagValues(key: string): string[] {
+  return tagInfo.value?.sample_values[key] ?? []
+}
+
+function onMetricSearch(val: string) {
+  customMetricsStore.fetchNames(val ?? '')
+}
+
+function onMetricSelected(name: string | null) {
+  if (name)
+    customMetricsStore.fetchTags(name)
+}
 
 const nameRules = [
   (v: string) => !!v || 'Panel name is required',
@@ -437,6 +741,29 @@ const routesRules = [
 const statisticRules = [
   (v: BottleneckStatistic | null) => !!v || 'Statistic is required',
 ]
+
+const traceLimitRules = [
+  (v: number) => !!v || 'Required',
+  (v: number) => v >= 1 || 'Min 1',
+  (v: number) => v <= 500 || 'Max 500',
+]
+
+const traceIdRules = [
+  (v: string) => !!v?.trim() || 'Trace ID is required',
+]
+
+const metricNameRules = [
+  (v: string) => !!v?.trim() || 'Metric name is required',
+]
+
+function normalizeEndpointUrl(val: string | null) {
+  if (!val)
+    return
+  const spaceIdx = val.indexOf(' ')
+  if (spaceIdx !== -1) {
+    form.value.endpointUrl = val.slice(spaceIdx + 1)
+  }
+}
 
 const hasTimeRange = computed(() => form.value.period || (form.value.periodFrom && form.value.periodTo))
 
@@ -473,8 +800,19 @@ const canSubmit = computed(() => {
   if (!isFormValid.value || !hasTimeRange.value)
     return false
 
+  if (needsTracing.value)
+    return false
+
   if (form.value.panelType === 'bottleneck') {
     return form.value.selectedRoutes.length > 0 && !!form.value.selectedStatistic
+  }
+
+  if (form.value.panelType === 'trace') {
+    return !!form.value.traceId.trim()
+  }
+
+  if (form.value.panelType === 'custom_metric') {
+    return !!form.value.metricName.trim()
   }
 
   return true
@@ -495,6 +833,12 @@ watch(() => form.value.panelType, () => {
   form.value.selectedStatistic = null
 })
 
+watch(() => form.value.panelType, (type) => {
+  if (type === 'custom_metric') {
+    customMetricsStore.fetchNames('')
+  }
+})
+
 function resetForm() {
   form.value = {
     name: '',
@@ -506,7 +850,18 @@ function resetForm() {
     period: null,
     periodFrom: '',
     periodTo: '',
+    serviceFilter: '',
+    operationFilter: '',
+    minDurationMs: null,
+    hasError: null,
+    traceLimit: 50,
+    traceId: '',
+    metricName: '',
+    metricAgg: 'avg',
+    metricViz: 'line',
+    metricStep: '',
   }
+  Object.keys(tagFilter).forEach(k => delete tagFilter[k])
   error.value = ''
   hasAttemptedSubmit.value = false
   if (formRef.value) {
@@ -537,6 +892,10 @@ async function handleCreate() {
   loading.value = true
 
   try {
+    const activeTagFilter = Object.fromEntries(
+      Object.entries(tagFilter).filter(([, v]) => !!v),
+    )
+
     const panelData: CreatePanelRequest = {
       name: form.value.name,
       project_id: form.value.projectId,
@@ -549,6 +908,42 @@ async function handleCreate() {
         : undefined,
       statistic: form.value.panelType === 'bottleneck' && form.value.selectedStatistic
         ? form.value.selectedStatistic
+        : undefined,
+      // trace_list
+      service_filter: form.value.panelType === 'trace_list'
+        ? form.value.serviceFilter || undefined
+        : undefined,
+      operation_filter: form.value.panelType === 'trace_list'
+        ? form.value.operationFilter || undefined
+        : undefined,
+      min_duration_ms: form.value.panelType === 'trace_list' && form.value.minDurationMs != null
+        ? form.value.minDurationMs
+        : undefined,
+      has_error: form.value.panelType === 'trace_list' && form.value.hasError != null
+        ? form.value.hasError
+        : undefined,
+      limit: form.value.panelType === 'trace_list'
+        ? form.value.traceLimit
+        : undefined,
+      // trace
+      trace_id: form.value.panelType === 'trace'
+        ? form.value.traceId
+        : undefined,
+      // custom_metric
+      metric_name: form.value.panelType === 'custom_metric'
+        ? form.value.metricName
+        : undefined,
+      tag_filter: form.value.panelType === 'custom_metric' && Object.keys(activeTagFilter).length > 0
+        ? activeTagFilter
+        : undefined,
+      agg: form.value.panelType === 'custom_metric'
+        ? form.value.metricAgg
+        : undefined,
+      viz: form.value.panelType === 'custom_metric'
+        ? form.value.metricViz
+        : undefined,
+      step: form.value.panelType === 'custom_metric' && form.value.metricStep
+        ? form.value.metricStep
         : undefined,
       index: panelsStore.panels.length,
       period: form.value.period || null,

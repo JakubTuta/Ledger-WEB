@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import type { AcceptInviteResponse, InviteCodeResponse, MembersListResponse, ProjectMember } from '~/types/sharing'
+import { defineStore } from 'pinia'
 
 export const useSharingStore = defineStore('sharing', () => {
   const { client } = useApiStore()
@@ -8,11 +8,9 @@ export const useSharingStore = defineStore('sharing', () => {
   const loadingByProject = ref<Record<number, boolean>>({})
   const lastFetchByProject = ref<Record<number, Date>>({})
 
-  const getMembersForProject = (projectId: number) =>
-    computed(() => membersByProject.value[projectId] ?? [])
+  const getMembersForProject = (projectId: number) => computed(() => membersByProject.value[projectId] ?? [])
 
-  const isLoadingForProject = (projectId: number) =>
-    computed(() => loadingByProject.value[projectId] ?? false)
+  const isLoadingForProject = (projectId: number) => computed(() => loadingByProject.value[projectId] ?? false)
 
   const fetchMembers = async (projectId: number, force = false) => {
     if (loadingByProject.value[projectId])

@@ -1,12 +1,14 @@
 <template>
   <div
     class="metric-chart-wrapper"
-    :style="{ height: heightStyle }"
+    :style="{'height': heightStyle}"
   >
     <EChart
       class="metric-chart"
       :option="chartOption"
-      :theme="isDark ? 'dark' : undefined"
+      :theme="isDark
+        ? 'dark'
+        : undefined"
       autoresize
     />
 
@@ -29,6 +31,7 @@
         >
           Separate
         </v-btn>
+
         <v-btn
           :value="true"
           size="x-small"
@@ -54,14 +57,22 @@ const props = withDefaults(defineProps<{
   height: '100%',
 })
 
-const heightStyle = computed(() => typeof props.height === 'number' ? `${props.height}px` : props.height)
+const heightStyle = computed(() => (typeof props.height === 'number'
+  ? `${props.height}px`
+  : props.height))
 
 function axisInterval(len: number): number {
-  if (len <= 12) return 0
-  if (len <= 24) return 1
-  if (len <= 48) return 3
-  if (len <= 96) return 5
-  if (len <= 168) return 11
+  if (len <= 12)
+    return 0
+  if (len <= 24)
+    return 1
+  if (len <= 48)
+    return 3
+  if (len <= 96)
+    return 5
+  if (len <= 168)
+    return 11
+
   return Math.floor(len / 12)
 }
 
@@ -72,28 +83,35 @@ const isCumulative = ref(false)
 const data = computed<AggregatedMetricData[]>(() => props.metrics?.data ?? [])
 const isHourly = computed(() => props.metrics?.granularity === 'hourly')
 
-const xAxisData = computed(() =>
-  data.value.map((d) => {
-    const y = d.date.substring(0, 4)
-    const m = d.date.substring(4, 6)
-    const day = d.date.substring(6, 8)
-    if (isHourly.value && d.hour !== undefined && d.hour !== null) {
-      return `${day}/${m} ${String(d.hour).padStart(2, '0')}:00`
-    }
-    return `${day}/${m}/${y}`
-  }),
+const xAxisData = computed(() => data.value.map((d) => {
+  const y = d.date.substring(0, 4)
+  const m = d.date.substring(4, 6)
+  const day = d.date.substring(6, 8)
+  if (isHourly.value && d.hour !== undefined && d.hour !== null) {
+    return `${day}/${m} ${String(d.hour).padStart(2, '0')}:00`
+  }
+
+  return `${day}/${m}/${y}`
+}),
 )
 
 function cumulate(arr: number[]): number[] {
   let sum = 0
+
   return arr.map(v => (sum += v))
 }
 
-const surfaceColor = computed(() => isDark.value ? '#424242' : '#e0e0e0')
-const textColor = computed(() => isDark.value ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')
+const surfaceColor = computed(() => (isDark.value
+  ? '#424242'
+  : '#e0e0e0'))
+const textColor = computed(() => (isDark.value
+  ? 'rgba(255,255,255,0.7)'
+  : 'rgba(0,0,0,0.6)'))
 
 const chartOption = computed(() => {
-  if (props.mode === 'latency') return buildLatencyOption()
+  if (props.mode === 'latency')
+    return buildLatencyOption()
+
   return buildVolumeOption()
 })
 
@@ -101,11 +119,17 @@ function buildVolumeOption() {
   const rawLogs = data.value.map(d => d.log_count)
   const rawErrors = data.value.map(d => d.error_count)
 
-  const errorData = isCumulative.value ? cumulate(rawErrors) : rawErrors
-  const logData = isCumulative.value ? cumulate(rawLogs) : rawLogs
+  const errorData = isCumulative.value
+    ? cumulate(rawErrors)
+    : rawErrors
+  const logData = isCumulative.value
+    ? cumulate(rawLogs)
+    : rawLogs
   const logOnlyData = logData.map((v, i) => v - errorData[i]!)
 
-  const suffix = isCumulative.value ? ' (cumulative)' : ''
+  const suffix = isCumulative.value
+    ? ' (cumulative)'
+    : ''
 
   return {
     backgroundColor: 'transparent',
@@ -118,7 +142,12 @@ function buildVolumeOption() {
         const logs = params.find((p: any) => p.seriesName === `Logs${suffix}`)?.value ?? 0
         const errors = params.find((p: any) => p.seriesName === `Errors${suffix}`)?.value ?? 0
         const totalLogs = (Number(logs) + Number(errors)).toLocaleString()
-        return `<b>${label}</b><br/>Logs: ${totalLogs}${isCumulative.value ? ' cumul.' : ''}<br/>Errors: ${Number(errors).toLocaleString()}${isCumulative.value ? ' cumul.' : ''}`
+
+        return `<b>${label}</b><br/>Logs: ${totalLogs}${isCumulative.value
+          ? ' cumul.'
+          : ''}<br/>Errors: ${Number(errors).toLocaleString()}${isCumulative.value
+          ? ' cumul.'
+          : ''}`
       },
     },
     xAxis: {
@@ -127,7 +156,9 @@ function buildVolumeOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        rotate: xAxisData.value.length > 20 ? 45 : 0,
+        rotate: xAxisData.value.length > 20
+          ? 45
+          : 0,
         interval: axisInterval(xAxisData.value.length),
         hideOverlap: true,
       },
@@ -139,7 +170,9 @@ function buildVolumeOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v),
+        formatter: (v: number) => (v >= 1000
+          ? `${(v / 1000).toFixed(0)}k`
+          : String(v)),
       },
       splitLine: { lineStyle: { color: surfaceColor.value, type: 'dashed' } },
     },
@@ -171,7 +204,9 @@ function buildVolumeOption() {
 }
 
 function buildLatencyOption() {
-  const toNum = (v: number | undefined | null) => (v == null || Number.isNaN(v) ? null : Math.round(v))
+  const toNum = (v: number | undefined | null) => (v == null || Number.isNaN(v)
+    ? null
+    : Math.round(v))
   const avgData = data.value.map(d => toNum(d.avg_duration_ms))
   const p95Data = data.value.map(d => toNum(d.p95_duration_ms))
   const p99Data = data.value.map(d => toNum(d.p99_duration_ms))
@@ -187,8 +222,10 @@ function buildLatencyOption() {
         const label = params[0]?.axisValue ?? ''
         let html = `<b>${label}</b>`
         for (const p of params) {
-          if (p.value != null) html += `<br/>${p.seriesName}: ${p.value}ms`
+          if (p.value != null)
+            html += `<br/>${p.seriesName}: ${p.value}ms`
         }
+
         return html
       },
     },
@@ -198,7 +235,9 @@ function buildLatencyOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        rotate: xAxisData.value.length > 20 ? 45 : 0,
+        rotate: xAxisData.value.length > 20
+          ? 45
+          : 0,
         interval: axisInterval(xAxisData.value.length),
         hideOverlap: true,
       },
@@ -210,7 +249,9 @@ function buildLatencyOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${v}ms`,
+        formatter: (v: number) => (v >= 1000
+          ? `${(v / 1000).toFixed(1)}s`
+          : `${v}ms`),
       },
       splitLine: { lineStyle: { color: surfaceColor.value, type: 'dashed' } },
     },

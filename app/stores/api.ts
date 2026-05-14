@@ -3,7 +3,7 @@ import axios from 'axios'
 
 let _client: AxiosInstance | null = null
 
-export const useApiStore = () => {
+export function useApiStore() {
   if (_client) {
     return { client: _client }
   }
@@ -47,6 +47,7 @@ export const useApiStore = () => {
 
           if (refreshed) {
             original.headers.Authorization = `Bearer ${authStore.token}`
+
             return client.request(original)
           }
         }

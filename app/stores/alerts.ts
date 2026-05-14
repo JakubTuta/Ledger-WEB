@@ -19,12 +19,13 @@ export const useAlertsStore = defineStore('alerts', () => {
 
   // --- Rules ---
 
-  const getRulesForProject = (projectId: number) =>
-    computed(() => rulesByProject.value.get(projectId) ?? [])
+  const getRulesForProject = (projectId: number) => computed(() => rulesByProject.value.get(projectId) ?? [])
 
   const fetchRules = async (projectId: number, force = false) => {
-    if (rulesLoading.value.has(projectId)) return
-    if (!force && rulesByProject.value.has(projectId)) return
+    if (rulesLoading.value.has(projectId))
+      return
+    if (!force && rulesByProject.value.has(projectId))
+      return
 
     rulesLoading.value.add(projectId)
     try {
@@ -46,6 +47,7 @@ export const useAlertsStore = defineStore('alerts', () => {
     const response = await client.post<AlertRule>('/api/v1/alerts/rules', data)
     const rules = rulesByProject.value.get(data.project_id) ?? []
     rulesByProject.value.set(data.project_id, [...rules, response.data])
+
     return response.data
   }
 
@@ -56,8 +58,11 @@ export const useAlertsStore = defineStore('alerts', () => {
     const rules = rulesByProject.value.get(projectId) ?? []
     rulesByProject.value.set(
       projectId,
-      rules.map(r => (r.id === id ? response.data : r)),
+      rules.map(r => (r.id === id
+        ? response.data
+        : r)),
     )
+
     return response.data
   }
 
@@ -75,12 +80,13 @@ export const useAlertsStore = defineStore('alerts', () => {
 
   // --- Channels ---
 
-  const getChannelsForProject = (projectId: number) =>
-    computed(() => channelsByProject.value.get(projectId) ?? [])
+  const getChannelsForProject = (projectId: number) => computed(() => channelsByProject.value.get(projectId) ?? [])
 
   const fetchChannels = async (projectId: number, force = false) => {
-    if (channelsLoading.value.has(projectId)) return
-    if (!force && channelsByProject.value.has(projectId)) return
+    if (channelsLoading.value.has(projectId))
+      return
+    if (!force && channelsByProject.value.has(projectId))
+      return
 
     channelsLoading.value.add(projectId)
     try {
@@ -102,6 +108,7 @@ export const useAlertsStore = defineStore('alerts', () => {
     const response = await client.post<AlertChannel>('/api/v1/alerts/channels', data)
     const channels = channelsByProject.value.get(data.project_id) ?? []
     channelsByProject.value.set(data.project_id, [...channels, response.data])
+
     return response.data
   }
 
@@ -112,8 +119,11 @@ export const useAlertsStore = defineStore('alerts', () => {
     const channels = channelsByProject.value.get(projectId) ?? []
     channelsByProject.value.set(
       projectId,
-      channels.map(c => (c.id === id ? response.data : c)),
+      channels.map(c => (c.id === id
+        ? response.data
+        : c)),
     )
+
     return response.data
   }
 
@@ -128,6 +138,7 @@ export const useAlertsStore = defineStore('alerts', () => {
   const testChannel = async (id: number): Promise<ChannelTestResult> => {
     try {
       const response = await client.post<ChannelTestResult>(`/api/v1/alerts/channels/${id}/test`)
+
       return response.data
     }
     catch (error: any) {

@@ -5,7 +5,9 @@
 
       <v-chip
         size="small"
-        :color="project.environment === 'production' ? 'error' : 'primary'"
+        :color="project.environment === 'production'
+          ? 'error'
+          : 'primary'"
         class="ml-2"
       >
         {{ project.environment }}
@@ -16,7 +18,7 @@
       <v-btn
         v-if="isOwner"
         color="primary"
-        variant="tonal"
+        variant="flat"
         size="small"
         prepend-icon="mdi-link-plus"
         @click="showInviteDialog = true"
@@ -27,7 +29,7 @@
       <v-btn
         v-else
         color="error"
-        variant="tonal"
+        variant="flat"
         size="small"
         prepend-icon="mdi-exit-to-app"
         @click="showLeaveDialog = true"
@@ -62,7 +64,9 @@
 
             <v-chip
               size="x-small"
-              :color="member.role === 'owner' ? 'primary' : 'default'"
+              :color="member.role === 'owner'
+                ? 'primary'
+                : 'default'"
             >
               {{ member.role }}
             </v-chip>
@@ -89,7 +93,7 @@
       <v-alert
         v-else
         type="info"
-        variant="tonal"
+        variant="flat"
         density="compact"
       >
         No members found. Generate an invite code to add members.
@@ -160,8 +164,7 @@ const isLoading = sharingStore.isLoadingForProject(props.project.project_id)
 
 const currentUserId = computed(() => authStore.user?.account_id)
 
-const isOwner = computed(() =>
-  members.value.some(m => m.account_id === currentUserId.value && m.role === 'owner'),
+const isOwner = computed(() => members.value.some(m => m.account_id === currentUserId.value && m.role === 'owner'),
 )
 
 function formatDate(dateString: string) {

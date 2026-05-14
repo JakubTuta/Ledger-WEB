@@ -1,12 +1,14 @@
 <template>
   <div
     class="bottleneck-chart-wrapper"
-    :style="{ height: heightStyle }"
+    :style="{'height': heightStyle}"
   >
     <EChart
       class="bottleneck-chart"
       :option="chartOption"
-      :theme="isDark ? 'dark' : undefined"
+      :theme="isDark
+        ? 'dark'
+        : undefined"
       autoresize
     />
 
@@ -25,6 +27,7 @@
         >
           Separate
         </v-btn>
+
         <v-btn
           :value="true"
           size="x-small"
@@ -50,14 +53,22 @@ const props = withDefaults(defineProps<{
   height: '100%',
 })
 
-const heightStyle = computed(() => typeof props.height === 'number' ? `${props.height}px` : props.height)
+const heightStyle = computed(() => (typeof props.height === 'number'
+  ? `${props.height}px`
+  : props.height))
 
 function axisInterval(len: number): number {
-  if (len <= 12) return 0
-  if (len <= 24) return 1
-  if (len <= 48) return 3
-  if (len <= 96) return 5
-  if (len <= 168) return 11
+  if (len <= 12)
+    return 0
+  if (len <= 24)
+    return 1
+  if (len <= 48)
+    return 3
+  if (len <= 96)
+    return 5
+  if (len <= 168)
+    return 11
+
   return Math.floor(len / 12)
 }
 
@@ -69,14 +80,24 @@ const data = computed<BottleneckMetricData[]>(() => props.metrics?.data ?? [])
 const isHourly = computed(() => props.metrics?.granularity === 'hourly')
 
 const routeColors = [
-  '#1976D2', '#388E3C', '#D32F2F', '#F57C00',
-  '#7B1FA2', '#0097A7', '#C2185B', '#5D4037',
-  '#455A64', '#689F38',
+  '#1976D2',
+  '#388E3C',
+  '#D32F2F',
+  '#F57C00',
+  '#7B1FA2',
+  '#0097A7',
+  '#C2185B',
+  '#5D4037',
+  '#455A64',
+  '#689F38',
 ]
 
 function getRouteColor(route: string): string {
   const idx = props.selectedRoutes.indexOf(route)
-  return routeColors[idx >= 0 ? idx % routeColors.length : 0]!
+
+  return routeColors[idx >= 0
+    ? idx % routeColors.length
+    : 0]!
 }
 
 const timePoints = computed(() => {
@@ -86,11 +107,13 @@ const timePoints = computed(() => {
 
   if (isHourly.value) {
     const pts: string[] = []
-    sorted.forEach(date => {
+    sorted.forEach((date) => {
       for (let h = 0; h < 24; h++) pts.push(`${date}-${h}`)
     })
+
     return pts
   }
+
   return sorted
 })
 
@@ -100,6 +123,7 @@ function formatTimePoint(tp: string): string {
   const y = d.substring(0, 4)
   const m = d.substring(4, 6)
   const day = d.substring(6, 8)
+
   return parts[1] !== undefined
     ? `${day}/${m} ${parts[1].padStart(2, '0')}:00`
     : `${day}/${m}/${y}`
@@ -108,38 +132,59 @@ function formatTimePoint(tp: string): string {
 function getRawValues(route: string): (number | null)[] {
   return timePoints.value.map((tp) => {
     const item = data.value.find((d) => {
-      const key = `${d.date}${d.hour != null ? `-${d.hour}` : ''}`
+      const key = `${d.date}${d.hour != null
+        ? `-${d.hour}`
+        : ''}`
+
       return key === tp && d.route === route
     })
+
     return item?.value ?? null
   })
 }
 
 function cumulateNullable(arr: (number | null)[]): (number | null)[] {
   let sum = 0
+
   return arr.map((v) => {
-    if (v === null) return sum > 0 ? sum : null
+    if (v === null) {
+      return sum > 0
+        ? sum
+        : null
+    }
     sum += v
+
     return sum
   })
 }
 
 function formatValue(v: number): string {
   if (props.statistic === 'count') {
-    return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v))
+    return v >= 1000
+      ? `${(v / 1000).toFixed(1)}k`
+      : String(Math.round(v))
   }
-  return v >= 1000 ? `${(v / 1000).toFixed(2)}s` : `${Math.round(v)}ms`
+
+  return v >= 1000
+    ? `${(v / 1000).toFixed(2)}s`
+    : `${Math.round(v)}ms`
 }
 
-const surfaceColor = computed(() => isDark.value ? '#424242' : '#e0e0e0')
-const textColor = computed(() => isDark.value ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')
+const surfaceColor = computed(() => (isDark.value
+  ? '#424242'
+  : '#e0e0e0'))
+const textColor = computed(() => (isDark.value
+  ? 'rgba(255,255,255,0.7)'
+  : 'rgba(0,0,0,0.6)'))
 
 const chartOption = computed(() => {
   const categories = timePoints.value.map(formatTimePoint)
 
   const series = props.selectedRoutes.map((route) => {
     const raw = getRawValues(route)
-    const seriesData = isCumulative.value ? cumulateNullable(raw) : raw
+    const seriesData = isCumulative.value
+      ? cumulateNullable(raw)
+      : raw
 
     return {
       name: route,
@@ -151,8 +196,12 @@ const chartOption = computed(() => {
   })
 
   const yFormatter = props.statistic === 'count'
-    ? (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
-    : (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${v}ms`
+    ? (v: number) => (v >= 1000
+        ? `${(v / 1000).toFixed(0)}k`
+        : String(v))
+    : (v: number) => (v >= 1000
+        ? `${(v / 1000).toFixed(1)}s`
+        : `${v}ms`)
 
   return {
     backgroundColor: 'transparent',
@@ -162,13 +211,16 @@ const chartOption = computed(() => {
       axisPointer: { type: 'shadow' },
       formatter: (params: any[]) => {
         const label = params[0]?.axisValue ?? ''
-        const cumLabel = isCumulative.value ? ' (cumul.)' : ''
+        const cumLabel = isCumulative.value
+          ? ' (cumul.)'
+          : ''
         let html = `<b>${label}</b>`
         for (const p of params) {
           if (p.value != null) {
             html += `<br/><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:4px"></span>${p.seriesName}: ${formatValue(p.value)}${cumLabel}`
           }
         }
+
         return html
       },
     },
@@ -178,7 +230,9 @@ const chartOption = computed(() => {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        rotate: categories.length > 15 ? 45 : 0,
+        rotate: categories.length > 15
+          ? 45
+          : 0,
         interval: axisInterval(categories.length),
         hideOverlap: true,
       },

@@ -35,16 +35,24 @@
               size="48"
               class="mb-2"
             />
+
             <div class="text-body-2">
               No data available
             </div>
           </div>
         </div>
 
-        <!-- Heatmap -->
+        <!-- Hourly heatmap (today or short range) -->
         <HeatmapChart
+          v-else-if="metrics?.granularity === 'hourly'"
+          :metrics="metrics"
+        />
+
+        <!-- Daily fallback: stacked bar chart of errors/logs per day -->
+        <MetricChart
           v-else
           :metrics="metrics"
+          mode="volume"
         />
       </v-card-text>
     </template>
@@ -56,6 +64,7 @@
             <div class="text-body-2 font-weight-medium">
               {{ totalLogs.toLocaleString() }}
             </div>
+
             <div class="text-caption text-grey">
               Total Logs
             </div>
@@ -65,6 +74,7 @@
             <div class="text-body-2 font-weight-medium text-error">
               {{ totalErrors.toLocaleString() }}
             </div>
+
             <div class="text-caption text-grey">
               Errors
             </div>
@@ -74,6 +84,7 @@
             <div class="text-body-2 font-weight-medium">
               {{ errorRateDisplay }}
             </div>
+
             <div class="text-caption text-grey">
               Error Rate
             </div>
@@ -106,7 +117,9 @@ const data = computed(() => props.metrics?.data ?? [])
 const totalLogs = computed(() => data.value.reduce((s, d) => s + d.log_count, 0))
 const totalErrors = computed(() => data.value.reduce((s, d) => s + d.error_count, 0))
 const errorRateDisplay = computed(() => {
-  if (totalLogs.value === 0) return '-'
+  if (totalLogs.value === 0)
+    return '-'
+
   return `${((totalErrors.value / totalLogs.value) * 100).toFixed(1)}%`
 })
 </script>

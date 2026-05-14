@@ -11,7 +11,7 @@
 [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D.svg)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6.svg)](https://www.typescriptlang.org/)
 
-[Live Dashboard](https://ledger.jtuta.cloud) • [API Server](https://ledger-server.jtuta.cloud) • [Python SDK](https://github.com/JakubTuta/Ledger-SDK) • [Backend](https://github.com/JakubTuta/Ledger-APP) • [API Docs](https://bump.sh/tuta-corp/doc/ledger-api/)
+[Live Dashboard](https://ledger.jtuta.cloud) • [API Server](https://ledger-server.jtuta.cloud) • [Python SDK](https://github.com/JakubTuta/Ledger-SDK) • [Backend](https://github.com/JakubTuta/Ledger-APP) • [API Docs](https://ledger-server.jtuta.cloud/docs)
 
 </div>
 
@@ -173,7 +173,7 @@ Ledger-WEB/
 The dashboard communicates with the Ledger API server:
 
 - **Production API:** `https://ledger-server.jtuta.cloud`
-- **API Documentation:** [bump.sh/tuta-corp/doc/ledger-api](https://bump.sh/tuta-corp/doc/ledger-api/)
+- **API Documentation:** [bump.sh/tuta-corp/doc/ledger-api](https://ledger-server.jtuta.cloud/docs)
 - **OpenAPI Spec:** `https://ledger-server.jtuta.cloud/openapi.json`
 
 All API calls include automatic:
@@ -189,7 +189,7 @@ Ledger is a complete observability platform:
 - **[Python SDK](https://github.com/JakubTuta/Ledger-SDK)** - Official client library ([PyPI](https://pypi.org/project/ledger-sdk/))
 - **[Backend Server](https://github.com/JakubTuta/Ledger-APP)** - FastAPI-based log ingestion and query API
 - **[Web Dashboard](https://github.com/JakubTuta/Ledger-WEB)** - This repository
-- **[API Documentation](https://bump.sh/tuta-corp/doc/ledger-api/)** - Complete REST API reference
+- **[API Documentation](https://ledger-server.jtuta.cloud/docs)** - Complete REST API reference
 
 ## Links
 
@@ -197,7 +197,7 @@ Ledger is a complete observability platform:
 - **API Server:** [ledger-server.jtuta.cloud](https://ledger-server.jtuta.cloud)
 - **Python SDK:** [github.com/JakubTuta/Ledger-SDK](https://github.com/JakubTuta/Ledger-SDK)
 - **Backend Source:** [github.com/JakubTuta/Ledger-APP](https://github.com/JakubTuta/Ledger-APP)
-- **API Documentation:** [bump.sh/tuta-corp/doc/ledger-api](https://bump.sh/tuta-corp/doc/ledger-api/)
+- **API Documentation:** [bump.sh/tuta-corp/doc/ledger-api](https://ledger-server.jtuta.cloud/docs)
 
 ## License
 

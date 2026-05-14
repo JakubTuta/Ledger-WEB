@@ -7,6 +7,7 @@
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Keyboard Shortcuts</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -33,6 +34,7 @@
                 {{ shortcut.key }}
               </v-chip>
             </template>
+
             <v-list-item-title class="text-body-2">
               {{ shortcut.label }}
             </v-list-item-title>

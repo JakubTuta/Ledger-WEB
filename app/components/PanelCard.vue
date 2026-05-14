@@ -35,6 +35,7 @@
               size="48"
               class="mb-2"
             />
+
             <div class="text-body-2">
               No data available
             </div>
@@ -57,6 +58,7 @@
             <div class="text-body-2 font-weight-medium">
               {{ totalLogs.toLocaleString() }}
             </div>
+
             <div class="text-caption text-grey">
               Total Logs
             </div>
@@ -66,6 +68,7 @@
             <div class="text-body-2 font-weight-medium text-error">
               {{ totalErrors.toLocaleString() }}
             </div>
+
             <div class="text-caption text-grey">
               Errors
             </div>
@@ -75,6 +78,7 @@
             <div class="text-body-2 font-weight-medium">
               {{ avgDuration }}
             </div>
+
             <div class="text-caption text-grey">
               Avg Duration
             </div>
@@ -122,7 +126,9 @@ const panelTypeColor = computed(() => {
   }
 })
 
-const chartMode = computed(() => props.panel.type === 'metrics' ? 'latency' : 'volume')
+const chartMode = computed(() => (props.panel.type === 'metrics'
+  ? 'latency'
+  : 'volume'))
 
 const chartData = computed(() => props.metrics?.data ?? [])
 
@@ -131,8 +137,10 @@ const totalErrors = computed(() => chartData.value.reduce((s, d) => s + d.error_
 
 const avgDuration = computed(() => {
   const durations = chartData.value.filter(d => d.avg_duration_ms > 0)
-  if (durations.length === 0) return '-'
+  if (durations.length === 0)
+    return '-'
   const avg = durations.reduce((s, d) => s + d.avg_duration_ms, 0) / durations.length
+
   return `${avg.toFixed(0)}ms`
 })
 </script>

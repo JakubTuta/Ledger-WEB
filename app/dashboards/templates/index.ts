@@ -74,4 +74,12 @@ export const custom: DashboardTemplate = {
   ],
 }
 
-export const templates: DashboardTemplate[] = [apiHealth, database, jobs, errors, custom]
+export const empty: DashboardTemplate = {
+  id: 'empty',
+  name: 'Empty',
+  description: 'Blank dashboard — add panels manually',
+  icon: 'mdi-plus-box-outline',
+  panels: [],
+}
+
+export const templates: DashboardTemplate[] = [apiHealth, database, jobs, errors, custom, empty]

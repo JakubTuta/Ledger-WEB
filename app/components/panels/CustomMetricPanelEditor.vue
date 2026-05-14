@@ -5,8 +5,9 @@
     persistent
   >
     <v-card>
-      <v-card-title class="pa-4 d-flex align-center justify-space-between">
+      <v-card-title class="d-flex align-center justify-space-between pa-4">
         <span>Configure Metric Panel</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -35,15 +36,17 @@
           v-if="tagKeys.length > 0"
           class="mb-3"
         >
-          <div class="text-caption mb-2 text-medium-emphasis">
+          <div class="text-caption text-medium-emphasis mb-2">
             Tag filters
           </div>
+
           <div
             v-for="key in tagKeys"
             :key="key"
-            class="d-flex align-center gap-2 mb-2"
+            class="d-flex align-center mb-2 gap-2"
           >
             <span class="text-body-2 w-25">{{ key }}</span>
+
             <v-select
               v-model="tagFilter[key]"
               :items="tagValues(key)"
@@ -86,6 +89,7 @@
             />
             Line
           </v-btn>
+
           <v-btn
             value="bar"
             size="small"
@@ -96,6 +100,7 @@
             />
             Bar
           </v-btn>
+
           <v-btn
             value="single_stat"
             size="small"
@@ -122,15 +127,17 @@
 
       <v-card-actions class="pa-3">
         <v-spacer />
+
         <v-btn
           variant="text"
           @click="dialogOpen = false"
         >
           Cancel
         </v-btn>
+
         <v-btn
           color="primary"
-          variant="tonal"
+          variant="flat"
           :loading="saving"
           @click="handleSave"
         >
@@ -152,7 +159,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  saved: []
+  'saved': []
 }>()
 
 const customMetricsStore = useCustomMetricsStore()
@@ -185,8 +192,9 @@ watch(() => props.panel, (p) => {
 
 const metricNames = computed(() => customMetricsStore.names)
 
-const tagInfo = computed(() =>
-  form.metric_name ? customMetricsStore.tagsByMetric.get(form.metric_name) : null,
+const tagInfo = computed(() => (form.metric_name
+  ? customMetricsStore.tagsByMetric.get(form.metric_name)
+  : null),
 )
 
 const tagKeys = computed(() => tagInfo.value?.keys ?? [])
@@ -200,7 +208,8 @@ function onMetricSearch(val: string) {
 }
 
 function onMetricSelected(name: string | null) {
-  if (name) customMetricsStore.fetchTags(name)
+  if (name)
+    customMetricsStore.fetchTags(name)
 }
 
 const aggOptions = [
@@ -225,7 +234,9 @@ async function handleSave() {
       agg: form.agg as any,
       viz: form.viz as any,
       step: form.step || null,
-      tag_filter: Object.keys(activeTagFilter).length > 0 ? activeTagFilter : null,
+      tag_filter: Object.keys(activeTagFilter).length > 0
+        ? activeTagFilter
+        : null,
     } as any)
     emit('saved')
     dialogOpen.value = false

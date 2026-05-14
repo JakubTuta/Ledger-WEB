@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import type { ApiKey, CreateApiKeyResponse, ListApiKeysResponse } from '~/types/apiKey'
+import { defineStore } from 'pinia'
 
 export const useApiKeysStore = defineStore('apiKeys', () => {
   const { client } = useApiStore()

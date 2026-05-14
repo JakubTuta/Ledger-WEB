@@ -53,7 +53,7 @@
           v-if="validationError"
           type="error"
           density="compact"
-          variant="tonal"
+          variant="flat"
           class="mt-4"
         >
           {{ validationError }}

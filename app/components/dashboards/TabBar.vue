@@ -7,7 +7,7 @@
       @update:model-value="handleTabChange"
     >
       <v-tab
-        v-for="tab in panelsStore.tabs"
+        v-for="tab in visibleTabs"
         :key="tab.id"
         :value="tab.id"
         class="tab-item"
@@ -16,7 +16,7 @@
           <span>{{ tab.name }}</span>
 
           <v-menu :close-on-content-click="true">
-            <template #activator="{ props: menuProps }">
+            <template #activator="{'props': menuProps}">
               <v-btn
                 v-bind="menuProps"
                 icon="mdi-dots-vertical"
@@ -33,8 +33,8 @@
                 title="Rename"
                 @click="startRename(tab)"
               />
+
               <v-list-item
-                v-if="panelsStore.tabs.length > 1"
                 prepend-icon="mdi-delete"
                 title="Delete"
                 base-color="error"
@@ -46,7 +46,26 @@
       </v-tab>
     </v-tabs>
 
+    <v-tooltip
+      v-if="!projectId"
+      location="bottom"
+      text="Select a project first"
+    >
+      <template #activator="{'props': tipProps}">
+        <span v-bind="tipProps">
+          <v-btn
+            icon="mdi-plus"
+            variant="text"
+            size="small"
+            class="ml-1"
+            disabled
+          />
+        </span>
+      </template>
+    </v-tooltip>
+
     <v-btn
+      v-else
       icon="mdi-plus"
       variant="text"
       size="small"
@@ -64,6 +83,7 @@
         <v-card-title class="pa-4">
           Rename tab
         </v-card-title>
+
         <v-card-text>
           <v-text-field
             v-model="renameName"
@@ -74,17 +94,20 @@
             @keydown.enter="commitRename"
           />
         </v-card-text>
+
         <v-card-actions>
           <v-spacer />
+
           <v-btn
             variant="text"
             @click="renameOpen = false"
           >
             Cancel
           </v-btn>
+
           <v-btn
             color="primary"
-            variant="tonal"
+            variant="flat"
             @click="commitRename"
           >
             Save
@@ -102,20 +125,25 @@
         <v-card-title class="pa-4">
           Delete "{{ deletingTab?.name }}"?
         </v-card-title>
+
         <v-card-text>
-          Panels in this tab will not be deleted from the server.
+          All panels in this tab will also be permanently deleted.
         </v-card-text>
+
         <v-card-actions>
           <v-spacer />
+
           <v-btn
             variant="text"
             @click="deleteOpen = false"
           >
             Cancel
           </v-btn>
+
           <v-btn
             color="error"
-            variant="tonal"
+            variant="flat"
+            :loading="deleting"
             @click="commitDelete"
           >
             Delete
@@ -125,7 +153,7 @@
     </v-dialog>
 
     <!-- Template picker -->
-    <DashboardsTemplatePicker
+    <TemplatePicker
       v-if="projectId"
       v-model="templatePickerOpen"
       :project-id="projectId"
@@ -150,13 +178,20 @@ const renameOpen = ref(false)
 const renameName = ref('')
 const renameTabId = ref<string | null>(null)
 const deleteOpen = ref(false)
-const deletingTab = ref<{ id: string; name: string } | null>(null)
+const deletingTab = ref<{ id: string, name: string } | null>(null)
+const deleting = ref(false)
 
-function handleTabChange(tabId: string) {
-  panelsStore.setActiveTab(tabId)
+const visibleTabs = computed(() => panelsStore.tabsForProject(props.projectId
+  ? String(props.projectId)
+  : null),
+)
+
+function handleTabChange(tabId: unknown) {
+  if (typeof tabId === 'string')
+    panelsStore.setActiveTab(tabId)
 }
 
-function startRename(tab: { id: string; name: string }) {
+function startRename(tab: { id: string, name: string }) {
   renameTabId.value = tab.id
   renameName.value = tab.name
   renameOpen.value = true
@@ -169,14 +204,16 @@ function commitRename() {
   renameOpen.value = false
 }
 
-function confirmDelete(tab: { id: string; name: string }) {
+function confirmDelete(tab: { id: string, name: string }) {
   deletingTab.value = tab
   deleteOpen.value = true
 }
 
-function commitDelete() {
+async function commitDelete() {
   if (deletingTab.value) {
-    panelsStore.deleteTab(deletingTab.value.id)
+    deleting.value = true
+    await panelsStore.deleteTab(deletingTab.value.id)
+    deleting.value = false
   }
   deleteOpen.value = false
 }
@@ -191,5 +228,9 @@ function commitDelete() {
 .tab-item:hover .tab-menu-btn,
 .tab-item.v-tab--selected .tab-menu-btn {
   opacity: 1;
+}
+
+.tab-item.v-tab--selected {
+  color: rgb(var(--v-theme-on-surface)) !important;
 }
 </style>

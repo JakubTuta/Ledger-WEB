@@ -17,17 +17,23 @@ interface DashboardTab {
   name: string
   templateId: string | null
   panelIds: string[]
+  projectId: string | null
 }
 
 const TABS_STORAGE_KEY = 'ledger_dashboard_tabs'
 const ACTIVE_TAB_STORAGE_KEY = 'ledger_active_tab'
 const TABS_VERSION_KEY = 'ledger_tabs_migrated_v1'
+const TABS_VERSION_KEY_V2 = 'ledger_tabs_migrated_v2'
 
 function loadTabsFromStorage(): DashboardTab[] {
   try {
-    if (typeof localStorage === 'undefined') return []
+    if (typeof localStorage === 'undefined')
+      return []
     const raw = localStorage.getItem(TABS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+
+    return raw
+      ? JSON.parse(raw)
+      : []
   }
   catch { return [] }
 }
@@ -122,8 +128,12 @@ export const usePanelsStore = defineStore('panels', () => {
       searchParams.set('type', metricsType)
 
       if (metricsType === 'endpoint') {
-        const endpointPath = params?.endpointPath || panel.endpoint
-        if (endpointPath) {
+        const rawEndpoint = params?.endpointPath || panel.endpoint
+        if (rawEndpoint) {
+          const spaceIdx = rawEndpoint.indexOf(' ')
+          const endpointPath = spaceIdx !== -1
+            ? rawEndpoint.slice(spaceIdx + 1)
+            : rawEndpoint
           searchParams.set('endpointPath', endpointPath)
         }
       }
@@ -387,7 +397,8 @@ export const usePanelsStore = defineStore('panels', () => {
   }
 
   const fetchHeatmapForPanel = async (panel: Panel) => {
-    if (metricsLoading.value.has(panel.id)) return
+    if (metricsLoading.value.has(panel.id))
+      return
 
     metricsLoading.value.add(panel.id)
 
@@ -421,15 +432,40 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap']
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'custom_metric']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
     const payload: Record<string, any> = {}
-    const allowed = ['name', 'index', 'project_id', 'type', 'endpoint', 'routes', 'statistic', 'period', 'periodFrom', 'periodTo', 'layout']
+    const allowed = [
+      'name',
+      'index',
+      'project_id',
+      'type',
+      'endpoint',
+      'routes',
+      'statistic',
+      'period',
+      'periodFrom',
+      'periodTo',
+      'layout',
+      'trace_id',
+      'service_filter',
+      'operation_filter',
+      'min_duration_ms',
+      'has_error',
+      'limit',
+      'metric_name',
+      'tag_filter',
+      'agg',
+      'viz',
+      'step',
+    ]
     for (const key of allowed) {
       const value = (data as any)[key]
-      if (value !== undefined) payload[key] = value
+      if (value !== undefined)
+        payload[key] = value
     }
+
     return payload
   }
 
@@ -443,18 +479,25 @@ export const usePanelsStore = defineStore('panels', () => {
       panels.value.push(response.data)
       total.value += 1
 
-      // Add to active tab if one exists
-      if (activeTab.value) {
-        activeTab.value.panelIds.push(response.data.id)
-        saveTabsToStorage(tabs.value)
+      const panelProjectId = response.data.project_id
+      let targetTab = activeTab.value?.projectId === panelProjectId ? activeTab.value : null
+      if (!targetTab) {
+        const projectTabs = tabsForProject(panelProjectId)
+        targetTab = projectTabs.find(t => t.projectId === panelProjectId) ?? null
       }
+      if (!targetTab) {
+        targetTab = addTab('Default', null, panelProjectId)
+        setActiveTab(targetTab.id)
+      }
+      targetTab.panelIds.push(response.data.id)
+      saveTabsToStorage(tabs.value)
 
       return { success: true, panel: response.data }
     }
     catch (error: any) {
       console.error('Error creating panel:', error)
 
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create panel'
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to create panel'
 
       return { success: false, error: errorMessage }
     }
@@ -490,6 +533,39 @@ export const usePanelsStore = defineStore('panels', () => {
         periodTo: data.periodTo !== undefined
           ? data.periodTo
           : panel.periodTo || null,
+        metric_name: data.metric_name !== undefined
+          ? data.metric_name
+          : panel.metric_name ?? null,
+        tag_filter: data.tag_filter !== undefined
+          ? data.tag_filter
+          : panel.tag_filter ?? null,
+        agg: data.agg !== undefined
+          ? data.agg
+          : panel.agg ?? null,
+        viz: data.viz !== undefined
+          ? data.viz
+          : panel.viz ?? null,
+        step: data.step !== undefined
+          ? data.step
+          : panel.step ?? null,
+        trace_id: data.trace_id !== undefined
+          ? data.trace_id
+          : panel.trace_id ?? null,
+        service_filter: data.service_filter !== undefined
+          ? data.service_filter
+          : panel.service_filter ?? null,
+        operation_filter: data.operation_filter !== undefined
+          ? data.operation_filter
+          : panel.operation_filter ?? null,
+        min_duration_ms: data.min_duration_ms !== undefined
+          ? data.min_duration_ms
+          : panel.min_duration_ms ?? null,
+        has_error: data.has_error !== undefined
+          ? data.has_error
+          : panel.has_error ?? null,
+        limit: data.limit !== undefined
+          ? data.limit
+          : panel.limit ?? null,
       }
 
       const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
@@ -504,7 +580,7 @@ export const usePanelsStore = defineStore('panels', () => {
     catch (error: any) {
       console.error('Error updating panel:', error)
 
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to update panel'
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to update panel'
 
       return { success: false, error: errorMessage }
     }
@@ -536,7 +612,7 @@ export const usePanelsStore = defineStore('panels', () => {
     catch (error: any) {
       console.error('Error deleting panel:', error)
 
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete panel'
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete panel'
 
       return { success: false, error: errorMessage }
     }
@@ -561,6 +637,17 @@ export const usePanelsStore = defineStore('panels', () => {
             period: panel.period || null,
             periodFrom: panel.periodFrom || null,
             periodTo: panel.periodTo || null,
+            metric_name: panel.metric_name ?? null,
+            tag_filter: panel.tag_filter ?? null,
+            agg: panel.agg ?? null,
+            viz: panel.viz ?? null,
+            step: panel.step ?? null,
+            trace_id: panel.trace_id ?? null,
+            service_filter: panel.service_filter ?? null,
+            operation_filter: panel.operation_filter ?? null,
+            min_duration_ms: panel.min_duration_ms ?? null,
+            has_error: panel.has_error ?? null,
+            limit: panel.limit ?? null,
           }
 
           return client.put(`/api/v1/dashboard/panels/${id}`, toServerPayload(updateData))
@@ -579,7 +666,7 @@ export const usePanelsStore = defineStore('panels', () => {
     catch (error: any) {
       console.error('Error updating panel indexes:', error)
 
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to update panel order'
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to update panel order'
 
       return { success: false, error: errorMessage }
     }
@@ -634,7 +721,10 @@ export const usePanelsStore = defineStore('panels', () => {
           await fetchBottleneckForPanel(response.data, routes, existingBottleneck.statistic)
         }
       }
-      else {
+      else if (response.data.type === 'error_heatmap') {
+        await fetchHeatmapForPanel(response.data)
+      }
+      else if (response.data.type !== 'trace' && response.data.type !== 'trace_list' && response.data.type !== 'custom_metric') {
         await fetchMetricsForPanel(response.data)
       }
 
@@ -643,44 +733,60 @@ export const usePanelsStore = defineStore('panels', () => {
     catch (error: any) {
       console.error('Error updating panel time range:', error)
 
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to update time range'
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to update time range'
 
       return { success: false, error: errorMessage }
     }
   }
 
   // --- Tabs state ---
-  const tabs = ref<DashboardTab[]>(import.meta.client ? loadTabsFromStorage() : [])
+  const tabs = ref<DashboardTab[]>(import.meta.client
+    ? loadTabsFromStorage()
+    : [])
   const activeTabId = ref<string>(
-    import.meta.client ? (localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) ?? '') : '',
+    import.meta.client
+      ? (localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) ?? '')
+      : '',
   )
 
-  const activeTab = computed(() =>
-    tabs.value.find(t => t.id === activeTabId.value) ?? tabs.value[0] ?? null,
+  const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? tabs.value[0] ?? null,
   )
 
   const activePanels = computed(() => {
-    if (!activeTab.value) return sortedPanels.value
+    if (!activeTab.value)
+      return sortedPanels.value
+
     return activeTab.value.panelIds
       .map(id => panels.value.find(p => p.id === id))
       .filter((p): p is Panel => !!p)
+      .sort((a, b) => a.index - b.index)
   })
 
   function setActiveTab(tabId: string) {
     activeTabId.value = tabId
-    if (import.meta.client) localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabId)
+    if (import.meta.client)
+      localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabId)
   }
 
-  function addTab(name: string, templateId: string | null = null): DashboardTab {
+  function addTab(name: string, templateId: string | null = null, projectId: string | null = null): DashboardTab {
     const tab: DashboardTab = {
       id: `tab-${Date.now()}`,
       name,
       templateId,
       panelIds: [],
+      projectId,
     }
     tabs.value.push(tab)
     saveTabsToStorage(tabs.value)
+
     return tab
+  }
+
+  function tabsForProject(projectId: string | null): DashboardTab[] {
+    if (!projectId)
+      return tabs.value
+
+    return tabs.value.filter(t => t.projectId === projectId || t.projectId === null)
   }
 
   function renameTab(tabId: string, name: string) {
@@ -691,7 +797,11 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  function deleteTab(tabId: string) {
+  async function deleteTab(tabId: string) {
+    const tab = tabs.value.find(t => t.id === tabId)
+    if (tab) {
+      await Promise.all(tab.panelIds.map(id => deletePanel(id)))
+    }
     tabs.value = tabs.value.filter(t => t.id !== tabId)
     saveTabsToStorage(tabs.value)
     if (activeTabId.value === tabId && tabs.value.length > 0) {
@@ -720,29 +830,62 @@ export const usePanelsStore = defineStore('panels', () => {
     saveTabsToStorage(tabs.value)
   }
 
-  // Run migration: if no tabs exist yet and we have panels, create "Default" tab
   function migrateToTabs() {
-    if (!import.meta.client) return
-    if (localStorage.getItem(TABS_VERSION_KEY)) return
-    if (tabs.value.length > 0) {
-      localStorage.setItem(TABS_VERSION_KEY, '1')
+    if (!import.meta.client)
       return
+
+    // v1: initial migration — create tabs from flat panel list
+    if (!localStorage.getItem(TABS_VERSION_KEY)) {
+      if (tabs.value.length === 0 && panels.value.length > 0) {
+        const byProject = new Map<string, string[]>()
+        for (const p of panels.value) {
+          const ids = byProject.get(p.project_id) ?? []
+          ids.push(p.id)
+          byProject.set(p.project_id, ids)
+        }
+        let firstTabId: string | null = null
+        for (const [pid, ids] of byProject) {
+          const t = addTab('Default', null, pid)
+          t.panelIds = ids
+          if (!firstTabId) firstTabId = t.id
+        }
+        saveTabsToStorage(tabs.value)
+        if (firstTabId) setActiveTab(firstTabId)
+      }
+      localStorage.setItem(TABS_VERSION_KEY, '1')
     }
-    if (panels.value.length > 0) {
-      const defaultTab = addTab('Default', null)
-      defaultTab.panelIds = panels.value.map(p => p.id)
+
+    // v2: upgrade null-projectId tabs to per-project tabs
+    if (!localStorage.getItem(TABS_VERSION_KEY_V2)) {
+      const nullTabs = tabs.value.filter(t => t.projectId === null)
+      for (const tab of nullTabs) {
+        const byProject = new Map<string, string[]>()
+        for (const panelId of tab.panelIds) {
+          const panel = panels.value.find(p => p.id === panelId)
+          if (!panel) continue
+          const ids = byProject.get(panel.project_id) ?? []
+          ids.push(panelId)
+          byProject.set(panel.project_id, ids)
+        }
+        tabs.value = tabs.value.filter(t => t.id !== tab.id)
+        for (const [pid, ids] of byProject) {
+          const newTab = addTab(tab.name, tab.templateId, pid)
+          newTab.panelIds = ids
+          if (activeTabId.value === tab.id) setActiveTab(newTab.id)
+        }
+      }
       saveTabsToStorage(tabs.value)
-      setActiveTab(defaultTab.id)
+      localStorage.setItem(TABS_VERSION_KEY_V2, '1')
     }
-    localStorage.setItem(TABS_VERSION_KEY, '1')
   }
 
   async function applyTemplate(templateId: string, projectId: string | number) {
     const { templates } = await import('~/dashboards/templates')
     const template = templates.find(t => t.id === templateId)
-    if (!template) return
+    if (!template)
+      return
 
-    const tab = addTab(template.name, templateId)
+    const tab = addTab(template.name, templateId, String(projectId))
     setActiveTab(tab.id)
 
     const created: Panel[] = []
@@ -755,11 +898,12 @@ export const usePanelsStore = defineStore('panels', () => {
       } as CreatePanelRequest)
       if (result.success && result.panel) {
         created.push(result.panel)
-        tab.panelIds.push(result.panel.id)
+        // createPanel already adds to activeTab, skip duplicate push
       }
     }
 
     saveTabsToStorage(tabs.value)
+
     return { tab, panels: created }
   }
 
@@ -803,6 +947,7 @@ export const usePanelsStore = defineStore('panels', () => {
     activePanels,
     setActiveTab,
     addTab,
+    tabsForProject,
     renameTab,
     deleteTab,
     reorderTabs,

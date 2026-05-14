@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import type { ProjectQuotaResponse } from '~/types/quota'
+import { defineStore } from 'pinia'
 
 export const useQuotaStore = defineStore('quota', () => {
   const { client } = useApiStore()

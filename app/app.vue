@@ -13,8 +13,9 @@
       temporary
       width="560"
     >
-      <div class="d-flex align-center justify-space-between pa-3 border-b">
+      <div class="d-flex align-center justify-space-between border-b pa-3">
         <span class="text-subtitle-1 font-weight-bold">Trace Detail</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -23,7 +24,7 @@
         />
       </div>
 
-      <TracesTraceDetail
+      <TraceDetail
         v-if="traceDrawer.currentTraceId.value"
         :trace-id="traceDrawer.currentTraceId.value"
         class="overflow-y-auto"
@@ -83,7 +84,8 @@ if (import.meta.client) {
 }
 
 watch(() => streamStore.connectionError, (error) => {
-  if (error) showConnectionError.value = true
+  if (error)
+    showConnectionError.value = true
 })
 
 function handleReconnect() {

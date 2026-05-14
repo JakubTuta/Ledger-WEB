@@ -5,8 +5,11 @@
     persistent
   >
     <v-card>
-      <v-card-title class="pa-4 d-flex align-center justify-space-between">
-        <span>{{ isEdit ? 'Edit Rule' : 'New Alert Rule' }}</span>
+      <v-card-title class="d-flex align-center justify-space-between pa-4">
+        <span>{{ isEdit
+          ? 'Edit Rule'
+          : 'New Alert Rule' }}</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -107,6 +110,7 @@
             <div class="text-caption mb-1">
               Window: {{ formatSeconds(form.window_seconds) }}
             </div>
+
             <v-slider
               v-model="form.window_seconds"
               min="60"
@@ -135,19 +139,23 @@
 
       <v-card-actions class="pa-3">
         <v-spacer />
+
         <v-btn
           variant="text"
           @click="dialogOpen = false"
         >
           Cancel
         </v-btn>
+
         <v-btn
           color="primary"
-          variant="tonal"
+          variant="flat"
           :loading="saving"
           @click="handleSubmit"
         >
-          {{ isEdit ? 'Save' : 'Create' }}
+          {{ isEdit
+            ? 'Save'
+            : 'Create' }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -165,7 +173,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  saved: []
+  'saved': []
 }>()
 
 const alertsStore = useAlertsStore()
@@ -231,8 +239,7 @@ const builtInMetrics = [
   { label: 'Endpoint p95 latency', value: 'endpoint_p95' },
 ]
 
-const customMetricOptions = computed(() =>
-  customMetricsStore.names.map(n => ({ label: `Custom: ${n}`, value: `custom:${n}` })),
+const customMetricOptions = computed(() => customMetricsStore.names.map(n => ({ label: `Custom: ${n}`, value: `custom:${n}` })),
 )
 
 const metricOptions = computed(() => [...builtInMetrics, ...customMetricOptions.value])
@@ -246,13 +253,17 @@ const severityOptions = [
 ]
 
 function formatSeconds(s: number): string {
-  if (s >= 3600) return `${s / 3600}h`
-  if (s >= 60) return `${s / 60}m`
+  if (s >= 3600)
+    return `${s / 3600}h`
+  if (s >= 60)
+    return `${s / 60}m`
+
   return `${s}s`
 }
 
 function buildTagFilter(): string {
-  if (!isCustomMetric.value || tagFilterPairs.value.length === 0) return '{}'
+  if (!isCustomMetric.value || tagFilterPairs.value.length === 0)
+    return '{}'
   const result: Record<string, string> = {}
   for (const pair of tagFilterPairs.value) {
     const eqIdx = pair.indexOf('=')
@@ -260,12 +271,14 @@ function buildTagFilter(): string {
       result[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1)
     }
   }
+
   return JSON.stringify(result)
 }
 
 async function handleSubmit() {
   const { valid } = await formRef.value.validate()
-  if (!valid) return
+  if (!valid)
+    return
 
   saving.value = true
   try {

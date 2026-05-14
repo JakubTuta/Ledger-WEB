@@ -12,7 +12,7 @@ export interface Project {
   retention_days: number
   daily_quota: number
   available_routes: string[]
-  features?: ProjectFeatures
+  features: ProjectFeatures
 }
 
 export interface ProjectListResponse {

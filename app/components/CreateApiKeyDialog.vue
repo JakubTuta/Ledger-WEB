@@ -78,7 +78,7 @@
           <v-alert
             v-if="createdKey"
             type="warning"
-            variant="tonal"
+            variant="flat"
           >
             <div class="text-subtitle-2 mb-4">
               {{ createdKey.warning }}

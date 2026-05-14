@@ -1,5 +1,7 @@
+import type { CreateProjectRequest, Project, ProjectFeatures, ProjectListResponse } from '~/types/project'
 import { defineStore } from 'pinia'
-import type { CreateProjectRequest, Project, ProjectListResponse } from '~/types/project'
+
+type FeatureKey = keyof ProjectFeatures
 
 export const useProjectsStore = defineStore('projects', () => {
   const { client } = useApiStore()
@@ -57,6 +59,28 @@ export const useProjectsStore = defineStore('projects', () => {
     }
   }
 
+  const updateFeature = async (projectId: number | string, key: FeatureKey, enabled: boolean) => {
+    try {
+      const response = await client.put<{ key: FeatureKey, enabled: boolean }>(
+        `/api/v1/projects/${projectId}/feature-flags`,
+        { key, enabled },
+      )
+
+      const project = projects.value.find(p => String(p.project_id) === String(projectId))
+      if (project) {
+        project.features = { ...project.features, [response.data.key]: response.data.enabled }
+      }
+
+      return { success: true, key: response.data.key, enabled: response.data.enabled }
+    }
+    catch (error: any) {
+      console.error('Error updating project feature:', error)
+      const errorMessage = error.response?.data?.message || error.response?.data?.detail || error.message || 'Failed to update feature'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
   return {
     projects,
     total,
@@ -66,5 +90,6 @@ export const useProjectsStore = defineStore('projects', () => {
     fetchProjects,
     refreshProjects,
     createProject,
+    updateFeature,
   }
 })

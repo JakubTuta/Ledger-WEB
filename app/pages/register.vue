@@ -1,7 +1,7 @@
 <template>
   <v-container class="fill-height d-flex align-center justify-center">
     <v-card
-      class="pa-4 w-100"
+      class="w-100 pa-4"
       style="max-width: 400px;"
     >
       <v-card-title class="d-flex flex-column align-center mb-4 justify-center">

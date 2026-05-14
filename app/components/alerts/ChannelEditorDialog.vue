@@ -5,8 +5,11 @@
     persistent
   >
     <v-card>
-      <v-card-title class="pa-4 d-flex align-center justify-space-between">
-        <span>{{ isEdit ? 'Edit Channel' : 'New Channel' }}</span>
+      <v-card-title class="d-flex align-center justify-space-between pa-4">
+        <span>{{ isEdit
+          ? 'Edit Channel'
+          : 'New Channel' }}</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -41,6 +44,7 @@
               />
               Email
             </v-btn>
+
             <v-btn
               value="webhook"
               size="small"
@@ -61,7 +65,10 @@
             density="compact"
             class="mb-3"
             type="email"
-            :rules="[v => !!v || 'Email required', v => /.+@.+\..+/.test(v) || 'Invalid email']"
+            :rules="[
+              v => !!v || 'Email required',
+              v => /.+@.+\..+/.test(v) || 'Invalid email',
+            ]"
           />
 
           <template v-if="form.kind === 'webhook'">
@@ -71,7 +78,10 @@
               variant="outlined"
               density="compact"
               class="mb-3"
-              :rules="[v => !!v || 'URL required', v => v.startsWith('https://') || 'Must be HTTPS']"
+              :rules="[
+                v => !!v || 'URL required',
+                v => v.startsWith('https://') || 'Must be HTTPS',
+              ]"
             />
 
             <v-text-field
@@ -80,8 +90,12 @@
               variant="outlined"
               density="compact"
               class="mb-3"
-              :append-inner-icon="showSecret ? 'mdi-eye-off' : 'mdi-eye'"
-              :type="showSecret ? 'text' : 'password'"
+              :append-inner-icon="showSecret
+                ? 'mdi-eye-off'
+                : 'mdi-eye'"
+              :type="showSecret
+                ? 'text'
+                : 'password'"
               @click:append-inner="showSecret = !showSecret"
             >
               <template #append>
@@ -92,6 +106,7 @@
                   title="Generate secret"
                   @click="generateSecret"
                 />
+
                 <v-btn
                   icon="mdi-content-copy"
                   variant="text"
@@ -118,19 +133,23 @@
 
       <v-card-actions class="pa-3">
         <v-spacer />
+
         <v-btn
           variant="text"
           @click="dialogOpen = false"
         >
           Cancel
         </v-btn>
+
         <v-btn
           color="primary"
-          variant="tonal"
+          variant="flat"
           :loading="saving"
           @click="handleSubmit"
         >
-          {{ isEdit ? 'Save' : 'Create' }}
+          {{ isEdit
+            ? 'Save'
+            : 'Create' }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -148,7 +167,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  saved: []
+  'saved': []
 }>()
 
 const alertsStore = useAlertsStore()
@@ -172,7 +191,8 @@ const form = reactive({
 })
 
 function parseConfig(config: string) {
-  try { return JSON.parse(config) } catch { return {} }
+  try { return JSON.parse(config) }
+  catch { return {} }
 }
 
 watch(() => props.channel, (channel) => {
@@ -194,12 +214,16 @@ watch(() => props.channel, (channel) => {
 }, { immediate: true })
 
 function buildConfig(): string {
-  if (form.kind === 'email') return JSON.stringify({ address: form.address })
+  if (form.kind === 'email')
+    return JSON.stringify({ address: form.address })
   if (form.kind === 'webhook') {
     const cfg: Record<string, string> = { url: form.url }
-    if (form.secret) cfg.secret = form.secret
+    if (form.secret)
+      cfg.secret = form.secret
+
     return JSON.stringify(cfg)
   }
+
   return '{}'
 }
 
@@ -218,7 +242,8 @@ async function copySecret() {
 
 async function handleSubmit() {
   const { valid } = await formRef.value.validate()
-  if (!valid) return
+  if (!valid)
+    return
 
   saving.value = true
   try {

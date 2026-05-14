@@ -28,7 +28,7 @@
         <template v-else-if="inviteData">
           <v-alert
             type="warning"
-            variant="tonal"
+            variant="flat"
             class="mb-4"
           >
             Code expires in 1 hour. Copy now — anyone with this code can join the project.
@@ -44,10 +44,14 @@
           >
             <template #append-inner>
               <v-btn
-                :icon="copied ? 'mdi-check' : 'mdi-content-copy'"
+                :icon="copied
+                  ? 'mdi-check'
+                  : 'mdi-content-copy'"
                 variant="text"
                 size="small"
-                :color="copied ? 'success' : undefined"
+                :color="copied
+                  ? 'success'
+                  : undefined"
                 @click="copyToClipboard"
               />
             </template>

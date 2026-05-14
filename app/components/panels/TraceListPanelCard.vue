@@ -19,7 +19,7 @@
         />
       </div>
 
-      <TracesTraceList
+      <TraceList
         v-else
         :traces="traces"
         :is-loading="isLoading"
@@ -27,31 +27,35 @@
     </template>
 
     <template #footer>
-      <div class="d-flex align-center pa-2 gap-2">
+      <div class="d-flex align-center gap-2 pa-2">
         <v-chip
           v-if="panel.service_filter"
           size="x-small"
-          variant="tonal"
+          variant="flat"
           color="info"
         >
           {{ panel.service_filter }}
         </v-chip>
+
         <v-chip
           v-if="panel.has_error === true"
           size="x-small"
-          variant="tonal"
+          variant="flat"
           color="error"
         >
           errors only
         </v-chip>
+
         <v-chip
           v-if="panel.min_duration_ms"
           size="x-small"
-          variant="tonal"
+          variant="flat"
         >
           &gt;{{ panel.min_duration_ms }}ms
         </v-chip>
+
         <v-spacer />
+
         <v-btn
           icon="mdi-cog"
           variant="text"
@@ -62,7 +66,7 @@
     </template>
   </BasePanelCard>
 
-  <PanelsTraceListPanelEditor
+  <TraceListPanelEditor
     v-model="configOpen"
     :panel="panel"
     @saved="handleRefresh"
@@ -92,6 +96,7 @@ const isLoading = computed(() => tracesStore.isListLoading(props.panel.id).value
 
 function buildFilters() {
   const now = new Date()
+
   return {
     project_id: props.panel.project_id,
     service: props.panel.service_filter,

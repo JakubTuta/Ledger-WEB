@@ -19,6 +19,7 @@
               <div class="text-h6 mb-1">
                 Enable Notifications
               </div>
+
               <div class="text-caption text-medium-emphasis">
                 Receive real-time notifications for error and critical exceptions
               </div>
@@ -47,7 +48,7 @@
         <v-alert
           v-if="projects.length === 0"
           type="info"
-          variant="tonal"
+          variant="flat"
         >
           No projects found. Create a project to configure notifications.
         </v-alert>
@@ -79,6 +80,7 @@
                     <div class="font-weight-bold">
                       {{ project.name }}
                     </div>
+
                     <div class="text-caption text-medium-emphasis">
                       <v-chip
                         size="x-small"
@@ -115,6 +117,7 @@
                   <div class="text-subtitle-2 mb-2">
                     Notification Levels
                   </div>
+
                   <div class="text-caption text-medium-emphasis mb-3">
                     Leave empty to receive all exception levels (error and critical)
                   </div>
@@ -124,7 +127,9 @@
                       v-for="level in availableLevels"
                       :key="level.value"
                       :color="level.color"
-                      :variant="isLevelSelected(project.project_id, level.value) ? 'flat' : 'outlined'"
+                      :variant="isLevelSelected(project.project_id, level.value)
+                        ? 'flat'
+                        : 'outlined'"
                       @click="toggleLevel(project.project_id, level.value)"
                     >
                       <v-icon
@@ -141,7 +146,7 @@
               <v-alert
                 v-else
                 type="info"
-                variant="tonal"
+                variant="flat"
                 density="compact"
                 class="mt-4"
               >
@@ -156,7 +161,7 @@
       <v-alert
         v-if="showSuccessAlert"
         type="success"
-        variant="tonal"
+        variant="flat"
         class="mt-4"
       >
         Notification preferences updated successfully
@@ -166,7 +171,7 @@
       <v-alert
         v-if="errorMessage"
         type="error"
-        variant="tonal"
+        variant="flat"
         class="mt-4"
       >
         {{ errorMessage }}

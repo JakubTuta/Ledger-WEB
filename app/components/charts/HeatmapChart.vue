@@ -2,8 +2,10 @@
   <EChart
     class="heatmap-chart"
     :option="chartOption"
-    :style="{ height: heightStyle }"
-    :theme="isDark ? 'dark' : undefined"
+    :style="{'height': heightStyle}"
+    :theme="isDark
+      ? 'dark'
+      : undefined"
     autoresize
   />
 </template>
@@ -19,7 +21,9 @@ const props = withDefaults(defineProps<{
   height: '100%',
 })
 
-const heightStyle = computed(() => typeof props.height === 'number' ? `${props.height}px` : props.height)
+const heightStyle = computed(() => (typeof props.height === 'number'
+  ? `${props.height}px`
+  : props.height))
 
 const vuetifyTheme = useTheme()
 const isDark = computed(() => vuetifyTheme.current.value.dark)
@@ -29,6 +33,7 @@ const data = computed<AggregatedMetricData[]>(() => props.metrics?.data ?? [])
 const days = computed(() => {
   const set = new Set<string>()
   data.value.forEach(d => set.add(d.date))
+
   return Array.from(set).sort()
 })
 
@@ -36,6 +41,7 @@ function formatDate(dateStr: string): string {
   const y = dateStr.substring(0, 4)
   const m = dateStr.substring(4, 6)
   const d = dateStr.substring(6, 8)
+
   return `${d}/${m}/${y}`
 }
 
@@ -43,20 +49,26 @@ const heatmapData = computed(() => {
   const result: [number, number, number][] = []
   for (const d of data.value) {
     const dayIdx = days.value.indexOf(d.date)
-    if (dayIdx === -1) continue
+    if (dayIdx === -1)
+      continue
     const hour = d.hour ?? 0
-    const errorRate = d.log_count > 0 ? d.error_count / d.log_count : 0
-    result.push([hour, dayIdx, Math.round(errorRate * 1000) / 10])
+    result.push([hour, dayIdx, d.error_count])
   }
+
   return result
 })
 
-const maxRate = computed(() => {
+const maxErrors = computed(() => {
   const vals = heatmapData.value.map(d => d[2])
-  return vals.length > 0 ? Math.max(...vals) : 100
+
+  return vals.length > 0
+    ? Math.max(...vals, 1)
+    : 1
 })
 
-const textColor = computed(() => isDark.value ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')
+const textColor = computed(() => (isDark.value
+  ? 'rgba(255,255,255,0.7)'
+  : 'rgba(0,0,0,0.6)'))
 
 const chartOption = computed(() => ({
   backgroundColor: 'transparent',
@@ -65,8 +77,9 @@ const chartOption = computed(() => ({
     formatter: (p: any) => {
       const hour = p.data[0]
       const dayLabel = formatDate(days.value[p.data[1]] ?? '')
-      const rate = p.data[2]
-      return `<b>${dayLabel} ${String(hour).padStart(2, '0')}:00</b><br/>Error rate: ${rate}%`
+      const count = p.data[2]
+
+      return `<b>${dayLabel} ${String(hour).padStart(2, '0')}:00</b><br/>Errors: ${count}`
     },
   },
   xAxis: {
@@ -83,7 +96,7 @@ const chartOption = computed(() => ({
   },
   visualMap: {
     min: 0,
-    max: Math.max(maxRate.value, 10),
+    max: maxErrors.value,
     calculable: true,
     orient: 'vertical',
     right: 0,
@@ -94,7 +107,7 @@ const chartOption = computed(() => ({
     },
   },
   series: [{
-    name: 'Error Rate %',
+    name: 'Errors',
     type: 'heatmap',
     data: heatmapData.value,
     label: { show: false },

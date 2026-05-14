@@ -3,13 +3,14 @@
     <!-- Health Strip -->
     <HealthStrip
       class="mb-4"
-      @project-click="filters.projectId = $event"
+      :selected-project-id="filters.projectId"
+      @project-click="handleHealthProjectClick"
     />
 
     <!-- Tab Bar -->
-    <DashboardsTabBar
+    <TabBar
       v-if="panelsStore.tabs.length > 0"
-      :project-id="filters.projectId ?? (projectOptions[0]?.id ?? '')"
+      :project-id="filters.projectId ?? undefined"
       class="mb-2"
       @template-applied="handlePanelsRefresh"
     />
@@ -20,7 +21,7 @@
       elevation="1"
     >
       <v-card-text class="px-3 py-2">
-        <div class="d-flex align-center flex-wrap ga-2">
+        <div class="d-flex align-center ga-2 flex-wrap">
           <v-select
             v-model="filters.projectId"
             label="Project"
@@ -31,7 +32,9 @@
             item-value="id"
             clearable
             hide-details
-            :style="mobile ? 'flex: 1; min-width: 0' : 'max-width: 230px'"
+            :style="mobile
+              ? 'flex: 1; min-width: 0'
+              : 'max-width: 230px'"
           >
             <template #item="{'props': itemProps, item}">
               <v-list-item
@@ -51,7 +54,9 @@
             item-value="value"
             clearable
             hide-details
-            :style="mobile ? 'flex: 1; min-width: 0' : 'max-width: 200px'"
+            :style="mobile
+              ? 'flex: 1; min-width: 0'
+              : 'max-width: 200px'"
           />
 
           <v-spacer v-if="!mobile" />
@@ -71,6 +76,7 @@
                 color="primary"
                 prepend-icon="mdi-plus"
                 size="small"
+                :disabled="!filters.projectId"
                 @click="newPanelDialog = true"
               >
                 Add Panel
@@ -128,7 +134,7 @@
             </template>
 
             <v-menu v-else>
-              <template #activator="{ props: menuProps }">
+              <template #activator="{'props': menuProps}">
                 <v-btn
                   v-bind="menuProps"
                   icon="mdi-dots-vertical"
@@ -141,6 +147,7 @@
                 <v-list-item
                   prepend-icon="mdi-plus"
                   title="Add Panel"
+                  :disabled="!filters.projectId"
                   @click="newPanelDialog = true"
                 />
 
@@ -200,7 +207,9 @@
         v-for="n in skeletonCount"
         :key="n"
         cols="12"
-        :sm="gridCols >= 6 ? 12 : 6"
+        :sm="gridCols >= 6
+          ? 12
+          : 6"
         :md="gridCols"
       >
         <v-skeleton-loader
@@ -235,6 +244,8 @@
           <v-btn
             color="primary"
             prepend-icon="mdi-plus"
+            :disabled="!filters.projectId"
+            variant="elevated"
             @click="newPanelDialog = true"
           >
             Create First Panel
@@ -261,7 +272,9 @@
         <template #item="{'element': panel}">
           <v-col
             cols="12"
-            :sm="gridCols >= 6 ? 12 : 6"
+            :sm="gridCols >= 6
+              ? 12
+              : 6"
             :md="gridCols"
           >
             <ListPanelCard
@@ -322,7 +335,7 @@
               @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
             />
 
-            <PanelsCustomMetricPanelCard
+            <CustomMetricPanelCard
               v-else-if="panel.type === 'custom_metric'"
               :panel="panel"
               :project="getProjectForPanel(panel)"
@@ -330,7 +343,7 @@
               @time-options="openTimeOptionsDialog(panel)"
             />
 
-            <PanelsTracePanelCard
+            <TracePanelCard
               v-else-if="panel.type === 'trace'"
               :panel="panel"
               :project="getProjectForPanel(panel)"
@@ -338,7 +351,7 @@
               @time-options="openTimeOptionsDialog(panel)"
             />
 
-            <PanelsTraceListPanelCard
+            <TraceListPanelCard
               v-else-if="panel.type === 'trace_list'"
               :panel="panel"
               :project="getProjectForPanel(panel)"
@@ -496,9 +509,7 @@ const timeOptionsDialog = ref<{
 
 // Computed
 const filteredPanels = computed(() => {
-  let result = panelsStore.tabs.length > 0
-    ? panelsStore.activePanels
-    : panelsStore.sortedPanels
+  let result = panelsStore.activePanels
 
   if (filters.value.projectId) {
     result = result.filter(p => p.project_id === filters.value.projectId)
@@ -570,6 +581,12 @@ async function confirmDelete() {
   deleteDialog.value.loading = false
 }
 
+function handleHealthProjectClick(projectId: string) {
+  filters.value.projectId = filters.value.projectId === projectId
+    ? null
+    : projectId
+}
+
 function openTimeOptionsDialog(panel: Panel) {
   timeOptionsDialog.value = { open: true, panel }
 }
@@ -603,6 +620,9 @@ async function handlePanelCreated(panel: Panel) {
   else if (panel.type === 'error_heatmap') {
     await panelsStore.fetchHeatmapForPanel(panel)
   }
+  else if (panel.type === 'trace_list' || panel.type === 'trace' || panel.type === 'custom_metric') {
+    // These panels fetch their own data on mount
+  }
   else {
     await panelsStore.fetchMetricsForPanel(panel)
   }
@@ -628,6 +648,9 @@ function fetchAllMetrics() {
     else if (panel.type === 'error_heatmap') {
       panelsStore.fetchHeatmapForPanel(panel)
     }
+    else if (panel.type === 'trace_list' || panel.type === 'trace' || panel.type === 'custom_metric') {
+      // These panels self-manage data fetching
+    }
     else {
       panelsStore.fetchMetricsForPanel(panel)
     }
@@ -641,7 +664,10 @@ async function handlePanelsRefresh() {
 
 // Keyboard shortcuts
 useDashboardShortcuts({
-  onNewPanel: () => { newPanelDialog.value = true },
+  onNewPanel: () => {
+    if (filters.value.projectId)
+      newPanelDialog.value = true
+  },
   onRefresh: () => fetchAllMetrics(),
   onToggleEdit: () => (isEditMode.value
     ? cancelEditMode()
@@ -649,7 +675,15 @@ useDashboardShortcuts({
   onShowHelp: () => { shortcutsDialog.value = true },
 })
 
-watch(() => filters.value.projectId, () => updateUrlParams())
+watch(() => filters.value.projectId, (projectId) => {
+  updateUrlParams()
+  if (projectId) {
+    const tabs = panelsStore.tabsForProject(projectId)
+    if (tabs.length > 0 && !tabs.find(t => t.id === panelsStore.activeTabId)) {
+      panelsStore.setActiveTab(tabs[0]!.id)
+    }
+  }
+})
 watch(() => filters.value.panelType, () => updateUrlParams())
 
 function updateUrlParams() {
@@ -699,9 +733,6 @@ onUnmounted(() => {
 
 <style scoped>
 .filters-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .ghost-panel {

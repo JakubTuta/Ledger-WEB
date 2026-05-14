@@ -8,7 +8,9 @@
         icon="mdi-bell-outline"
         class="mr-2"
       />
+
       <span class="text-h5 font-weight-bold">Notifications</span>
+
       <v-chip
         v-if="streamStore.unreadCount > 0"
         color="error"
@@ -25,7 +27,7 @@
       elevation="1"
     >
       <v-card-text class="py-2">
-        <div class="d-flex align-center flex-wrap ga-2">
+        <div class="d-flex align-center ga-2 flex-wrap">
           <v-switch
             v-model="filters.unreadOnly"
             label="Unread only"
@@ -85,7 +87,7 @@
           <v-btn
             v-if="selectedIds.size > 0"
             color="primary"
-            variant="tonal"
+            variant="flat"
             size="small"
             prepend-icon="mdi-check-all"
             @click="bulkMarkRead"
@@ -130,7 +132,9 @@
         >
           <v-list-item
             class="px-4 py-3"
-            :class="!notification.read_at ? 'bg-surface-variant' : ''"
+            :class="!notification.read_at
+              ? 'bg-surface-variant'
+              : ''"
           >
             <template #prepend>
               <v-checkbox
@@ -151,6 +155,7 @@
 
             <v-list-item-title class="text-body-2 font-weight-medium">
               <span>{{ notification.error_type || notification.message }}</span>
+
               <v-chip
                 v-if="!notification.read_at"
                 color="primary"
@@ -163,18 +168,21 @@
 
             <v-list-item-subtitle class="text-caption mt-1">
               <span v-if="notification.project_name">{{ notification.project_name }}</span>
+
               <span
                 v-if="notification.project_name"
                 class="mx-1"
               >·</span>
+
               <v-chip
                 :color="getLevelColor(notification.level)"
                 size="x-small"
-                variant="tonal"
+                variant="flat"
                 class="mr-1"
               >
                 {{ notification.level }}
               </v-chip>
+
               <span>{{ formatTimestamp(notification.timestamp) }}</span>
             </v-list-item-subtitle>
 
@@ -190,6 +198,7 @@
                   <div class="text-caption font-weight-bold mb-1">
                     Message
                   </div>
+
                   <div class="text-body-2">
                     {{ notification.message }}
                   </div>
@@ -202,6 +211,7 @@
                   <div class="text-caption font-weight-bold mb-1">
                     Stack Trace
                   </div>
+
                   <pre class="stack-trace text-caption">{{ notification.stack_trace }}</pre>
                 </div>
 
@@ -212,6 +222,7 @@
                   <div class="text-caption font-weight-bold mb-1">
                     Context
                   </div>
+
                   <pre class="stack-trace text-caption">{{ JSON.stringify(notification.context, null, 2) }}</pre>
                 </div>
               </div>
@@ -220,7 +231,9 @@
             <template #append>
               <div class="d-flex align-center gap-1">
                 <v-btn
-                  :icon="notification.expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                  :icon="notification.expanded
+                    ? 'mdi-chevron-up'
+                    : 'mdi-chevron-down'"
                   variant="text"
                   size="x-small"
                   @click.stop="notification.expanded = !notification.expanded"
@@ -255,13 +268,14 @@
 
       <div
         v-else
-        class="d-flex flex-column align-center justify-center pa-8 gap-2"
+        class="d-flex flex-column align-center justify-center gap-2 pa-8"
       >
         <v-icon
           icon="mdi-bell-check-outline"
           size="48"
           color="success"
         />
+
         <span class="text-body-1 text-medium-emphasis">No notifications</span>
       </div>
 
@@ -311,8 +325,7 @@ const filters = reactive({
   to: '',
 })
 
-const projectOptions = computed(() =>
-  projects.value.map(p => ({ id: p.project_id, name: p.name })),
+const projectOptions = computed(() => projects.value.map(p => ({ id: p.project_id, name: p.name })),
 )
 
 const kindOptions = [
@@ -333,11 +346,16 @@ async function loadNotifications(reset = true) {
     limit: LIMIT,
     offset: offset.value,
   }
-  if (filters.unreadOnly) params.unread = true
-  if (filters.projectId) params.project_id = filters.projectId
-  if (filters.kind) params.kind = filters.kind
-  if (filters.from) params.from = filters.from
-  if (filters.to) params.to = filters.to
+  if (filters.unreadOnly)
+    params.unread = true
+  if (filters.projectId)
+    params.project_id = filters.projectId
+  if (filters.kind)
+    params.kind = filters.kind
+  if (filters.from)
+    params.from = filters.from
+  if (filters.to)
+    params.to = filters.to
 
   const data = await streamStore.fetchHistory(params)
   if (data) {
@@ -361,7 +379,8 @@ async function loadMore() {
 watch(filters, () => loadNotifications(true), { deep: true })
 
 function toggleSelect(id: string) {
-  if (selectedIds.value.has(id)) selectedIds.value.delete(id)
+  if (selectedIds.value.has(id))
+    selectedIds.value.delete(id)
   else selectedIds.value.add(id)
   selectedIds.value = new Set(selectedIds.value)
 }
@@ -369,7 +388,8 @@ function toggleSelect(id: string) {
 async function bulkMarkRead() {
   await Promise.all([...selectedIds.value].map(id => streamStore.markRead(id)))
   notifications.value.forEach((n) => {
-    if (selectedIds.value.has(n.id)) n.read_at = new Date().toISOString()
+    if (selectedIds.value.has(n.id))
+      n.read_at = new Date().toISOString()
   })
   selectedIds.value = new Set()
 }
@@ -381,6 +401,7 @@ function getLevelColor(level: NotificationLevel): string {
     warning: 'warning',
     info: 'info',
   }
+
   return map[level] ?? 'error'
 }
 
@@ -391,6 +412,7 @@ function getLevelIcon(level: NotificationLevel): string {
     warning: 'mdi-alert-outline',
     info: 'mdi-information-outline',
   }
+
   return map[level] ?? 'mdi-alert'
 }
 

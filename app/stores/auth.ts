@@ -39,7 +39,9 @@ export const useAuthStore = defineStore('auth', () => {
       if (savedToken && savedRefreshToken) {
         token.value = savedToken
         refreshToken.value = savedRefreshToken
-        tokenExpiryTime.value = savedExpiry ? Number.parseInt(savedExpiry) : null
+        tokenExpiryTime.value = savedExpiry
+          ? Number.parseInt(savedExpiry)
+          : null
       }
     }
   }
@@ -157,12 +159,15 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Refresh token 1 minute before expiry (60000ms)
     const refreshThreshold = 60000
+
     return Date.now() + refreshThreshold >= tokenExpiryTime.value
   }
 
   const refreshAccessToken = async (): Promise<boolean> => {
-    if (!refreshToken.value) return false
-    if (refreshPromise.value) return refreshPromise.value
+    if (!refreshToken.value)
+      return false
+    if (refreshPromise.value)
+      return refreshPromise.value
 
     refreshPromise.value = (async () => {
       try {
@@ -186,6 +191,7 @@ export const useAuthStore = defineStore('auth', () => {
       catch (error) {
         console.error('Token refresh failed:', error)
         await logout()
+
         return false
       }
       finally {
@@ -209,6 +215,7 @@ export const useAuthStore = defineStore('auth', () => {
         const refreshed = await refreshAccessToken()
         if (!refreshed) {
           authInitialized.value = true
+
           return
         }
       }

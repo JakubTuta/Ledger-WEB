@@ -31,6 +31,7 @@
               <thead>
                 <tr>
                   <th>Severity</th>
+
                   <th
                     v-for="kind in channelKinds"
                     :key="kind"
@@ -46,6 +47,7 @@
                   </th>
                 </tr>
               </thead>
+
               <tbody>
                 <tr
                   v-for="severity in severities"
@@ -55,11 +57,12 @@
                     <v-chip
                       :color="severityColor(severity)"
                       size="x-small"
-                      variant="tonal"
+                      variant="flat"
                     >
                       {{ severity }}
                     </v-chip>
                   </td>
+
                   <td
                     v-for="kind in channelKinds"
                     :key="kind"
@@ -83,12 +86,12 @@
 
       <div
         v-if="projects.length === 0"
-        class="text-center pa-4 text-medium-emphasis"
+        class="text-medium-emphasis pa-4 text-center"
       >
         No projects available.
       </div>
 
-      <div class="d-flex justify-end mt-4">
+      <div class="d-flex mt-4 justify-end">
         <v-btn
           color="primary"
           :loading="saving"
@@ -125,9 +128,11 @@ function isEnabled(projectId: number, severity: string, kind: string): boolean {
 }
 
 function toggle(projectId: number, severity: string, kind: string, value: unknown) {
-  if (!matrix.value.has(projectId)) matrix.value.set(projectId, new Map())
+  if (!matrix.value.has(projectId))
+    matrix.value.set(projectId, new Map())
   const proj = matrix.value.get(projectId)!
-  if (!proj.has(severity)) proj.set(severity, new Map())
+  if (!proj.has(severity))
+    proj.set(severity, new Map())
   proj.get(severity)!.set(kind, value as boolean)
   matrix.value = new Map(matrix.value)
 }
@@ -138,6 +143,7 @@ function kindIcon(kind: AlertChannelKind): string {
     email: 'mdi-email',
     webhook: 'mdi-webhook',
   }
+
   return map[kind] ?? 'mdi-send'
 }
 
@@ -147,6 +153,7 @@ function severityColor(severity: AlertSeverity): string {
     warning: 'warning',
     critical: 'error',
   }
+
   return map[severity] ?? 'default'
 }
 

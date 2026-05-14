@@ -5,16 +5,19 @@
   >
     <div
       v-if="spans.length === 0"
-      class="d-flex align-center justify-center pa-4 text-medium-emphasis"
+      class="d-flex align-center text-medium-emphasis justify-center pa-4"
     >
       <span>No spans</span>
     </div>
+
     <EChart
       v-else
       class="w-100"
-      :style="{ height: `${chartHeight}px` }"
+      :style="{'height': `${chartHeight}px`}"
       :option="chartOption"
-      :theme="isDark ? 'dark' : undefined"
+      :theme="isDark
+        ? 'dark'
+        : undefined"
       autoresize
       @click="handleClick"
     />
@@ -53,7 +56,8 @@ const flatSpans = computed<FlatSpan[]>(() => {
   for (const span of props.spans) {
     byId.set(span.span_id, span)
     const parentId = span.parent_span_id ?? 'root'
-    if (!children.has(parentId)) children.set(parentId, [])
+    if (!children.has(parentId))
+      children.set(parentId, [])
     children.get(parentId)!.push(span)
   }
 
@@ -72,21 +76,26 @@ const flatSpans = computed<FlatSpan[]>(() => {
 
   roots.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
   for (const root of roots) visit(root, 0)
+
   return result
 })
 
-const chartHeight = computed(() =>
-  Math.max(MIN_HEIGHT, flatSpans.value.length * ROW_HEIGHT + 40),
+const chartHeight = computed(() => Math.max(MIN_HEIGHT, flatSpans.value.length * ROW_HEIGHT + 40),
 )
 
 const traceStart = computed(() => {
-  if (flatSpans.value.length === 0) return 0
+  if (flatSpans.value.length === 0)
+    return 0
+
   return Math.min(...flatSpans.value.map(f => new Date(f.span.start_time).getTime()))
 })
 
 function spanColor(span: Span): string {
-  if (span.status === 'ERROR') return '#f44336'
-  if (span.status === 'OK') return '#78909c'
+  if (span.status === 'ERROR')
+    return '#f44336'
+  if (span.status === 'OK')
+    return '#78909c'
+
   return '#bdbdbd'
 }
 
@@ -95,6 +104,7 @@ const chartOption = computed(() => {
     const start = new Date(f.span.start_time).getTime() - traceStart.value
     const dur = f.span.duration_ms
     const label = `${'  '.repeat(f.depth)}${f.span.name} ${dur}ms`
+
     return {
       value: [f.rowIndex, start, start + dur, f.span.name],
       itemStyle: { color: spanColor(f.span) },
@@ -103,8 +113,7 @@ const chartOption = computed(() => {
     }
   })
 
-  const yCategories = flatSpans.value.map(f =>
-    f.span.service_name ?? f.span.name.slice(0, 20),
+  const yCategories = flatSpans.value.map(f => f.span.service_name ?? f.span.name.slice(0, 20),
   )
 
   const useDataZoom = flatSpans.value.length > 500
@@ -114,11 +123,11 @@ const chartOption = computed(() => {
     tooltip: {
       formatter: (params: any) => {
         const f = flatSpans.value[params.value[0]]
-        if (!f) return ''
+        if (!f)
+          return ''
         const { span } = f
-        const attrs = Object.entries(span.attributes ?? {}).slice(0, 5)
-          .map(([k, v]) => `${k}: ${String(v).slice(0, 60)}`)
-          .join('<br/>')
+        const attrs = Object.entries(span.attributes ?? {}).slice(0, 5).map(([k, v]) => `${k}: ${String(v).slice(0, 60)}`).join('<br/>')
+
         return `
           <b>${span.name}</b><br/>
           Service: ${span.service_name ?? '—'}<br/>
@@ -131,7 +140,9 @@ const chartOption = computed(() => {
     grid: {
       top: 8,
       right: 16,
-      bottom: useDataZoom ? 60 : 16,
+      bottom: useDataZoom
+        ? 60
+        : 16,
       left: 120,
       containLabel: false,
     },
@@ -156,6 +167,7 @@ const chartOption = computed(() => {
           const startCoord = api.coord([startMs, rowIndex])
           const endCoord = api.coord([endMs, rowIndex])
           const barHeight = Math.min(ROW_HEIGHT - 4, 20)
+
           return {
             type: 'rect',
             shape: {
@@ -178,8 +190,10 @@ const chartOption = computed(() => {
 })
 
 function handleClick(params: any) {
-  if (!params.data?._spanId) return
+  if (!params.data?._spanId)
+    return
   const f = flatSpans.value.find(s => s.span.span_id === params.data._spanId)
-  if (f) emit('select', f.span)
+  if (f)
+    emit('select', f.span)
 }
 </script>

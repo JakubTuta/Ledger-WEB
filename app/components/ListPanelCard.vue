@@ -53,10 +53,13 @@
             class="item-card mb-2"
           >
             <v-card-title
-              class="d-flex align-start justify-space-between cursor-pointer pa-2 flex-wrap"
+              class="d-flex justify-space-between flex-wrap cursor-pointer pa-2 align-start"
               @click="toggleExpanded(item)"
             >
-              <div class="d-flex align-center flex-grow-1 gap-1" style="min-width: 0">
+              <div
+                class="d-flex align-center flex-grow-1 gap-1"
+                style="min-width: 0"
+              >
                 <v-icon
                   :icon="getItemIcon(item)"
                   :color="getIconColorForItem(item)"
@@ -121,7 +124,7 @@
                 </div>
               </div>
 
-              <div class="d-flex align-center gap-1 flex-shrink-0 ml-2">
+              <div class="d-flex align-center ml-2 flex-shrink-0 gap-1">
                 <span
                   v-if="item.timestamp"
                   class="text-caption text-medium-emphasis"
@@ -132,7 +135,7 @@
                 <v-chip
                   v-if="item.trace_id"
                   size="x-small"
-                  variant="tonal"
+                  variant="flat"
                   color="info"
                   prepend-icon="mdi-link-variant"
                   @click.stop="openTrace(item.trace_id)"
@@ -322,6 +325,24 @@ import type { NotificationLevel } from '~/types/notifications'
 import type { Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
+const props = defineProps<{
+  panel: Panel
+  project?: Project
+  items?: ListItem[]
+  loading?: boolean
+  disabled?: boolean
+  hasMore?: boolean
+  offset?: number
+  type: 'errors' | 'logs'
+}>()
+
+const emit = defineEmits<{
+  delete: []
+  timeOptions: []
+  refresh: []
+  loadPage: [offset: number]
+}>()
+
 const { openTrace } = useTraceDrawer()
 
 type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'critical'
@@ -346,24 +367,6 @@ interface ListItem {
   expanded?: boolean
   isNew?: boolean
 }
-
-const props = defineProps<{
-  panel: Panel
-  project?: Project
-  items?: ListItem[]
-  loading?: boolean
-  disabled?: boolean
-  hasMore?: boolean
-  offset?: number
-  type: 'errors' | 'logs'
-}>()
-
-const emit = defineEmits<{
-  delete: []
-  timeOptions: []
-  refresh: []
-  loadPage: [offset: number]
-}>()
 
 const currentTime = ref(Date.now())
 

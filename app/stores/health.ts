@@ -1,6 +1,6 @@
-import { defineStore } from 'pinia'
 import type { HealthSummaryResponse, ProjectHealthSummary } from '~/types/health'
 import type { TimeRangePreset } from '~/types/panel'
+import { defineStore } from 'pinia'
 
 export const useHealthStore = defineStore('health', () => {
   const { client } = useApiStore()
@@ -12,7 +12,8 @@ export const useHealthStore = defineStore('health', () => {
   let refreshTimer: ReturnType<typeof setInterval> | null = null
 
   const fetchHealthSummary = async (projectIds: string[], period: TimeRangePreset = 'today') => {
-    if (isLoading.value || projectIds.length === 0) return
+    if (isLoading.value || projectIds.length === 0)
+      return
 
     isLoading.value = true
 

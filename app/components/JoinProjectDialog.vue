@@ -53,7 +53,7 @@
         <v-alert
           v-if="successData"
           type="success"
-          variant="tonal"
+          variant="flat"
           class="mt-4"
         >
           Joined <strong>{{ successData.project_name }}</strong> as {{ successData.role }}.
@@ -77,7 +77,9 @@
           :disabled="loading"
           @click="handleCancel"
         >
-          {{ successData ? 'Close' : 'Cancel' }}
+          {{ successData
+            ? 'Close'
+            : 'Cancel' }}
         </v-btn>
 
         <v-btn
@@ -98,13 +100,13 @@
 import type { AcceptInviteResponse } from '~/types/sharing'
 import { inviteCodeRules } from '~/utils/validation'
 
+const props = defineProps<{
+  modelValue: boolean
+}>()
+
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'joined': []
-}>()
-
-const props = defineProps<{
-  modelValue: boolean
 }>()
 
 const sharingStore = useSharingStore()

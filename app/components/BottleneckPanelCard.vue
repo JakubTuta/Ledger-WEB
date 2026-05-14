@@ -45,7 +45,9 @@
             density="compact"
             hide-details
             :disabled="disabled || loading"
-            :style="mobile ? '' : 'max-width: 140px;'"
+            :style="mobile
+              ? ''
+              : 'max-width: 140px;'"
           />
         </div>
 
@@ -73,8 +75,11 @@
               size="48"
               class="mb-2"
             />
+
             <div class="text-body-2">
-              {{ selectedRoutes.length === 0 ? 'Select routes to analyze' : 'No data available' }}
+              {{ selectedRoutes.length === 0
+                ? 'Select routes to analyze'
+                : 'No data available' }}
             </div>
           </div>
         </div>
@@ -101,6 +106,7 @@
             <div class="text-body-2 font-weight-medium">
               {{ stat.value }}
             </div>
+
             <div class="text-caption text-grey">
               {{ stat.label }}
             </div>
@@ -147,27 +153,45 @@ const availableRoutes = computed(() => props.project?.available_routes || [])
 const chartData = computed(() => props.metrics?.data ?? [])
 
 const routeColors = [
-  '#1976D2', '#388E3C', '#D32F2F', '#F57C00',
-  '#7B1FA2', '#0097A7', '#C2185B', '#5D4037',
-  '#455A64', '#689F38',
+  '#1976D2',
+  '#388E3C',
+  '#D32F2F',
+  '#F57C00',
+  '#7B1FA2',
+  '#0097A7',
+  '#C2185B',
+  '#5D4037',
+  '#455A64',
+  '#689F38',
 ]
 
 function getRouteColor(route: string): string {
   const idx = selectedRoutes.value.indexOf(route)
-  return routeColors[idx >= 0 ? idx % routeColors.length : 0]!
+
+  return routeColors[idx >= 0
+    ? idx % routeColors.length
+    : 0]!
 }
 
 const statisticLabel = computed(() => {
   const labels: Record<BottleneckStatistic, string> = {
-    avg: 'Average', min: 'Minimum', max: 'Maximum', median: 'Median', count: 'Count',
+    avg: 'Average',
+    min: 'Minimum',
+    max: 'Maximum',
+    median: 'Median',
+    count: 'Count',
   }
+
   return labels[selectedStatistic.value]
 })
 
 function formatValue(v: number): string {
   if (selectedStatistic.value === 'count') {
-    return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : Math.round(v).toLocaleString()
+    return v >= 1000
+      ? `${(v / 1000).toFixed(1)}k`
+      : Math.round(v).toLocaleString()
   }
+
   return `${Math.round(v)}ms`
 }
 
@@ -181,12 +205,16 @@ const summaryStats = computed(() => {
   }
 
   const values = chartData.value.map((d: BottleneckMetricData) => d.value).filter((v: number) => v > 0)
-  const avg = values.length > 0 ? values.reduce((s: number, v: number) => s + v, 0) / values.length : 0
+  const avg = values.length > 0
+    ? values.reduce((s: number, v: number) => s + v, 0) / values.length
+    : 0
 
   return [
     { label: 'Routes', value: selectedRoutes.value.length.toString() },
     { label: 'Data Points', value: chartData.value.length.toString() },
-    { label: `Avg ${statisticLabel.value}`, value: values.length > 0 ? formatValue(avg) : '-' },
+    { label: `Avg ${statisticLabel.value}`, value: values.length > 0
+      ? formatValue(avg)
+      : '-' },
   ]
 })
 
@@ -203,7 +231,8 @@ watch([selectedRoutes, selectedStatistic], ([routes, statistic]) => {
   if (routes.length > 0) {
     emit('update', routes, statistic)
 
-    if (updateTimeout) clearTimeout(updateTimeout)
+    if (updateTimeout)
+      clearTimeout(updateTimeout)
     updateTimeout = setTimeout(() => {
       emit('updatePanel', routes, statistic)
     }, 1000)
@@ -211,14 +240,18 @@ watch([selectedRoutes, selectedStatistic], ([routes, statistic]) => {
 }, { deep: true })
 
 onUnmounted(() => {
-  if (updateTimeout) clearTimeout(updateTimeout)
+  if (updateTimeout)
+    clearTimeout(updateTimeout)
 })
 
 onMounted(() => {
-  if (props.panel.routes?.length) selectedRoutes.value = [...props.panel.routes]
-  else if (availableRoutes.value.length) selectedRoutes.value = [availableRoutes.value[0]!]
+  if (props.panel.routes?.length)
+    selectedRoutes.value = [...props.panel.routes]
+  else if (availableRoutes.value.length)
+    selectedRoutes.value = [availableRoutes.value[0]!]
 
-  if (props.panel.statistic) selectedStatistic.value = props.panel.statistic
+  if (props.panel.statistic)
+    selectedStatistic.value = props.panel.statistic
 
   if (!props.metrics && selectedRoutes.value.length > 0) {
     emit('update', selectedRoutes.value, selectedStatistic.value)

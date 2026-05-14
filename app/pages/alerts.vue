@@ -8,6 +8,7 @@
         icon="mdi-bell-alert"
         class="mr-2"
       />
+
       <span class="text-h5 font-weight-bold">Alerts</span>
 
       <v-spacer />
@@ -44,9 +45,11 @@
         color="medium-emphasis"
         class="mb-3"
       />
+
       <div class="text-h6 mb-2">
         Alerts not enabled
       </div>
+
       <div class="text-body-2 text-medium-emphasis">
         Enable alert rules for this project to create monitoring rules.
       </div>
@@ -67,6 +70,7 @@
           />
           Rules
         </v-tab>
+
         <v-tab value="channels">
           <v-icon
             icon="mdi-send-circle"
@@ -81,7 +85,7 @@
       <v-window v-model="activeTab">
         <!-- Rules tab -->
         <v-window-item value="rules">
-          <div class="pa-3 d-flex justify-end">
+          <div class="d-flex justify-end pa-3">
             <v-btn
               color="primary"
               prepend-icon="mdi-plus"
@@ -96,20 +100,22 @@
             :headers="ruleHeaders"
             :items="rules"
             :loading="rulesLoading"
+            :items-per-page="-1"
+            hide-default-footer
             no-data-text="No alert rules yet"
             item-value="id"
           >
-            <template #item.last_state="{ item }">
+            <template #item.last_state="{item}">
               <v-chip
                 :color="statusColor(item.last_state)"
                 size="small"
-                variant="tonal"
+                variant="flat"
               >
                 {{ item.last_state }}
               </v-chip>
             </template>
 
-            <template #item.enabled="{ item }">
+            <template #item.enabled="{item}">
               <v-switch
                 :model-value="item.enabled"
                 color="primary"
@@ -119,13 +125,15 @@
               />
             </template>
 
-            <template #item.last_fired_at="{ item }">
+            <template #item.last_fired_at="{item}">
               <span class="text-caption">
-                {{ item.last_fired_at ? formatRelative(item.last_fired_at) : 'Never' }}
+                {{ item.last_fired_at
+                  ? formatRelative(item.last_fired_at)
+                  : 'Never' }}
               </span>
             </template>
 
-            <template #item.actions="{ item }">
+            <template #item.actions="{item}">
               <div class="d-flex gap-1">
                 <v-btn
                   icon="mdi-pencil"
@@ -133,6 +141,7 @@
                   size="x-small"
                   @click="openRuleEditor(item)"
                 />
+
                 <v-btn
                   icon="mdi-delete"
                   variant="text"
@@ -147,7 +156,7 @@
 
         <!-- Channels tab -->
         <v-window-item value="channels">
-          <div class="pa-3 d-flex justify-end">
+          <div class="d-flex justify-end pa-3">
             <v-btn
               color="primary"
               prepend-icon="mdi-plus"
@@ -162,24 +171,26 @@
             :headers="channelHeaders"
             :items="channels"
             :loading="channelsLoading"
+            :items-per-page="-1"
+            hide-default-footer
             no-data-text="No alert channels yet"
             item-value="id"
           >
-            <template #item.kind="{ item }">
+            <template #item.kind="{item}">
               <v-chip
                 :prepend-icon="channelIcon(item.kind)"
                 size="small"
-                variant="tonal"
+                variant="flat"
               >
                 {{ item.kind }}
               </v-chip>
             </template>
 
-            <template #item.config="{ item }">
+            <template #item.config="{item}">
               <span class="text-caption">{{ maskTarget(item) }}</span>
             </template>
 
-            <template #item.enabled="{ item }">
+            <template #item.enabled="{item}">
               <v-switch
                 :model-value="item.enabled"
                 color="primary"
@@ -190,10 +201,10 @@
               />
             </template>
 
-            <template #item.actions="{ item }">
-              <div class="d-flex gap-1 align-center">
+            <template #item.actions="{item}">
+              <div class="d-flex align-center gap-1">
                 <v-btn
-                  variant="tonal"
+                  variant="flat"
                   size="x-small"
                   :loading="testingChannelId === item.id"
                   @click="handleTestChannel(item)"
@@ -207,6 +218,7 @@
                   color="success"
                   size="18"
                 />
+
                 <v-icon
                   v-else-if="testResults[item.id]?.success === false"
                   icon="mdi-close-circle"
@@ -221,6 +233,7 @@
                   :disabled="item.kind === 'in_app'"
                   @click="openChannelEditor(item)"
                 />
+
                 <v-btn
                   icon="mdi-delete"
                   variant="text"
@@ -261,22 +274,28 @@
     >
       <v-card>
         <v-card-title class="pa-4">
-          Delete {{ deletingItem?.type === 'rule' ? 'Rule' : 'Channel' }}?
+          Delete {{ deletingItem?.type === 'rule'
+            ? 'Rule'
+            : 'Channel' }}?
         </v-card-title>
+
         <v-card-text>
           This action cannot be undone.
         </v-card-text>
+
         <v-card-actions>
           <v-spacer />
+
           <v-btn
             variant="text"
             @click="deleteConfirmOpen = false"
           >
             Cancel
           </v-btn>
+
           <v-btn
             color="error"
-            variant="tonal"
+            variant="flat"
             :loading="deleting"
             @click="executeDelete"
           >
@@ -305,8 +324,7 @@ const { projects } = storeToRefs(projectsStore)
 const activeTab = ref('rules')
 const selectedProjectId = ref<number | null>(null)
 
-const selectedProject = computed(() =>
-  projects.value.find(p => p.project_id === selectedProjectId.value) ?? null,
+const selectedProject = computed(() => projects.value.find(p => p.project_id === selectedProjectId.value) ?? null,
 )
 
 const { alertRules } = useProjectFeatures(selectedProject)
@@ -316,33 +334,32 @@ const editingRule = ref<AlertRule | undefined>()
 const channelEditorOpen = ref(false)
 const editingChannel = ref<AlertChannel | undefined>()
 const deleteConfirmOpen = ref(false)
-const deletingItem = ref<{ type: 'rule' | 'channel'; id: number } | null>(null)
+const deletingItem = ref<{ type: 'rule' | 'channel', id: number } | null>(null)
 const deleting = ref(false)
 const testingChannelId = ref<number | null>(null)
 const testResults = ref<Record<number, { success: boolean }>>({})
 
-const projectOptions = computed(() =>
-  projects.value.map(p => ({ id: p.project_id, name: p.name })),
+const projectOptions = computed(() => projects.value.map(p => ({ id: p.project_id, name: p.name })),
 )
 
-const rules = computed(() =>
-  selectedProjectId.value
-    ? alertsStore.getRulesForProject(selectedProjectId.value).value
-    : [],
+const rules = computed(() => (selectedProjectId.value
+  ? alertsStore.getRulesForProject(selectedProjectId.value).value
+  : []),
 )
 
-const channels = computed(() =>
-  selectedProjectId.value
-    ? alertsStore.getChannelsForProject(selectedProjectId.value).value
-    : [],
+const channels = computed(() => (selectedProjectId.value
+  ? alertsStore.getChannelsForProject(selectedProjectId.value).value
+  : []),
 )
 
-const rulesLoading = computed(() =>
-  selectedProjectId.value ? alertsStore.rulesLoading.has(selectedProjectId.value) : false,
+const rulesLoading = computed(() => (selectedProjectId.value
+  ? alertsStore.rulesLoading.has(selectedProjectId.value)
+  : false),
 )
 
-const channelsLoading = computed(() =>
-  selectedProjectId.value ? alertsStore.channelsLoading.has(selectedProjectId.value) : false,
+const channelsLoading = computed(() => (selectedProjectId.value
+  ? alertsStore.channelsLoading.has(selectedProjectId.value)
+  : false),
 )
 
 const ruleHeaders = [
@@ -365,6 +382,7 @@ const channelHeaders = [
 
 function statusColor(status: string): string {
   const map: Record<string, string> = { firing: 'error', ok: 'success', disabled: 'default' }
+
   return map[status] ?? 'default'
 }
 
@@ -374,22 +392,27 @@ function channelIcon(kind: string): string {
     email: 'mdi-email',
     webhook: 'mdi-webhook',
   }
+
   return map[kind] ?? 'mdi-send'
 }
 
 function maskTarget(channel: AlertChannel): string {
   let cfg: Record<string, string> = {}
-  try { cfg = JSON.parse(channel.config) } catch { /* noop */ }
+  try { cfg = JSON.parse(channel.config) }
+  catch { /* noop */ }
 
   if (channel.kind === 'email') {
     const addr = cfg.address ?? cfg.email ?? ''
-    if (!addr) return '—'
+    if (!addr)
+      return '—'
     const [user, domain] = addr.split('@')
+
     return `${user?.slice(0, 2) ?? ''}***@${domain}`
   }
   if (channel.kind === 'webhook') {
     const url = cfg.url ?? ''
-    if (!url) return '—'
+    if (!url)
+      return '—'
     try {
       return new URL(url).hostname
     }
@@ -397,6 +420,7 @@ function maskTarget(channel: AlertChannel): string {
       return url.slice(0, 30)
     }
   }
+
   return '—'
 }
 
@@ -406,9 +430,13 @@ function formatRelative(ts: string): string {
     const mins = Math.floor(diff / 60000)
     const hours = Math.floor(mins / 60)
     const days = Math.floor(hours / 24)
-    if (days > 0) return `${days}d ago`
-    if (hours > 0) return `${hours}h ago`
-    if (mins > 0) return `${mins}m ago`
+    if (days > 0)
+      return `${days}d ago`
+    if (hours > 0)
+      return `${hours}h ago`
+    if (mins > 0)
+      return `${mins}m ago`
+
     return 'Just now'
   }
   catch {
@@ -437,7 +465,8 @@ function confirmDeleteChannel(channel: AlertChannel) {
 }
 
 async function executeDelete() {
-  if (!deletingItem.value || !selectedProjectId.value) return
+  if (!deletingItem.value || !selectedProjectId.value)
+    return
   deleting.value = true
   try {
     if (deletingItem.value.type === 'rule') {
@@ -454,12 +483,14 @@ async function executeDelete() {
 }
 
 async function handleToggleRule(rule: AlertRule, enabled: boolean) {
-  if (!selectedProjectId.value) return
+  if (!selectedProjectId.value)
+    return
   await alertsStore.toggleRule(rule.id, selectedProjectId.value, enabled)
 }
 
 async function handleToggleChannel(channel: AlertChannel, enabled: boolean) {
-  if (!selectedProjectId.value) return
+  if (!selectedProjectId.value)
+    return
   await alertsStore.updateChannel(channel.id, selectedProjectId.value, { enabled })
 }
 

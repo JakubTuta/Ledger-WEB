@@ -25,8 +25,10 @@
     <!-- Cards -->
     <div
       v-else
-      class="d-flex pa-1 overflow-x-auto"
-      :class="mobile ? 'gap-2' : 'gap-3'"
+      class="d-flex overflow-x-auto pa-1"
+      :class="mobile
+        ? 'gap-2'
+        : 'gap-3'"
     >
       <HealthCard
         v-for="summary in summaries"
@@ -35,6 +37,7 @@
         :project-name="getProjectName(summary.project_id)"
         :environment="getProjectEnvironment(summary.project_id)"
         :compact="mobile"
+        :selected="props.selectedProjectId === String(summary.project_id)"
         @click="emit('project-click', $event)"
       />
     </div>
@@ -45,6 +48,10 @@
 import type { ProjectHealthSummary } from '~/types/health'
 import { useDisplay } from 'vuetify'
 
+const props = defineProps<{
+  selectedProjectId?: string | null
+}>()
+
 const emit = defineEmits<{
   'project-click': [projectId: string]
 }>()
@@ -53,12 +60,10 @@ const { mobile } = useDisplay()
 const healthStore = useHealthStore()
 const projectsStore = useProjectsStore()
 
-const summaries = computed<ProjectHealthSummary[]>(() =>
-  Array.from(healthStore.summaries.values()),
+const summaries = computed<ProjectHealthSummary[]>(() => Array.from(healthStore.summaries.values()),
 )
 
-const skeletonCount = computed(() =>
-  Math.min(projectsStore.projects.length || 3, 5),
+const skeletonCount = computed(() => Math.min(projectsStore.projects.length || 3, 5),
 )
 
 function getProjectName(projectId: string): string {

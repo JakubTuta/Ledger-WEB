@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia'
 import type { NotificationPreferencesResponse, NotificationPreferencesUpdate } from '~/types/notifications'
+import { defineStore } from 'pinia'
 
 export const useNotificationsStore = defineStore('notifications', () => {
   const { client } = useApiStore()

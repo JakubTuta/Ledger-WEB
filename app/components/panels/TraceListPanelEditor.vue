@@ -5,8 +5,9 @@
     persistent
   >
     <v-card>
-      <v-card-title class="pa-4 d-flex align-center justify-space-between">
+      <v-card-title class="d-flex align-center justify-space-between pa-4">
         <span>Configure Trace List Panel</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -18,6 +19,39 @@
       <v-divider />
 
       <v-card-text class="pa-4">
+        <v-alert
+          v-if="tracingDisabled"
+          type="warning"
+          variant="flat"
+          density="compact"
+          class="mb-4"
+        >
+          <div class="mb-2">
+            <strong>Tracing is disabled</strong> for this project. Trace List panels won't return data
+            until you enable it.
+          </div>
+
+          <v-alert
+            v-if="tracingError"
+            type="error"
+            density="compact"
+            class="mb-2"
+          >
+            {{ tracingError }}
+          </v-alert>
+
+          <v-btn
+            size="small"
+            color="warning"
+            variant="flat"
+            prepend-icon="mdi-toggle-switch"
+            :loading="enablingTracing"
+            @click="enableTracing"
+          >
+            Enable tracing
+          </v-btn>
+        </v-alert>
+
         <v-text-field
           v-model="form.service_filter"
           label="Service (optional)"
@@ -77,15 +111,17 @@
 
       <v-card-actions class="pa-3">
         <v-spacer />
+
         <v-btn
           variant="text"
           @click="dialogOpen = false"
         >
           Cancel
         </v-btn>
+
         <v-btn
           color="primary"
-          variant="tonal"
+          variant="flat"
           :loading="saving"
           @click="handleSave"
         >
@@ -106,10 +142,31 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  saved: []
+  'saved': []
 }>()
 
 const panelsStore = usePanelsStore()
+const projectsStore = useProjectsStore()
+
+const project = computed(() => projectsStore.projects.find(p => String(p.project_id) === String(props.panel.project_id)) ?? null,
+)
+const { tracing } = useProjectFeatures(project)
+const tracingDisabled = computed(() => !!project.value && !tracing.value)
+
+const enablingTracing = ref(false)
+const tracingError = ref('')
+
+async function enableTracing() {
+  if (!project.value)
+    return
+  enablingTracing.value = true
+  tracingError.value = ''
+  const result = await projectsStore.updateFeature(project.value.project_id, 'tracing', true)
+  if (!result.success) {
+    tracingError.value = result.error || 'Failed to enable tracing'
+  }
+  enablingTracing.value = false
+}
 
 const dialogOpen = computed({
   get: () => props.modelValue,

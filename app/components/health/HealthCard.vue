@@ -1,7 +1,10 @@
 <template>
   <v-card
     class="health-card"
-    :class="`health-card--${summary.status}`"
+    :class="[
+      `health-card--${summary.status}`,
+      {'health-card--selected': selected},
+    ]"
     variant="elevated"
     elevation="2"
     hover
@@ -16,9 +19,10 @@
     <v-card-text class="pa-3">
       <!-- Header -->
       <div class="d-flex align-center justify-space-between mb-2">
-        <div class="text-subtitle-2 font-weight-bold text-truncate text-on-surface">
+        <div class="text-subtitle-2 font-weight-bold text-on-surface text-truncate">
           {{ projectName }}
         </div>
+
         <v-chip
           size="x-small"
           :color="statusColor"
@@ -32,8 +36,10 @@
       <!-- Environment chip -->
       <v-chip
         size="x-small"
-        :color="environment === 'production' ? 'error' : 'primary'"
-        variant="tonal"
+        :color="environment === 'production'
+          ? 'error'
+          : 'primary'"
+        variant="flat"
         class="mb-3"
       >
         {{ environment || 'unknown' }}
@@ -45,10 +51,10 @@
           location="top"
           text="Error Rate — percentage of requests that resulted in an error over the selected period."
         >
-          <template #activator="{ props: tipProps }">
+          <template #activator="{'props': tipProps}">
             <div
               v-bind="tipProps"
-              class="text-center metric-cell"
+              class="metric-cell text-center"
             >
               <div
                 class="text-body-1 font-weight-bold"
@@ -56,6 +62,7 @@
               >
                 {{ errorRateDisplay }}
               </div>
+
               <div class="text-caption text-on-surface">
                 Error Rate
               </div>
@@ -67,10 +74,10 @@
           location="top"
           text="p95 latency — 95% of requests completed faster than this value (response time)."
         >
-          <template #activator="{ props: tipProps }">
+          <template #activator="{'props': tipProps}">
             <div
               v-bind="tipProps"
-              class="text-center metric-cell"
+              class="metric-cell text-center"
             >
               <div
                 class="text-body-1 font-weight-bold"
@@ -78,6 +85,7 @@
               >
                 {{ p95Display }}
               </div>
+
               <div class="text-caption text-on-surface">
                 p95
               </div>
@@ -89,14 +97,15 @@
           location="top"
           text="RPS — average requests per second over the selected period."
         >
-          <template #activator="{ props: tipProps }">
+          <template #activator="{'props': tipProps}">
             <div
               v-bind="tipProps"
-              class="text-center metric-cell"
+              class="metric-cell text-center"
             >
               <div class="text-body-1 font-weight-bold text-on-surface">
                 {{ rpsDisplay }}
               </div>
+
               <div class="text-caption text-on-surface">
                 RPS
               </div>
@@ -110,7 +119,7 @@
         location="bottom"
         text="Request volume per hour for the last 24 hours."
       >
-        <template #activator="{ props: tipProps }">
+        <template #activator="{'props': tipProps}">
           <div v-bind="tipProps">
             <Sparkline
               :points="summary.sparkline"
@@ -131,6 +140,7 @@ const props = defineProps<{
   projectName?: string
   environment?: string
   compact?: boolean
+  selected?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -164,32 +174,48 @@ const sparklineColor = computed(() => {
 const errorRateDisplay = computed(() => `${(props.summary.error_rate * 100).toFixed(1)}%`)
 const p95Display = computed(() => {
   const ms = props.summary.p95_ms
-  return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)}ms`
+
+  return ms >= 1000
+    ? `${(ms / 1000).toFixed(2)}s`
+    : `${Math.round(ms)}ms`
 })
 const rpsDisplay = computed(() => {
   const r = props.summary.rps
-  return r >= 100 ? `${Math.round(r)}` : r.toFixed(1)
+
+  return r >= 100
+    ? `${Math.round(r)}`
+    : r.toFixed(1)
 })
 
 const errorRateClass = computed(() => {
   const t = props.summary.thresholds
-  if (props.summary.error_rate >= t.error_rate_crit) return 'text-error'
-  if (props.summary.error_rate >= t.error_rate_warn) return 'text-warning'
+  if (props.summary.error_rate >= t.error_rate_crit)
+    return 'text-error'
+  if (props.summary.error_rate >= t.error_rate_warn)
+    return 'text-warning'
+
   return 'text-success'
 })
 
 const p95Class = computed(() => {
   const t = props.summary.thresholds
-  if (props.summary.p95_ms >= t.p95_crit_ms) return 'text-error'
-  if (props.summary.p95_ms >= t.p95_warn_ms) return 'text-warning'
+  if (props.summary.p95_ms >= t.p95_crit_ms)
+    return 'text-error'
+  if (props.summary.p95_ms >= t.p95_warn_ms)
+    return 'text-warning'
+
   return 'text-on-surface'
 })
 </script>
 
 <style scoped>
 .health-card {
-  min-width: v-bind("compact ? '160px' : '200px'");
-  max-width: v-bind("compact ? '200px' : '240px'");
+  min-width: v-bind("compact
+? '160px'
+: '200px'");
+  max-width: v-bind("compact
+? '200px'
+: '240px'");
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.15s;
   position: relative;
@@ -197,6 +223,11 @@ const p95Class = computed(() => {
 }
 
 .health-card:hover {
+  transform: translateY(-2px);
+}
+
+.health-card--selected {
+  outline: 2px solid rgb(var(--v-theme-primary));
   transform: translateY(-2px);
 }
 

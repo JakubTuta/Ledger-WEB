@@ -4,8 +4,9 @@
     max-width="640"
   >
     <v-card>
-      <v-card-title class="pa-4 d-flex align-center justify-space-between">
+      <v-card-title class="d-flex align-center justify-space-between pa-4">
         <span>Choose a dashboard template</span>
+
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -25,35 +26,52 @@
             sm="6"
           >
             <v-card
-              :variant="selected === template.id ? 'tonal' : 'outlined'"
-              :color="selected === template.id ? 'primary' : undefined"
-              class="cursor-pointer h-100"
+              :variant="selected === template.id
+                ? 'flat'
+                : 'outlined'"
+              :color="selected === template.id
+                ? 'primary'
+                : undefined"
+              class="h-100 cursor-pointer"
               @click="selected = template.id"
             >
-              <v-card-text class="d-flex flex-column align-start pa-4 gap-2">
+              <v-card-text class="d-flex flex-column gap-2 pa-4 align-start">
                 <div class="d-flex align-center gap-2">
                   <v-icon
                     :icon="template.icon"
                     size="24"
-                    :color="selected === template.id ? 'primary' : 'medium-emphasis'"
+                    :color="selected === template.id
+                      ? 'on-primary'
+                      : 'medium-emphasis'"
                   />
-                  <span class="text-subtitle-2 font-weight-bold">{{ template.name }}</span>
+
+                  <span
+                    class="text-subtitle-2 font-weight-bold"
+                    :class="selected === template.id ? 'text-on-primary' : ''"
+                  >{{ template.name }}</span>
                 </div>
-                <span class="text-caption text-medium-emphasis">{{ template.description }}</span>
-                <div class="d-flex flex-wrap gap-1 mt-1">
+
+                <span
+                  class="text-caption"
+                  :class="selected === template.id ? 'text-on-primary' : 'text-medium-emphasis'"
+                >{{ template.description }}</span>
+
+                <div class="d-flex mt-1 flex-wrap gap-1">
                   <v-chip
                     v-for="panel in template.panels.slice(0, 3)"
                     :key="panel.name"
                     size="x-small"
-                    variant="tonal"
+                    variant="outlined"
+                    :color="selected === template.id ? 'on-primary' : undefined"
                   >
                     {{ panel.name }}
                   </v-chip>
+
                   <v-chip
                     v-if="template.panels.length > 3"
                     size="x-small"
-                    variant="tonal"
-                    color="medium-emphasis"
+                    variant="outlined"
+                    :color="selected === template.id ? 'on-primary' : 'medium-emphasis'"
                   >
                     +{{ template.panels.length - 3 }} more
                   </v-chip>
@@ -68,15 +86,17 @@
 
       <v-card-actions class="pa-3">
         <v-spacer />
+
         <v-btn
           variant="text"
           @click="dialogOpen = false"
         >
           Cancel
         </v-btn>
+
         <v-btn
           color="primary"
-          variant="tonal"
+          variant="flat"
           :disabled="!selected"
           :loading="applying"
           @click="apply"
@@ -98,7 +118,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  applied: []
+  'applied': []
 }>()
 
 const panelsStore = usePanelsStore()
@@ -112,11 +132,13 @@ const selected = ref<string | null>(null)
 const applying = ref(false)
 
 watch(dialogOpen, (open) => {
-  if (!open) selected.value = null
+  if (!open)
+    selected.value = null
 })
 
 async function apply() {
-  if (!selected.value) return
+  if (!selected.value)
+    return
   applying.value = true
   try {
     await panelsStore.applyTemplate(selected.value, props.projectId)

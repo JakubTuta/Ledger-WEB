@@ -13,9 +13,11 @@ export const useCustomMetricsStore = defineStore('customMetrics', () => {
   let namesFetchDebounce: ReturnType<typeof setTimeout> | null = null
 
   const fetchNames = (prefix = '', force = false) => {
-    if (namesFetchDebounce) clearTimeout(namesFetchDebounce)
+    if (namesFetchDebounce)
+      clearTimeout(namesFetchDebounce)
     namesFetchDebounce = setTimeout(async () => {
-      if (namesLoading.value && !force) return
+      if (namesLoading.value && !force)
+        return
       namesLoading.value = true
       try {
         const response = await client.get<{ names: string[] }>('/api/v1/metrics/custom/names', {
@@ -33,7 +35,8 @@ export const useCustomMetricsStore = defineStore('customMetrics', () => {
   }
 
   const fetchTags = async (metricName: string, force = false) => {
-    if (!force && tagsByMetric.value.has(metricName)) return
+    if (!force && tagsByMetric.value.has(metricName))
+      return
     try {
       const response = await client.get<MetricTagInfo>('/api/v1/metrics/custom/tags', {
         params: { name: metricName },
@@ -57,7 +60,8 @@ export const useCustomMetricsStore = defineStore('customMetrics', () => {
     },
     force = false,
   ) => {
-    if (seriesLoading.value.has(panelId) && !force) return
+    if (seriesLoading.value.has(panelId) && !force)
+      return
     seriesLoading.value.add(panelId)
     try {
       const params: Record<string, any> = {
@@ -66,7 +70,8 @@ export const useCustomMetricsStore = defineStore('customMetrics', () => {
         from: config.from,
         to: config.to,
       }
-      if (config.step) params.step = config.step
+      if (config.step)
+        params.step = config.step
       if (config.tags && Object.keys(config.tags).length > 0) {
         params.tags = JSON.stringify(config.tags)
       }
@@ -82,11 +87,9 @@ export const useCustomMetricsStore = defineStore('customMetrics', () => {
     }
   }
 
-  const getSeriesForPanel = (panelId: string | number) =>
-    computed(() => seriesByPanel.value.get(panelId) ?? null)
+  const getSeriesForPanel = (panelId: string | number) => computed(() => seriesByPanel.value.get(panelId) ?? null)
 
-  const isLoadingPanel = (panelId: string | number) =>
-    computed(() => seriesLoading.value.has(panelId))
+  const isLoadingPanel = (panelId: string | number) => computed(() => seriesLoading.value.has(panelId))
 
   return {
     names,

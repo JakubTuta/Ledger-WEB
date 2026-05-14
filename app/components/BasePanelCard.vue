@@ -76,7 +76,7 @@
 
       <!-- Mobile: overflow menu -->
       <v-menu v-else>
-        <template #activator="{ props: menuProps }">
+        <template #activator="{'props': menuProps}">
           <v-btn
             v-bind="menuProps"
             icon="mdi-dots-vertical"
@@ -117,7 +117,7 @@
           :color="project?.environment === 'production'
             ? 'error'
             : 'primary'"
-          variant="tonal"
+          variant="flat"
         >
           {{ project?.environment || 'Unknown' }}
         </v-chip>

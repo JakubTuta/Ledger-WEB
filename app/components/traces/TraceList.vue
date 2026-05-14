@@ -1,38 +1,44 @@
 <template>
-  <div class="w-100 h-100">
+  <div class="h-100 w-100">
     <v-data-table
       :headers="headers"
       :items="traces"
       :loading="isLoading"
+      :items-per-page="-1"
+      hide-default-footer
       no-data-text="No traces found"
       density="compact"
       item-value="trace_id"
       @click:row="handleRowClick"
     >
-      <template #item.start_time="{ item }">
+      <template #item.start_time="{item}">
         <span class="text-caption">{{ formatTime(item.start_time) }}</span>
       </template>
 
-      <template #item.duration_ms="{ item }">
+      <template #item.duration_ms="{item}">
         <span class="text-caption">{{ item.duration_ms }}ms</span>
       </template>
 
-      <template #item.has_error="{ item }">
+      <template #item.has_error="{item}">
         <v-chip
-          :color="item.has_error ? 'error' : 'success'"
+          :color="item.has_error
+            ? 'error'
+            : 'success'"
           size="x-small"
-          variant="tonal"
+          variant="flat"
         >
-          {{ item.has_error ? 'ERROR' : 'OK' }}
+          {{ item.has_error
+            ? 'ERROR'
+            : 'OK' }}
         </v-chip>
       </template>
 
-      <template #item.trace_id="{ item }">
+      <template #item.trace_id="{item}">
         <v-btn
           v-if="item.trace_id"
           variant="text"
           size="x-small"
-          :prepend-icon="'mdi-link-variant'"
+          prepend-icon="mdi-link-variant"
           color="primary"
           @click.stop="useTraceDrawer().openTrace(item.trace_id)"
         >

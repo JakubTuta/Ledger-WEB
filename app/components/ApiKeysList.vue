@@ -75,7 +75,7 @@
     <v-alert
       v-else
       type="info"
-      variant="tonal"
+      variant="flat"
     >
       No API keys found. Create one to get started.
     </v-alert>

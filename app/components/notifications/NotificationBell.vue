@@ -7,7 +7,7 @@
     max-width="400"
     min-width="380"
   >
-    <template #activator="{ props: menuProps }">
+    <template #activator="{'props': menuProps}">
       <v-btn
         v-bind="menuProps"
         icon
@@ -15,7 +15,9 @@
         color="white"
       >
         <v-badge
-          :content="unreadCount > 99 ? '99+' : unreadCount"
+          :content="unreadCount > 99
+            ? '99+'
+            : unreadCount"
           :model-value="unreadCount > 0"
           color="error"
         >
@@ -58,6 +60,7 @@
         class="pa-4"
       >
         <v-skeleton-loader type="list-item-three-line" />
+
         <v-skeleton-loader type="list-item-three-line" />
       </div>
 
@@ -72,7 +75,9 @@
           :key="notification.id"
         >
           <v-list-item
-            :class="notification.read_at ? 'opacity-60' : ''"
+            :class="notification.read_at
+              ? 'opacity-60'
+              : ''"
             class="px-3 py-2"
           >
             <template #prepend>
@@ -90,7 +95,9 @@
 
             <v-list-item-subtitle class="text-caption">
               <span>{{ notification.project_name }}</span>
+
               <span class="mx-1">·</span>
+
               <span>{{ formatRelativeTime(notification.timestamp) }}</span>
             </v-list-item-subtitle>
 
@@ -125,7 +132,7 @@
 
       <div
         v-else
-        class="d-flex flex-column align-center justify-center pa-6 gap-2"
+        class="d-flex flex-column align-center justify-center gap-2 pa-6"
       >
         <v-icon
           icon="mdi-bell-check-outline"
@@ -172,11 +179,13 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (timeInterval) clearInterval(timeInterval)
+  if (timeInterval)
+    clearInterval(timeInterval)
 })
 
 watch(menuOpen, (open) => {
-  if (open) streamStore.fetchInbox()
+  if (open)
+    streamStore.fetchInbox()
 })
 
 const displayedNotifications = computed(() => inbox.value.slice(0, 10))
@@ -188,6 +197,7 @@ function getLevelColor(level: NotificationLevel): string {
     warning: 'warning',
     info: 'info',
   }
+
   return map[level] ?? 'error'
 }
 
@@ -198,6 +208,7 @@ function getLevelIcon(level: NotificationLevel): string {
     warning: 'mdi-alert-outline',
     info: 'mdi-information-outline',
   }
+
   return map[level] ?? 'mdi-alert'
 }
 
@@ -208,10 +219,15 @@ function formatRelativeTime(timestamp: string): string {
     const minutes = Math.floor(seconds / 60)
     const hours = Math.floor(minutes / 60)
     const days = Math.floor(hours / 24)
-    if (days > 0) return `${days}d ago`
-    if (hours > 0) return `${hours}h ago`
-    if (minutes > 0) return `${minutes}m ago`
-    if (seconds > 5) return `${seconds}s ago`
+    if (days > 0)
+      return `${days}d ago`
+    if (hours > 0)
+      return `${hours}h ago`
+    if (minutes > 0)
+      return `${minutes}m ago`
+    if (seconds > 5)
+      return `${seconds}s ago`
+
     return 'Just now'
   }
   catch {

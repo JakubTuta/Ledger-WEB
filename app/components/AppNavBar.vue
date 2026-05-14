@@ -3,6 +3,7 @@
     app
     color="primary"
     elevation="2"
+    density="compact"
   >
     <template v-if="mobile">
       <v-app-bar-nav-icon
@@ -15,93 +16,116 @@
         variant="text"
         color="white"
         prepend-icon="mdi-finance"
+        class="font-weight-bold"
       >
         Ledger
       </v-btn>
     </template>
 
     <template v-else>
-      <div class="d-flex align-center w-100">
-        <div class="navbar-section navbar-section-left">
+      <div class="d-flex align-center w-100 px-2">
+        <v-chip
+          to="/"
+          variant="flat"
+          prepend-icon="mdi-finance"
+          size="large"
+          class="font-weight-bold text-primary mr-3 cursor-pointer"
+          label
+        >
+          Ledger
+        </v-chip>
+
+        <template v-if="!authStore.isAuthenticated">
           <v-btn
             to="/"
             variant="text"
-            color="white"
-            prepend-icon="mdi-finance"
+            prepend-icon="mdi-home"
           >
-            Ledger
+            Home
           </v-btn>
-        </div>
+        </template>
 
-        <div class="navbar-section navbar-section-center">
-          <template v-if="!authStore.isAuthenticated">
+        <template v-else>
+          <v-btn
+            to="/panel"
+            variant="text"
+            prepend-icon="mdi-view-dashboard"
+          >
+            Panel
+          </v-btn>
+
+          <v-btn
+            to="/alerts"
+            variant="text"
+            prepend-icon="mdi-bell-alert"
+          >
+            Alerts
+          </v-btn>
+
+          <v-btn
+            to="/settings"
+            variant="text"
+            prepend-icon="mdi-cog"
+          >
+            Settings
+          </v-btn>
+        </template>
+
+        <v-spacer />
+
+        <NotificationsNotificationBell v-if="authStore.isAuthenticated" />
+
+        <v-menu
+          location="bottom end"
+          close-on-content-click
+        >
+          <template #activator="{'props': menuProps}">
             <v-btn
-              to="/"
+              v-bind="menuProps"
               variant="text"
-              prepend-icon="mdi-home"
             >
-              Home
+              <v-icon size="x-large">
+                mdi-account
+              </v-icon>
+
+              <v-icon>
+                mdi-chevron-down
+              </v-icon>
             </v-btn>
           </template>
 
-          <template v-else>
-            <v-btn
-              to="/panel"
-              variant="text"
-              prepend-icon="mdi-view-dashboard"
-            >
-              Panel
-            </v-btn>
+          <v-list
+            min-width="180"
+          >
+            <template v-if="!authStore.isAuthenticated">
+              <v-list-item
+                to="/login"
+                prepend-icon="mdi-login"
+                title="Login"
+              />
 
-            <v-btn
-              to="/alerts"
-              variant="text"
-              prepend-icon="mdi-bell-alert"
-            >
-              Alerts
-            </v-btn>
-          </template>
-        </div>
+              <v-list-item
+                to="/register"
+                prepend-icon="mdi-account-plus"
+                title="Register"
+              />
+            </template>
 
-        <div class="navbar-section navbar-section-right">
-          <template v-if="!authStore.isAuthenticated">
-            <v-btn
-              to="/login"
-              variant="text"
-              prepend-icon="mdi-login"
-            >
-              Login
-            </v-btn>
+            <template v-else>
+              <v-list-item
+                to="/account"
+                prepend-icon="mdi-account-cog"
+                title="Account settings"
+              />
 
-            <v-btn
-              to="/register"
-              variant="text"
-              prepend-icon="mdi-account-plus"
-            >
-              Register
-            </v-btn>
-          </template>
-
-          <template v-else>
-            <NotificationsNotificationBell />
-
-            <v-btn
-              to="/account"
-              variant="text"
-              prepend-icon="mdi-account"
-            >
-              Account
-            </v-btn>
-
-            <v-btn
-              variant="text"
-              prepend-icon="mdi-logout"
-              @click="handleLogout"
-            >
-              Logout
-            </v-btn>
-          </template>
-        </div>
+              <v-list-item
+                prepend-icon="mdi-logout"
+                title="Logout"
+                @click="handleLogout"
+              />
+            </template>
+          </v-list>
+        </v-menu>
       </div>
     </template>
   </v-app-bar>
@@ -151,6 +175,13 @@
         />
 
         <v-list-item
+          to="/settings"
+          prepend-icon="mdi-cog"
+          title="Settings"
+          @click="drawer = false"
+        />
+
+        <v-list-item
           to="/notifications"
           prepend-icon="mdi-bell"
           title="Notifications"
@@ -159,8 +190,8 @@
 
         <v-list-item
           to="/account"
-          prepend-icon="mdi-account"
-          title="Account"
+          prepend-icon="mdi-account-cog"
+          title="Account settings"
           @click="drawer = false"
         />
 
@@ -186,23 +217,3 @@ async function handleLogout() {
   await authStore.logout()
 }
 </script>
-
-<style scoped>
-.navbar-section {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.navbar-section-left {
-  justify-content: flex-start;
-}
-
-.navbar-section-center {
-  justify-content: center;
-}
-
-.navbar-section-right {
-  justify-content: flex-end;
-}
-</style>

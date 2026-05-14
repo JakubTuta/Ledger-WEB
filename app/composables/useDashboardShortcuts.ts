@@ -6,14 +6,18 @@ export function useDashboardShortcuts(handlers: {
 }) {
   function isInputFocused(): boolean {
     const el = document.activeElement
-    if (!el) return false
+    if (!el)
+      return false
     const tag = el.tagName.toLowerCase()
+
     return tag === 'input' || tag === 'textarea' || (el as HTMLElement).isContentEditable
   }
 
   function handleKey(e: KeyboardEvent) {
-    if (isInputFocused()) return
-    if (e.ctrlKey || e.metaKey || e.altKey) return
+    if (isInputFocused())
+      return
+    if (e.ctrlKey || e.metaKey || e.altKey)
+      return
 
     switch (e.key) {
       case 'n':

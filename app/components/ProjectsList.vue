@@ -64,7 +64,7 @@
     <v-alert
       v-else-if="!projectsStore.isLoading"
       type="info"
-      variant="tonal"
+      variant="flat"
     >
       No projects found. Create your first project to get started.
     </v-alert>

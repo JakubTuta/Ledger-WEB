@@ -37,8 +37,10 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   // --- Inbox REST methods ---
 
   const fetchInbox = async (force = false) => {
-    if (inboxLoading.value) return
-    if (!force && inboxLastFetch.value && Date.now() - inboxLastFetch.value < 30_000) return
+    if (inboxLoading.value)
+      return
+    if (!force && inboxLastFetch.value && Date.now() - inboxLastFetch.value < 30_000)
+      return
 
     inboxLoading.value = true
     try {
@@ -63,10 +65,12 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
       const response = await client.get<NotificationsListResponse>('/api/v1/notifications', {
         params: filters,
       })
+
       return response.data
     }
     catch (error) {
       console.error('Error fetching notification history:', error)
+
       return null
     }
   }
@@ -75,7 +79,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     try {
       await client.post(`/api/v1/notifications/${id}/read`)
       const item = inbox.value.find(n => n.id === id)
-      if (item) item.read_at = new Date().toISOString()
+      if (item)
+        item.read_at = new Date().toISOString()
     }
     catch (error) {
       console.error('Error marking notification read:', error)
@@ -103,7 +108,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   }
 
   const prependToInbox = (notification: InboxNotification) => {
-    if (inbox.value.some(n => n.id === notification.id)) return
+    if (inbox.value.some(n => n.id === notification.id))
+      return
     inbox.value.unshift({ ...notification, expanded: false })
     inboxTotal.value++
   }
@@ -187,9 +193,12 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   }
 
   const connect = async () => {
-    if (!import.meta.client) return
-    if (!authStore.isAuthenticated || !authStore.token) return
-    if (abortController) return
+    if (!import.meta.client)
+      return
+    if (!authStore.isAuthenticated || !authStore.token)
+      return
+    if (abortController)
+      return
 
     try {
       abortController = new AbortController()
@@ -205,8 +214,10 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
         signal: abortController.signal,
       })
 
-      if (!response.ok) throw new Error(`SSE connection failed: ${response.status}`)
-      if (!response.body) throw new Error('Response body is null')
+      if (!response.ok)
+        throw new Error(`SSE connection failed: ${response.status}`)
+      if (!response.body)
+        throw new Error('Response body is null')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -220,7 +231,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
           while (true) {
             // eslint-disable-next-line no-await-in-loop
             const { done, value } = await reader.read()
-            if (done) break
+            if (done)
+              break
 
             buffer += decoder.decode(value, { stream: true })
             const lines = buffer.split(/\r?\n/)
@@ -245,7 +257,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
           }
         }
         catch (error: any) {
-          if (error.name === 'AbortError') return
+          if (error.name === 'AbortError')
+            return
           console.error('SSE stream error:', error)
           handleConnectionError()
         }
@@ -254,7 +267,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
       processStream()
     }
     catch (error: any) {
-      if (error.name === 'AbortError') return
+      if (error.name === 'AbortError')
+        return
       console.error('Failed to establish SSE connection:', error)
       handleConnectionError()
     }
@@ -278,7 +292,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   // Legacy helpers kept for backwards compat
   const removeNotification = (notificationId: string) => {
     const index = notifications.value.findIndex(n => n.id === notificationId)
-    if (index > -1) notifications.value.splice(index, 1)
+    if (index > -1)
+      notifications.value.splice(index, 1)
   }
 
   const clearAll = () => {
@@ -287,7 +302,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
 
   const toggleExpanded = (notificationId: string) => {
     const notification = inbox.value.find(n => n.id === notificationId)
-    if (notification) notification.expanded = !notification.expanded
+    if (notification)
+      notification.expanded = !notification.expanded
   }
 
   return {

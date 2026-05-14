@@ -2,7 +2,9 @@
   <EChart
     class="sparkline"
     :option="option"
-    :theme="isDark ? 'dark' : undefined"
+    :theme="isDark
+      ? 'dark'
+      : undefined"
     autoresize
   />
 </template>
