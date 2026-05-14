@@ -9,19 +9,20 @@
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
   >
-    <!-- Filter row (logs panel only) -->
+    <!-- Filter row (logs: status toggle + search; error_list: search only) -->
     <template
-      v-if="type === 'logs'"
+      v-if="type === 'logs' || type === 'error_list'"
       #filters
     >
       <div class="d-flex align-center flex-wrap gap-2">
         <v-btn-toggle
+          v-if="type === 'logs'"
           v-model="statusClassFilter"
           density="compact"
           variant="outlined"
           divided
           mandatory
-          class="status-toggle mx-2"
+          class="status-toggle mx-2 gap-2"
         >
           <v-btn
             value="all"
@@ -60,7 +61,9 @@
           density="compact"
           variant="outlined"
           hide-details
-          placeholder="Filter path, method, status..."
+          :placeholder="type === 'error_list'
+            ? 'Filter by path or message...'
+            : 'Filter path, method, status...'"
           prepend-inner-icon="mdi-magnify"
           clearable
           class="search-input"
@@ -314,83 +317,95 @@
             </div>
           </template>
 
-          <!-- Errors: original card style -->
+          <!-- Errors: compact grouped rows -->
           <template v-else>
-            <v-card
+            <div
               v-for="item in items"
               :key="item.log_id"
-              :color="getItemColor(item)"
-              variant="elevated"
-              elevation="1"
-              class="item-card mx-2 mb-2 mt-2"
+              class="log-row"
             >
-              <v-card-title
-                class="d-flex justify-space-between flex-wrap cursor-pointer pa-2 align-start"
+              <!-- Collapsed row -->
+              <div
+                class="log-row-header d-flex align-center cursor-pointer"
                 @click="toggleExpanded(item)"
               >
+                <!-- Status bar: red for 5xx or no status, amber for 4xx -->
                 <div
-                  class="d-flex align-center flex-grow-1 gap-1"
-                  style="min-width: 0"
+                  class="status-bar flex-shrink-0"
+                  :class="getErrorStatusBarClass(item)"
+                />
+
+                <!-- Status code chip or error type -->
+                <v-chip
+                  v-if="item.status_code"
+                  :color="getStatusChipColor(item)"
+                  size="x-small"
+                  variant="flat"
+                  class="method-chip font-weight-bold mr-2 flex-shrink-0"
+                  label
                 >
-                  <v-icon
-                    :icon="getItemIcon(item)"
-                    :color="getIconColorForItem(item)"
-                    size="x-small"
-                    class="mr-1"
-                  />
+                  {{ item.status_code }}
+                </v-chip>
 
-                  <div class="d-flex flex-column flex-grow-1">
-                    <span class="text-body-2 font-weight-bold text-truncate">
-                      {{ item.message }}
-                    </span>
+                <v-chip
+                  v-else
+                  color="error"
+                  size="x-small"
+                  variant="flat"
+                  class="method-chip font-weight-bold mr-2 flex-shrink-0"
+                  label
+                >
+                  {{ item.error_type || 'error' }}
+                </v-chip>
 
-                    <div class="d-flex align-center gap-1">
-                      <v-chip
-                        size="x-small"
-                        color="error"
-                        variant="flat"
-                      >
-                        {{ item.error_type || 'error' }}
-                      </v-chip>
+                <!-- Path or message -->
+                <span class="log-path text-caption text-mono mr-2 flex-grow-1 text-truncate">
+                  {{ item.path || item.message || '—' }}
+                </span>
 
-                      <v-chip
-                        v-if="item.isNew"
-                        size="x-small"
-                        color="success"
-                        variant="flat"
-                      >
-                        NEW
-                      </v-chip>
-                    </div>
-                  </div>
-                </div>
+                <!-- Occurrence count -->
+                <v-chip
+                  :color="(item.occurrence_count || 1) > 1
+                    ? 'error'
+                    : 'default'"
+                  :variant="(item.occurrence_count || 1) > 1
+                    ? 'tonal'
+                    : 'text'"
+                  size="x-small"
+                  class="mr-3 flex-shrink-0"
+                >
+                  ×{{ item.occurrence_count || 1 }}
+                </v-chip>
 
-                <div class="d-flex align-center ml-2 flex-shrink-0 gap-1">
-                  <span
-                    v-if="item.timestamp"
-                    class="text-caption text-medium-emphasis"
-                  >
-                    {{ formatTimestamp(item.timestamp) }}
-                  </span>
+                <!-- Last seen -->
+                <span class="text-caption text-medium-emphasis time-col flex-shrink-0">
+                  {{ formatTimestamp(item.last_seen || item.timestamp) }}
+                </span>
+              </div>
 
-                  <v-chip
-                    v-if="item.trace_id"
-                    size="x-small"
-                    variant="flat"
-                    color="info"
-                    prepend-icon="mdi-link-variant"
-                    @click.stop="openTrace(item.trace_id)"
-                  >
-                    trace
-                  </v-chip>
-                </div>
-              </v-card-title>
-
+              <!-- Expanded details -->
               <v-expand-transition>
-                <v-card-text
+                <div
                   v-if="item.expanded"
-                  class="pa-2 pt-0"
+                  class="log-row-detail pa-3"
                 >
+                  <!-- Occurrence range -->
+                  <div
+                    v-if="item.first_seen"
+                    class="d-flex align-center mb-2 gap-2"
+                  >
+                    <v-chip
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      ×{{ item.occurrence_count || 1 }} occurrences
+                    </v-chip>
+
+                    <span class="text-caption text-medium-emphasis">
+                      {{ formatTimestamp(item.first_seen) }} → {{ formatTimestamp(item.last_seen || item.timestamp) }}
+                    </span>
+                  </div>
+
                   <div class="mb-2">
                     <div class="text-caption font-weight-bold mb-1">
                       Message:
@@ -402,7 +417,18 @@
                   </div>
 
                   <div
-                    v-if="item.attributes?.stack_trace"
+                    v-if="item.stack_trace"
+                    class="mb-2"
+                  >
+                    <div class="text-caption font-weight-bold mb-1">
+                      Stack Trace:
+                    </div>
+
+                    <pre class="detail-pre text-caption">{{ item.stack_trace }}</pre>
+                  </div>
+
+                  <div
+                    v-else-if="item.attributes?.stack_trace"
                     class="mb-2"
                   >
                     <div class="text-caption font-weight-bold mb-1">
@@ -421,9 +447,9 @@
 
                     <pre class="detail-pre text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
                   </div>
-                </v-card-text>
+                </div>
               </v-expand-transition>
-            </v-card>
+            </div>
           </template>
 
           <!-- Load More Trigger -->
@@ -474,7 +500,7 @@ const props = defineProps<{
   disabled?: boolean
   hasMore?: boolean
   offset?: number
-  type: 'errors' | 'logs'
+  type: 'errors' | 'logs' | 'error_list'
 }>()
 
 const emit = defineEmits<{
@@ -515,6 +541,12 @@ interface ListItem {
   path?: string
   status_code?: number
   duration_ms?: number
+  // Grouped error fields
+  group_key?: string
+  occurrence_count?: number
+  first_seen?: string
+  last_seen?: string
+  stack_trace?: string
 }
 
 const currentTime = ref(Date.now())
@@ -536,24 +568,54 @@ watch(searchFilter, () => {
 })
 
 function applyFilters() {
-  const sc = statusClassFilter.value === 'all'
-    ? undefined
-    : statusClassFilter.value
-  panelsStore.updateLogsFilter(props.panel.id, sc, searchFilter.value || undefined)
+  if (props.type === 'error_list') {
+    panelsStore.updateErrorListFilter(props.panel.id, searchFilter.value || undefined)
+  }
+  else {
+    const sc = statusClassFilter.value === 'all'
+      ? undefined
+      : statusClassFilter.value
+    panelsStore.updateLogsFilter(props.panel.id, sc, searchFilter.value || undefined)
+  }
 }
 
-const icon = computed(() => (props.type === 'errors'
-  ? 'mdi-format-list-bulleted'
-  : 'mdi-text-box-outline'))
-const iconColor = computed(() => (props.type === 'errors'
-  ? 'error'
-  : 'primary'))
-const emptyIcon = computed(() => (props.type === 'errors'
-  ? 'mdi-check-circle'
-  : 'mdi-text-box-check'))
-const emptyMessage = computed(() => (props.type === 'errors'
-  ? 'No errors found'
-  : 'No request logs found'))
+const icon = computed(() => {
+  if (props.type === 'logs')
+    return 'mdi-text-box-outline'
+
+  return 'mdi-format-list-bulleted'
+})
+const iconColor = computed(() => {
+  if (props.type === 'logs')
+    return 'primary'
+
+  return 'error'
+})
+const emptyIcon = computed(() => {
+  if (props.type === 'logs')
+    return 'mdi-text-box-check'
+
+  return 'mdi-check-circle'
+})
+const emptyMessage = computed(() => {
+  if (props.type === 'logs')
+    return 'No request logs found'
+
+  return 'No errors found'
+})
+
+// Error grouped row status bar (red for 5xx/no-code, amber for 4xx)
+function getErrorStatusBarClass(item: ListItem): string {
+  const code = item.status_code
+  if (!code)
+    return 'status-bar--error'
+  if (code >= 500)
+    return 'status-bar--error'
+  if (code >= 400)
+    return 'status-bar--warning'
+
+  return 'status-bar--error'
+}
 
 // HTTP status helpers
 function getStatusBarClass(item: ListItem): string {

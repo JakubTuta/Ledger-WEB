@@ -249,7 +249,7 @@
               :has-more="panelsStore.getErrorsHasMore(panel.id)"
               :offset="panelsStore.getErrorsOffset(panel.id)"
               :disabled="isEditMode"
-              type="errors"
+              type="error_list"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
               @refresh="() => panelsStore.fetchErrorsForPanel(panel)"

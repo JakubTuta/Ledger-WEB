@@ -202,13 +202,17 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
+      if (panel.search) {
+        searchParams.set('search', panel.search)
+      }
+
       const response = await client.get<any>(
         `/api/v1/errors/list?${searchParams.toString()}`,
       )
 
       const newErrors = response.data.errors.map((error: any) => ({
         ...error,
-        isNew: false,
+        expanded: false,
       }))
 
       const currentErrors = panelErrors.value.get(panel.id) || []
@@ -251,20 +255,19 @@ export const usePanelsStore = defineStore('panels', () => {
     return errorsOffset.value.get(panelId) || 0
   }
 
-  const addNewErrorToPanel = (projectId: string, error: any) => {
+  const _errorRefetchTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+  const addNewErrorToPanel = (projectId: string, _error: any) => {
     for (const panel of panels.value) {
       if (panel.type === 'error_list' && panel.project_id === projectId) {
-        const currentErrors = panelErrors.value.get(panel.id) || []
-
-        const newError = {
-          ...error,
-          log_id: Date.now(),
-          project_id: Number.parseInt(projectId),
-          isNew: true,
-          expanded: false,
-        }
-
-        panelErrors.value.set(panel.id, [newError, ...currentErrors])
+        // Debounced refetch — coalesces burst of incoming errors into one request
+        const existing = _errorRefetchTimers.get(panel.id)
+        if (existing)
+          clearTimeout(existing)
+        _errorRefetchTimers.set(panel.id, setTimeout(() => {
+          _errorRefetchTimers.delete(panel.id)
+          fetchErrorsForPanel(panel)
+        }, 250))
       }
     }
   }
@@ -710,6 +713,24 @@ export const usePanelsStore = defineStore('panels', () => {
     await fetchLogsForPanel(panel)
   }
 
+  const updateErrorListFilter = async (
+    panelId: string,
+    search: string | undefined,
+  ) => {
+    const panel = panels.value.find(p => p.id === panelId)
+    if (!panel)
+      return
+
+    panel.search = search ?? undefined
+
+    await updatePanel(panelId, {
+      search: search ?? null,
+    })
+
+    errorsOffset.value.set(panelId, 0)
+    await fetchErrorsForPanel(panel)
+  }
+
   const updatePanelTimeRange = async (
     panelId: string,
     timeRange: { period?: TimeRangePreset | null, periodFrom?: string | null, periodTo?: string | null },
@@ -970,6 +991,7 @@ export const usePanelsStore = defineStore('panels', () => {
     getLogsHasMore,
     getLogsOffset,
     updateLogsFilter,
+    updateErrorListFilter,
     fetchBottleneckForPanel,
     getBottleneckForPanel,
     isBottleneckLoading,
