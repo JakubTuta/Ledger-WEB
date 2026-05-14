@@ -26,37 +26,7 @@
       />
     </div>
 
-    <v-alert
-      v-if="selectedProject && !alertRules"
-      type="info"
-      class="mb-4"
-    >
-      Alert rules are not enabled for this project. Contact your admin to enable this feature.
-    </v-alert>
-
     <v-card
-      v-if="selectedProject && !alertRules"
-      elevation="1"
-      class="pa-6 text-center"
-    >
-      <v-icon
-        icon="mdi-bell-alert-outline"
-        size="48"
-        color="medium-emphasis"
-        class="mb-3"
-      />
-
-      <div class="text-h6 mb-2">
-        Alerts not enabled
-      </div>
-
-      <div class="text-body-2 text-medium-emphasis">
-        Enable alert rules for this project to create monitoring rules.
-      </div>
-    </v-card>
-
-    <v-card
-      v-else
       elevation="1"
     >
       <v-tabs
@@ -326,8 +296,6 @@ const selectedProjectId = ref<number | null>(null)
 
 const selectedProject = computed(() => projects.value.find(p => p.project_id === selectedProjectId.value) ?? null,
 )
-
-const { alertRules } = useProjectFeatures(selectedProject)
 
 const ruleEditorOpen = ref(false)
 const editingRule = ref<AlertRule | undefined>()

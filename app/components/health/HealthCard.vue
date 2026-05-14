@@ -19,7 +19,7 @@
     <v-card-text class="pa-3">
       <!-- Header -->
       <div class="d-flex align-center justify-space-between mb-2">
-        <div class="text-subtitle-2 font-weight-bold text-on-surface text-truncate">
+        <div class="text-title-medium font-weight-bold text-on-surface text-truncate">
           {{ projectName }}
         </div>
 
@@ -211,11 +211,11 @@ const p95Class = computed(() => {
 <style scoped>
 .health-card {
   min-width: v-bind("compact
-? '160px'
-: '200px'");
-  max-width: v-bind("compact
 ? '200px'
 : '240px'");
+  max-width: v-bind("compact
+? '240px'
+: '280px'");
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.15s;
   position: relative;
@@ -227,8 +227,13 @@ const p95Class = computed(() => {
 }
 
 .health-card--selected {
-  outline: 2px solid rgb(var(--v-theme-primary));
-  transform: translateY(-2px);
+  outline: 3px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+  transform: translateY(-4px) scale(1.03);
+  box-shadow:
+    0 0 0 4px rgba(var(--v-theme-primary), 0.18),
+    0 8px 20px rgba(var(--v-theme-primary), 0.35) !important;
+  z-index: 1;
 }
 
 .health-status-bar {

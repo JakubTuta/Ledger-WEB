@@ -19,40 +19,7 @@
       <v-divider />
 
       <v-card-text class="pa-4">
-        <v-alert
-          v-if="tracingDisabled"
-          type="warning"
-          variant="flat"
-          density="compact"
-          class="mb-4"
-        >
-          <div class="mb-2">
-            <strong>Tracing is disabled</strong> for this project. Trace List panels won't return data
-            until you enable it.
-          </div>
-
-          <v-alert
-            v-if="tracingError"
-            type="error"
-            density="compact"
-            class="mb-2"
-          >
-            {{ tracingError }}
-          </v-alert>
-
-          <v-btn
-            size="small"
-            color="warning"
-            variant="flat"
-            prepend-icon="mdi-toggle-switch"
-            :loading="enablingTracing"
-            @click="enableTracing"
-          >
-            Enable tracing
-          </v-btn>
-        </v-alert>
-
-        <v-text-field
+          <v-text-field
           v-model="form.service_filter"
           label="Service (optional)"
           variant="outlined"
@@ -146,27 +113,6 @@ const emit = defineEmits<{
 }>()
 
 const panelsStore = usePanelsStore()
-const projectsStore = useProjectsStore()
-
-const project = computed(() => projectsStore.projects.find(p => String(p.project_id) === String(props.panel.project_id)) ?? null,
-)
-const { tracing } = useProjectFeatures(project)
-const tracingDisabled = computed(() => !!project.value && !tracing.value)
-
-const enablingTracing = ref(false)
-const tracingError = ref('')
-
-async function enableTracing() {
-  if (!project.value)
-    return
-  enablingTracing.value = true
-  tracingError.value = ''
-  const result = await projectsStore.updateFeature(project.value.project_id, 'tracing', true)
-  if (!result.success) {
-    tracingError.value = result.error || 'Failed to enable tracing'
-  }
-  enablingTracing.value = false
-}
 
 const dialogOpen = computed({
   get: () => props.modelValue,

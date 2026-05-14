@@ -1,60 +1,95 @@
 <template>
   <v-dialog
     v-model="isOpen"
-    max-width="500"
+    max-width="560"
     :fullscreen="$vuetify.display.smAndDown"
     persistent
+    scrollable
   >
     <v-card>
-      <v-card-title class="text-h6">
-        Create New Panel
+      <v-card-title class="text-h6 pa-4 pb-2">
+        New Panel
       </v-card-title>
 
-      <v-card-text>
+      <v-card-text class="pa-4 pt-2">
         <v-form
           ref="formRef"
           v-model="isFormValid"
           @submit.prevent="handleCreate"
         >
-          <!-- Panel Name -->
+          <!-- Title -->
           <v-text-field
             v-model="form.name"
-            label="Panel Name"
+            label="Title"
             variant="outlined"
+            density="compact"
             :disabled="loading"
             :rules="nameRules"
             validate-on="input"
-            hint="A descriptive name for your panel"
             class="mb-4"
-          >
-            <template #append-inner>
-              <v-icon
-                v-if="form.name && nameRules.every(rule => rule(form.name) === true)"
-                color="success"
-              >
-                mdi-check-circle
-              </v-icon>
+          />
 
-              <v-icon
-                v-else-if="form.name && nameRules.some(rule => rule(form.name) !== true)"
-                color="error"
-              >
-                mdi-close-circle
-              </v-icon>
-            </template>
-          </v-text-field>
+          <!-- Panel Type Tile Grid -->
+          <div class="mb-4">
+            <div class="text-caption text-medium-emphasis mb-2">
+              Type <span class="text-error">*</span>
+            </div>
 
-          <!-- Project Select -->
+            <v-row
+              dense
+              class="ma-0"
+            >
+              <v-col
+                v-for="option in panelTypeOptions"
+                :key="option.value"
+                cols="6"
+                sm="4"
+                class="pa-1"
+              >
+                <v-card
+                  :variant="form.panelType === option.value
+                    ? 'tonal'
+                    : 'outlined'"
+                  :color="form.panelType === option.value
+                    ? 'primary'
+                    : undefined"
+                  class="panel-type-tile cursor-pointer pa-2 text-center"
+                  :class="{'tile-selected': form.panelType === option.value}"
+                  height="72"
+                  @click="form.panelType = option.value as PanelType"
+                >
+                  <v-icon
+                    :icon="option.icon"
+                    size="20"
+                    class="mb-1"
+                  />
+
+                  <div class="text-caption">
+                    {{ option.label }}
+                  </div>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <div
+              v-if="panelTypeError"
+              class="text-error text-caption ml-1 mt-1"
+            >
+              Panel type is required
+            </div>
+          </div>
+
+          <!-- Project -->
           <v-select
             v-model="form.projectId"
             label="Project"
             variant="outlined"
+            density="compact"
             :disabled="loading"
             :items="projectOptions"
             item-title="name"
             item-value="id"
             :rules="projectRules"
-            hint="Select the project to monitor"
             class="mb-4"
           >
             <template #item="{'props': itemProps, item}">
@@ -80,345 +115,22 @@
             </template>
           </v-select>
 
-          <!-- Panel Type Select -->
-          <v-select
-            v-model="form.panelType"
-            label="Panel Type"
-            variant="outlined"
-            :disabled="loading"
-            :items="panelTypeOptions"
-            item-title="label"
-            item-value="value"
-            :rules="panelTypeRules"
-            :hint="selectedPanelTypeDescription || 'Choose what data to display'"
-            persistent-hint
-            class="mb-4"
-          >
-            <template #item="{'props': itemProps, item}">
-              <v-list-item
-                v-bind="itemProps"
-                :subtitle="item.raw.description"
-                lines="two"
-              >
-                <template #prepend>
-                  <v-icon :icon="item.raw.icon" />
-                </template>
-              </v-list-item>
-            </template>
-
-            <template #selection="{item}">
-              <v-icon
-                :icon="item.raw.icon"
-                class="mr-2"
-              />
-
-              <span>{{ item.raw.label }}</span>
-            </template>
-          </v-select>
-
-          <!-- Tracing requirement notice -->
-          <v-alert
-            v-if="needsTracing"
-            type="warning"
-            variant="flat"
-            density="compact"
-            class="mb-4"
-          >
-            <div class="mb-2">
-              <strong>Tracing must be enabled</strong>
-              for this project before you can create
-              <strong>{{ form.panelType === 'trace_list'
-                ? 'Trace List'
-                : 'Single Trace' }}</strong>
-              panels.
-            </div>
-
-            <v-alert
-              v-if="tracingError"
-              type="error"
-              density="compact"
-              class="mb-2"
-            >
-              {{ tracingError }}
-            </v-alert>
-
-            <v-btn
-              size="small"
-              color="warning"
-              variant="flat"
-              prepend-icon="mdi-toggle-switch"
-              :loading="enablingTracing"
-              @click="enableTracing"
-            >
-              Enable tracing
-            </v-btn>
-          </v-alert>
-
-          <!-- Endpoint URL (conditional) -->
-          <v-combobox
-            v-if="form.panelType === 'metrics'"
-            v-model="form.endpointUrl"
-            label="Endpoint URL"
-            variant="outlined"
-            :disabled="loading || !form.projectId"
-            :items="availableRoutes"
-            :rules="endpointUrlRules"
-            validate-on="input"
-            :hint="availableRoutes.length > 0
-              ? 'Select from discovered routes or type a custom path'
-              : 'Type an endpoint path (e.g., /api/users)'"
-            class="mb-4"
-            placeholder="/api/..."
-            clearable
-            @update:model-value="normalizeEndpointUrl"
-          >
-            <template #no-data>
-              <v-list-item>
-                <v-list-item-title>
-                  No routes discovered yet. Type a custom path.
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-combobox>
-
-          <!-- Bottleneck Routes Select (conditional) -->
-          <v-select
-            v-if="form.panelType === 'bottleneck'"
-            v-model="form.selectedRoutes"
-            label="Routes to Analyze"
-            variant="outlined"
-            :disabled="loading || !form.projectId"
-            :items="availableRoutes"
-            :rules="routesRules"
-            hint="Select one or more routes to monitor"
-            class="mb-4"
-            multiple
-            chips
-            closable-chips
-          >
-            <template #no-data>
-              <v-list-item>
-                <v-list-item-title>
-                  No routes available for this project
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-select>
-
-          <!-- Bottleneck Statistic Select (conditional) -->
-          <v-select
-            v-if="form.panelType === 'bottleneck'"
-            v-model="form.selectedStatistic"
-            label="Statistic"
-            variant="outlined"
-            :disabled="loading"
-            :items="statisticOptions"
-            item-title="label"
-            item-value="value"
-            :rules="statisticRules"
-            hint="Choose the metric to analyze"
-            class="mb-4"
-          >
-            <template #item="{'props': itemProps, item}">
-              <v-list-item
-                v-bind="itemProps"
-                :subtitle="item.raw.description"
-              />
-            </template>
-          </v-select>
-
-          <!-- Trace List config (conditional) -->
-          <template v-if="form.panelType === 'trace_list'">
-            <v-text-field
-              v-model="form.serviceFilter"
-              label="Service (optional)"
-              variant="outlined"
-              density="compact"
-              class="mb-3"
-              clearable
-              placeholder="e.g. orders-api"
-            />
-
-            <v-text-field
-              v-model="form.operationFilter"
-              label="Operation (optional)"
-              variant="outlined"
-              density="compact"
-              class="mb-3"
-              clearable
-              placeholder="e.g. GET /users/{id}"
-            />
-
-            <v-text-field
-              v-model.number="form.minDurationMs"
-              label="Min duration (ms, optional)"
-              variant="outlined"
-              density="compact"
-              class="mb-3"
-              type="number"
-              min="0"
-              clearable
-              placeholder="e.g. 500"
-            />
-
-            <v-select
-              v-model="form.hasError"
-              label="Error filter"
-              variant="outlined"
-              density="compact"
-              class="mb-3"
-              :items="errorFilterOptions"
-              item-title="label"
-              item-value="value"
-            />
-
-            <v-text-field
-              v-model.number="form.traceLimit"
-              label="Max results"
-              variant="outlined"
-              density="compact"
-              class="mb-4"
-              type="number"
-              min="1"
-              max="500"
-              :rules="traceLimitRules"
-            />
-          </template>
-
-          <!-- Single Trace config (conditional) -->
-          <v-text-field
-            v-if="form.panelType === 'trace'"
-            v-model="form.traceId"
-            label="Trace ID"
-            variant="outlined"
-            :disabled="loading"
-            :rules="traceIdRules"
-            validate-on="input"
-            hint="The specific trace ID to display"
-            class="mb-4"
-            clearable
-          />
-
-          <!-- Custom Metric config (conditional) -->
-          <template v-if="form.panelType === 'custom_metric'">
-            <v-autocomplete
-              v-model="form.metricName"
-              label="Metric name"
-              variant="outlined"
-              density="compact"
-              class="mb-3"
-              :items="metricNames"
-              :loading="customMetricsStore.namesLoading"
-              :rules="metricNameRules"
-              clearable
-              @update:search="onMetricSearch"
-              @update:model-value="onMetricSelected"
-            />
-
-            <div
-              v-if="tagKeys.length > 0"
-              class="mb-3"
-            >
-              <div class="text-caption text-medium-emphasis mb-2">
-                Tag filters
-              </div>
-
-              <div
-                v-for="key in tagKeys"
-                :key="key"
-                class="d-flex align-center mb-2 gap-2"
-              >
-                <span class="text-body-2 w-25">{{ key }}</span>
-
-                <v-select
-                  v-model="tagFilter[key]"
-                  :items="tagValues(key)"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  clearable
-                  placeholder="Any"
-                  style="flex: 1;"
-                />
-              </div>
-            </div>
-
-            <v-select
-              v-model="form.metricAgg"
-              label="Aggregation"
-              variant="outlined"
-              density="compact"
-              class="mb-3"
-              :items="aggOptions"
-              item-title="label"
-              item-value="value"
-            />
-
-            <v-btn-toggle
-              v-model="form.metricViz"
-              mandatory
-              density="compact"
-              color="primary"
-              variant="outlined"
-              class="mb-3"
-            >
-              <v-btn
-                value="line"
-                size="small"
-              >
-                <v-icon
-                  icon="mdi-chart-line"
-                  class="mr-1"
-                />
-                Line
-              </v-btn>
-
-              <v-btn
-                value="bar"
-                size="small"
-              >
-                <v-icon
-                  icon="mdi-chart-bar"
-                  class="mr-1"
-                />
-                Bar
-              </v-btn>
-
-              <v-btn
-                value="single_stat"
-                size="small"
-              >
-                <v-icon
-                  icon="mdi-numeric"
-                  class="mr-1"
-                />
-                Single Stat
-              </v-btn>
-            </v-btn-toggle>
-
-            <v-select
-              v-model="form.metricStep"
-              label="Step (auto)"
-              variant="outlined"
-              density="compact"
-              class="mb-4"
-              clearable
-              :items="stepOptions"
-            />
-          </template>
-
-          <!-- Time Range Button -->
+          <!-- Time Range -->
           <div class="mb-4">
-            <div class="text-subtitle-2 mb-2">
+            <div class="text-caption text-medium-emphasis mb-2">
               Time Range <span class="text-error">*</span>
             </div>
 
             <v-btn
-              variant="outlined"
+              :variant="timeRangeError
+                ? 'tonal'
+                : 'outlined'"
               :color="timeRangeError
                 ? 'error'
                 : undefined"
               prepend-icon="mdi-clock-outline"
+              size="small"
+              class="time-range-btn"
               @click="timeOptionsDialog = true"
             >
               {{ timeRangeLabel }}
@@ -430,28 +142,295 @@
             >
               {{ timeRangeError }}
             </div>
-
-            <div
-              v-else
-              class="text-grey text-caption mt-1"
-            >
-              Select the time period for this panel
-            </div>
           </div>
+
+          <!-- Advanced -->
+          <v-expansion-panels
+            v-if="showAdvanced"
+            v-model="advancedOpen"
+            variant="accordion"
+            class="mb-2"
+          >
+            <v-expansion-panel value="advanced">
+              <v-expansion-panel-title class="text-body-2 font-weight-medium">
+                <v-icon
+                  icon="mdi-tune"
+                  size="16"
+                  class="mr-2"
+                />
+                Advanced
+              </v-expansion-panel-title>
+
+              <v-expansion-panel-text class="pt-3">
+                <!-- Endpoint URL (metrics) -->
+                <v-combobox
+                  v-if="form.panelType === 'metrics'"
+                  v-model="form.endpointUrl"
+                  label="Endpoint URL"
+                  variant="outlined"
+                  density="compact"
+                  :disabled="loading || !form.projectId"
+                  :items="availableRoutes"
+                  :rules="endpointUrlRules"
+                  validate-on="input"
+                  :hint="availableRoutes.length > 0
+                    ? 'Select from discovered routes or type a custom path'
+                    : 'Type an endpoint path (e.g., /api/users)'"
+                  class="mb-3"
+                  placeholder="/api/..."
+                  clearable
+                  @update:model-value="normalizeEndpointUrl"
+                >
+                  <template #no-data>
+                    <v-list-item>
+                      <v-list-item-title>No routes discovered yet. Type a custom path.</v-list-item-title>
+                    </v-list-item>
+                  </template>
+                </v-combobox>
+
+                <!-- Bottleneck routes -->
+                <v-select
+                  v-if="form.panelType === 'bottleneck'"
+                  v-model="form.selectedRoutes"
+                  label="Routes to Analyze"
+                  variant="outlined"
+                  density="compact"
+                  :disabled="loading || !form.projectId"
+                  :items="availableRoutes"
+                  :rules="routesRules"
+                  hint="Select one or more routes to monitor"
+                  class="mb-3"
+                  multiple
+                  chips
+                  closable-chips
+                >
+                  <template #no-data>
+                    <v-list-item>
+                      <v-list-item-title>No routes available for this project</v-list-item-title>
+                    </v-list-item>
+                  </template>
+                </v-select>
+
+                <!-- Bottleneck statistic -->
+                <v-select
+                  v-if="form.panelType === 'bottleneck'"
+                  v-model="form.selectedStatistic"
+                  label="Statistic"
+                  variant="outlined"
+                  density="compact"
+                  :disabled="loading"
+                  :items="statisticOptions"
+                  item-title="label"
+                  item-value="value"
+                  :rules="statisticRules"
+                  hint="Choose the metric to analyze"
+                  class="mb-3"
+                >
+                  <template #item="{'props': itemProps, item}">
+                    <v-list-item
+                      v-bind="itemProps"
+                      :subtitle="item.raw.description"
+                    />
+                  </template>
+                </v-select>
+
+                <!-- Trace ID (single trace) -->
+                <v-text-field
+                  v-if="form.panelType === 'trace'"
+                  v-model="form.traceId"
+                  label="Trace ID"
+                  variant="outlined"
+                  density="compact"
+                  :disabled="loading"
+                  :rules="traceIdRules"
+                  validate-on="input"
+                  hint="The specific trace ID to display"
+                  class="mb-3"
+                  clearable
+                />
+
+                <!-- Trace List config -->
+                <template v-if="form.panelType === 'trace_list'">
+                  <v-text-field
+                    v-model="form.serviceFilter"
+                    label="Service (optional)"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    clearable
+                    placeholder="e.g. orders-api"
+                  />
+
+                  <v-text-field
+                    v-model="form.operationFilter"
+                    label="Operation (optional)"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    clearable
+                    placeholder="e.g. GET /users/{id}"
+                  />
+
+                  <v-text-field
+                    v-model.number="form.minDurationMs"
+                    label="Min duration (ms, optional)"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    type="number"
+                    min="0"
+                    clearable
+                    placeholder="e.g. 500"
+                  />
+
+                  <v-select
+                    v-model="form.hasError"
+                    label="Error filter"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    :items="errorFilterOptions"
+                    item-title="label"
+                    item-value="value"
+                  />
+
+                  <v-text-field
+                    v-model.number="form.traceLimit"
+                    label="Max results"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    type="number"
+                    min="1"
+                    max="500"
+                    :rules="traceLimitRules"
+                  />
+                </template>
+
+                <!-- Custom Metric config -->
+                <template v-if="form.panelType === 'custom_metric'">
+                  <v-autocomplete
+                    v-model="form.metricName"
+                    label="Metric name"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    :items="metricNames"
+                    :loading="customMetricsStore.namesLoading"
+                    :rules="metricNameRules"
+                    clearable
+                    @update:search="onMetricSearch"
+                    @update:model-value="onMetricSelected"
+                  />
+
+                  <div
+                    v-if="tagKeys.length > 0"
+                    class="mb-3"
+                  >
+                    <div class="text-caption text-medium-emphasis mb-2">
+                      Tag filters
+                    </div>
+
+                    <div
+                      v-for="key in tagKeys"
+                      :key="key"
+                      class="d-flex align-center mb-2 gap-2"
+                    >
+                      <span class="text-body-2 w-25">{{ key }}</span>
+
+                      <v-select
+                        v-model="tagFilter[key]"
+                        :items="tagValues(key)"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                        placeholder="Any"
+                        style="flex: 1;"
+                      />
+                    </div>
+                  </div>
+
+                  <v-select
+                    v-model="form.metricAgg"
+                    label="Aggregation"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    :items="aggOptions"
+                    item-title="label"
+                    item-value="value"
+                  />
+
+                  <v-btn-toggle
+                    v-model="form.metricViz"
+                    mandatory
+                    density="compact"
+                    color="primary"
+                    variant="outlined"
+                    class="mb-3"
+                  >
+                    <v-btn
+                      value="line"
+                      size="small"
+                    >
+                      <v-icon
+                        icon="mdi-chart-line"
+                        class="mr-1"
+                      />
+                      Line
+                    </v-btn>
+
+                    <v-btn
+                      value="bar"
+                      size="small"
+                    >
+                      <v-icon
+                        icon="mdi-chart-bar"
+                        class="mr-1"
+                      />
+                      Bar
+                    </v-btn>
+
+                    <v-btn
+                      value="single_stat"
+                      size="small"
+                    >
+                      <v-icon
+                        icon="mdi-numeric"
+                        class="mr-1"
+                      />
+                      Single Stat
+                    </v-btn>
+                  </v-btn-toggle>
+
+                  <v-select
+                    v-model="form.metricStep"
+                    label="Step (auto)"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                    clearable
+                    :items="stepOptions"
+                  />
+                </template>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
 
           <!-- Error Alert -->
           <v-alert
             v-if="error"
             type="error"
             density="compact"
-            class="mt-4"
+            class="mt-2"
           >
             {{ error }}
           </v-alert>
         </v-form>
       </v-card-text>
 
-      <v-card-actions>
+      <v-card-actions class="pa-4 pt-2">
         <v-spacer />
 
         <v-btn
@@ -464,16 +443,16 @@
 
         <v-btn
           color="primary"
+          variant="flat"
           :loading="loading"
           :disabled="!canSubmit"
           @click="handleCreate"
         >
-          Create Panel
+          Create
         </v-btn>
       </v-card-actions>
     </v-card>
 
-    <!-- Time Options Dialog -->
     <TimeOptionsDialog
       v-model="timeOptionsDialog"
       @apply="handleTimeRangeApply"
@@ -486,6 +465,7 @@ import type { BottleneckStatistic, CreatePanelRequest, CustomMetricAgg, CustomMe
 
 const props = defineProps<{
   modelValue: boolean
+  initialProjectId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -503,6 +483,7 @@ const loading = ref(false)
 const error = ref('')
 const timeOptionsDialog = ref(false)
 const hasAttemptedSubmit = ref(false)
+const advancedOpen = ref<string | undefined>(undefined)
 
 const form = ref<{
   name: string
@@ -514,15 +495,12 @@ const form = ref<{
   period: TimeRangePreset | null
   periodFrom: string
   periodTo: string
-  // trace_list
   serviceFilter: string
   operationFilter: string
   minDurationMs: number | null
   hasError: boolean | null
   traceLimit: number
-  // trace
   traceId: string
-  // custom_metric
   metricName: string
   metricAgg: CustomMetricAgg
   metricViz: CustomMetricViz
@@ -571,102 +549,26 @@ const selectedProject = computed(() => {
   return projectsStore.projects.find(p => String(p.project_id) === form.value.projectId)
 })
 
-const availableRoutes = computed(() => {
-  return selectedProject.value?.available_routes || []
-})
-
-const selectedPanelTypeDescription = computed(() => {
-  return panelTypeOptions.value.find(o => o.value === form.value.panelType)?.description || ''
-})
-
-const { tracing, customMetrics } = useProjectFeatures(selectedProject)
+const availableRoutes = computed(() => selectedProject.value?.available_routes || [])
 
 const allPanelTypeOptions = [
-  {
-    label: 'Logs',
-    value: 'logs',
-    icon: 'mdi-text-box-outline',
-    description: 'Stacked bar chart of log volume vs errors over time.',
-    requires: null,
-  },
-  {
-    label: 'Metrics',
-    value: 'metrics',
-    icon: 'mdi-chart-line',
-    description: 'Latency lines (min, avg, p95, p99, max) for a specific endpoint.',
-    requires: null,
-  },
-  {
-    label: 'Error List',
-    value: 'error_list',
-    icon: 'mdi-format-list-bulleted',
-    description: 'Paginated list of recent errors with stack traces and metadata.',
-    requires: null,
-  },
-  {
-    label: 'Bottleneck Analysis',
-    value: 'bottleneck',
-    icon: 'mdi-speedometer',
-    description: 'Grouped bars comparing route latency or request count.',
-    requires: null,
-  },
-  {
-    label: 'Error Heatmap',
-    value: 'error_heatmap',
-    icon: 'mdi-grid',
-    description: 'Hour-by-day grid colored by error rate.',
-    requires: null,
-  },
-  {
-    label: 'Trace List',
-    value: 'trace_list',
-    icon: 'mdi-format-list-text',
-    description: 'List of recent traces filterable by service, operation, and duration.',
-    requires: 'tracing',
-  },
-  {
-    label: 'Single Trace',
-    value: 'trace',
-    icon: 'mdi-chart-timeline-variant',
-    description: 'Pinned waterfall view for a specific trace ID.',
-    requires: 'tracing',
-  },
-  {
-    label: 'Custom Metric',
-    value: 'custom_metric',
-    icon: 'mdi-chart-line-variant',
-    description: 'Line, bar, or single-stat panel for a custom metric.',
-    requires: 'custom_metrics',
-  },
+  { label: 'Logs', value: 'logs', icon: 'mdi-text-box-outline', description: 'Stacked bar chart of log volume vs errors over time.', requires: null },
+  { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines for a specific endpoint.', requires: null },
+  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Paginated list of recent errors with stack traces.', requires: null },
+  { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Grouped bars comparing route latency or request count.', requires: null },
+  { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate.', requires: null },
+  { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent traces filterable by service.' },
+  { label: 'Single Trace', value: 'trace', icon: 'mdi-chart-timeline-variant', description: 'Pinned waterfall view for a specific trace ID.' },
+  { label: 'Custom Metric', value: 'custom_metric', icon: 'mdi-chart-line-variant', description: 'Line, bar, or single-stat panel for a custom metric.' },
 ]
 
-const panelTypeOptions = computed(() => allPanelTypeOptions.filter((o) => {
-  if (o.requires === 'custom_metrics')
-    return customMetrics.value
+const panelTypeOptions = allPanelTypeOptions
 
-  return true
-}),
-)
+const showAdvanced = computed(() => {
+  const t = form.value.panelType
 
-const needsTracing = computed(() => (form.value.panelType === 'trace' || form.value.panelType === 'trace_list')
-  && !!selectedProject.value
-  && !tracing.value,
-)
-
-const enablingTracing = ref(false)
-const tracingError = ref('')
-
-async function enableTracing() {
-  if (!selectedProject.value)
-    return
-  enablingTracing.value = true
-  tracingError.value = ''
-  const result = await projectsStore.updateFeature(selectedProject.value.project_id, 'tracing', true)
-  if (!result.success) {
-    tracingError.value = result.error || 'Failed to enable tracing'
-  }
-  enablingTracing.value = false
-}
+  return t === 'metrics' || t === 'bottleneck' || t === 'trace' || t === 'trace_list' || t === 'custom_metric'
+})
 
 const statisticOptions = [
   { label: 'Average', value: 'avg', description: 'Average response time in milliseconds' },
@@ -707,7 +609,8 @@ function tagValues(key: string): string[] {
 }
 
 function onMetricSearch(val: string) {
-  customMetricsStore.fetchNames(val ?? '')
+  if (val)
+    customMetricsStore.fetchNames(val)
 }
 
 function onMetricSelected(name: string | null) {
@@ -716,17 +619,13 @@ function onMetricSelected(name: string | null) {
 }
 
 const nameRules = [
-  (v: string) => !!v || 'Panel name is required',
-  (v: string) => (v && v.length >= 2) || 'Name must be at least 2 characters',
-  (v: string) => (v && v.length <= 100) || 'Name must be at most 100 characters',
+  (v: string) => !!v || 'Title is required',
+  (v: string) => (v && v.length >= 2) || 'Min 2 characters',
+  (v: string) => (v && v.length <= 100) || 'Max 100 characters',
 ]
 
 const projectRules = [
   (v: string | null) => !!v || 'Project is required',
-]
-
-const panelTypeRules = [
-  (v: string | null) => !!v || 'Panel type is required',
 ]
 
 const endpointUrlRules = [
@@ -756,6 +655,8 @@ const metricNameRules = [
   (v: string) => !!v?.trim() || 'Metric name is required',
 ]
 
+const panelTypeError = computed(() => hasAttemptedSubmit.value && !form.value.panelType)
+
 function normalizeEndpointUrl(val: string | null) {
   if (!val)
     return
@@ -776,9 +677,8 @@ const timeRangeError = computed(() => {
 })
 
 const timeRangeLabel = computed(() => {
-  if (!hasTimeRange.value) {
+  if (!hasTimeRange.value)
     return 'Select Time Range'
-  }
 
   if (form.value.period) {
     const presetLabels: Record<TimeRangePreset, string> = {
@@ -797,10 +697,7 @@ const timeRangeLabel = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  if (!isFormValid.value || !hasTimeRange.value)
-    return false
-
-  if (needsTracing.value)
+  if (!isFormValid.value || !hasTimeRange.value || !form.value.panelType)
     return false
 
   if (form.value.panelType === 'bottleneck') {
@@ -819,7 +716,12 @@ const canSubmit = computed(() => {
 })
 
 watch(() => props.modelValue, (newValue) => {
-  if (!newValue) {
+  if (newValue) {
+    if (props.initialProjectId) {
+      form.value.projectId = props.initialProjectId
+    }
+  }
+  else {
     resetForm()
   }
 })
@@ -828,14 +730,14 @@ watch(() => form.value.projectId, () => {
   form.value.selectedRoutes = []
 })
 
-watch(() => form.value.panelType, () => {
+watch(() => form.value.panelType, (type) => {
   form.value.selectedRoutes = []
   form.value.selectedStatistic = null
-})
-
-watch(() => form.value.panelType, (type) => {
   if (type === 'custom_metric') {
     customMetricsStore.fetchNames('')
+  }
+  if (showAdvanced.value) {
+    advancedOpen.value = 'advanced'
   }
 })
 
@@ -864,6 +766,7 @@ function resetForm() {
   Object.keys(tagFilter).forEach(k => delete tagFilter[k])
   error.value = ''
   hasAttemptedSubmit.value = false
+  advancedOpen.value = undefined
   if (formRef.value) {
     formRef.value.reset()
   }
@@ -909,7 +812,6 @@ async function handleCreate() {
       statistic: form.value.panelType === 'bottleneck' && form.value.selectedStatistic
         ? form.value.selectedStatistic
         : undefined,
-      // trace_list
       service_filter: form.value.panelType === 'trace_list'
         ? form.value.serviceFilter || undefined
         : undefined,
@@ -925,11 +827,9 @@ async function handleCreate() {
       limit: form.value.panelType === 'trace_list'
         ? form.value.traceLimit
         : undefined,
-      // trace
       trace_id: form.value.panelType === 'trace'
         ? form.value.traceId
         : undefined,
-      // custom_metric
       metric_name: form.value.panelType === 'custom_metric'
         ? form.value.metricName
         : undefined,
@@ -977,3 +877,23 @@ function handleCancel() {
   isOpen.value = false
 }
 </script>
+
+<style scoped>
+.panel-type-tile {
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.panel-type-tile:hover:not(.tile-selected) {
+  border-color: rgba(var(--v-theme-primary), 0.5) !important;
+}
+
+.time-range-btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+</style>

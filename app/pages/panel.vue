@@ -7,14 +7,6 @@
       @project-click="handleHealthProjectClick"
     />
 
-    <!-- Tab Bar -->
-    <TabBar
-      v-if="panelsStore.tabs.length > 0"
-      :project-id="filters.projectId ?? undefined"
-      class="mb-2"
-      @template-applied="handlePanelsRefresh"
-    />
-
     <!-- Sticky Filters Toolbar -->
     <v-card
       class="filters-toolbar mb-3"
@@ -22,41 +14,12 @@
     >
       <v-card-text class="px-3 py-2">
         <div class="d-flex align-center ga-2 flex-wrap">
-          <v-select
-            v-model="filters.projectId"
-            label="Project"
-            variant="outlined"
-            density="compact"
-            :items="projectOptions"
-            item-title="name"
-            item-value="id"
-            clearable
-            hide-details
-            :style="mobile
-              ? 'flex: 1; min-width: 0'
-              : 'max-width: 230px'"
-          >
-            <template #item="{'props': itemProps, item}">
-              <v-list-item
-                v-bind="itemProps"
-                :subtitle="item.raw.environment"
-              />
-            </template>
-          </v-select>
-
-          <v-select
-            v-model="filters.panelType"
-            label="Panel Type"
-            variant="outlined"
-            density="compact"
-            :items="panelTypeOptions"
-            item-title="label"
-            item-value="value"
-            clearable
-            hide-details
-            :style="mobile
-              ? 'flex: 1; min-width: 0'
-              : 'max-width: 200px'"
+          <TabBar
+            v-if="panelsStore.tabs.length > 0"
+            :project-id="filters.projectId ?? undefined"
+            class="flex-grow-1"
+            style="min-width: 0;"
+            @template-applied="handlePanelsRefresh"
           />
 
           <v-spacer v-if="!mobile" />
@@ -188,11 +151,11 @@
             show-ticks="always"
             tick-size="4"
             hide-details
-            style="width: 120px"
+            style="width: 140px"
           />
 
           <v-icon
-            size="small"
+            size="large"
             color="medium-emphasis"
           >
             mdi-view-grid-outline
@@ -378,6 +341,7 @@
     <!-- Dialogs -->
     <NewPanelDialog
       v-model="newPanelDialog"
+      :initial-project-id="filters.projectId"
       @created="handlePanelCreated"
     />
 
@@ -401,7 +365,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BottleneckStatistic, Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import type { BottleneckStatistic, Panel, TimeRangePreset } from '~/types/panel'
 import type { Project } from '~/types/project'
 import { useDisplay } from 'vuetify'
 
@@ -424,28 +388,9 @@ const router = useRouter()
 // Filters
 const filters = ref<{
   projectId: string | null
-  panelType: PanelType | null
 }>({
   projectId: null,
-  panelType: null,
 })
-
-const panelTypeOptions = [
-  { label: 'Logs', value: 'logs' },
-  { label: 'Metrics', value: 'metrics' },
-  { label: 'Error List', value: 'error_list' },
-  { label: 'Bottleneck Analysis', value: 'bottleneck' },
-  { label: 'Error Heatmap', value: 'error_heatmap' },
-  { label: 'Trace List', value: 'trace_list' },
-  { label: 'Single Trace', value: 'trace' },
-  { label: 'Custom Metric', value: 'custom_metric' },
-]
-
-const projectOptions = computed(() => projectsStore.projects.map(p => ({
-  id: String(p.project_id),
-  name: p.name,
-  environment: p.environment,
-})))
 
 // Panel size slider
 const panelSizeSteps = [
@@ -515,10 +460,6 @@ const filteredPanels = computed(() => {
     result = result.filter(p => p.project_id === filters.value.projectId)
   }
 
-  if (filters.value.panelType) {
-    result = result.filter(p => p.type === filters.value.panelType)
-  }
-
   return result
 })
 
@@ -582,9 +523,7 @@ async function confirmDelete() {
 }
 
 function handleHealthProjectClick(projectId: string) {
-  filters.value.projectId = filters.value.projectId === projectId
-    ? null
-    : projectId
+  filters.value.projectId = projectId
 }
 
 function openTimeOptionsDialog(panel: Panel) {
@@ -684,14 +623,10 @@ watch(() => filters.value.projectId, (projectId) => {
     }
   }
 })
-watch(() => filters.value.panelType, () => updateUrlParams())
-
 function updateUrlParams() {
   const query: Record<string, string> = {}
   if (filters.value.projectId)
     query.project = filters.value.projectId
-  if (filters.value.panelType)
-    query.type = filters.value.panelType
   router.replace({ query })
 }
 
@@ -699,9 +634,6 @@ function loadFiltersFromUrl() {
   const query = route.query
   if (query.project && typeof query.project === 'string') {
     filters.value.projectId = query.project
-  }
-  if (query.type && typeof query.type === 'string' && ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'custom_metric'].includes(query.type)) {
-    filters.value.panelType = query.type as PanelType
   }
 }
 
@@ -713,6 +645,10 @@ onMounted(async () => {
     projectsStore.fetchProjects(),
     panelsStore.fetchPanels(),
   ])
+
+  if (!filters.value.projectId && projectsStore.projects.length > 0) {
+    filters.value.projectId = String(projectsStore.projects[0]!.project_id)
+  }
 
   await fetchAllMetrics()
 

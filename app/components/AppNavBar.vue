@@ -1,29 +1,16 @@
 <template>
   <v-app-bar
     app
-    color="primary"
     elevation="2"
     density="compact"
   >
-    <template v-if="mobile">
-      <v-app-bar-nav-icon
-        color="white"
-        @click="drawer = !drawer"
-      />
+    <v-app-bar-nav-icon
+      class="d-md-none"
+      color="white"
+      @click="drawer = !drawer"
+    />
 
-      <v-btn
-        to="/"
-        variant="text"
-        color="white"
-        prepend-icon="mdi-finance"
-        class="font-weight-bold"
-      >
-        Ledger
-      </v-btn>
-    </template>
-
-    <template v-else>
-      <div class="d-flex align-center w-100 px-2">
+    <div class="d-none d-md-flex align-center w-100 px-2">
         <v-chip
           to="/"
           variant="flat"
@@ -35,17 +22,7 @@
           Ledger
         </v-chip>
 
-        <template v-if="!authStore.isAuthenticated">
-          <v-btn
-            to="/"
-            variant="text"
-            prepend-icon="mdi-home"
-          >
-            Home
-          </v-btn>
-        </template>
-
-        <template v-else>
+        <template v-if="authStore.isAuthenticated">
           <v-btn
             to="/panel"
             variant="text"
@@ -127,11 +104,10 @@
           </v-list>
         </v-menu>
       </div>
-    </template>
   </v-app-bar>
 
+  <ClientOnly>
   <v-navigation-drawer
-    v-if="mobile"
     v-model="drawer"
     temporary
   >
@@ -139,10 +115,14 @@
       <template v-if="!authStore.isAuthenticated">
         <v-list-item
           to="/"
-          prepend-icon="mdi-home"
-          title="Home"
-          @click="drawer = false"
-        />
+          variant="flat"
+          prepend-icon="mdi-finance"
+          size="large"
+          class="font-weight-bold text-primary mr-3 cursor-pointer"
+          label
+        >
+          Ledger
+        </v-list-item>
 
         <v-list-item
           to="/login"
@@ -203,12 +183,10 @@
       </template>
     </v-list>
   </v-navigation-drawer>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
-import { useDisplay } from 'vuetify'
-
-const { mobile } = useDisplay()
 const authStore = useAuthStore()
 const drawer = ref(false)
 
