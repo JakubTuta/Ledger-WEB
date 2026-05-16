@@ -77,6 +77,22 @@
             >
               Panel type is required
             </div>
+
+            <v-alert
+              v-if="form.panelType === 'trace_list'"
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mt-2"
+              icon="mdi-information-outline"
+            >
+              Requires SDK tracing.
+              <a
+                href="https://github.com/ledger-sdk/python#tracing"
+                target="_blank"
+                class="ml-1"
+              >See setup guide.</a>
+            </v-alert>
           </div>
 
           <!-- Project -->
@@ -187,67 +203,6 @@
                     </v-list-item>
                   </template>
                 </v-combobox>
-
-                <!-- Bottleneck routes -->
-                <v-select
-                  v-if="form.panelType === 'bottleneck'"
-                  v-model="form.selectedRoutes"
-                  label="Routes to Analyze"
-                  variant="outlined"
-                  density="compact"
-                  :disabled="loading || !form.projectId"
-                  :items="availableRoutes"
-                  :rules="routesRules"
-                  hint="Select one or more routes to monitor"
-                  class="mb-3"
-                  multiple
-                  chips
-                  closable-chips
-                >
-                  <template #no-data>
-                    <v-list-item>
-                      <v-list-item-title>No routes available for this project</v-list-item-title>
-                    </v-list-item>
-                  </template>
-                </v-select>
-
-                <!-- Bottleneck statistic -->
-                <v-select
-                  v-if="form.panelType === 'bottleneck'"
-                  v-model="form.selectedStatistic"
-                  label="Statistic"
-                  variant="outlined"
-                  density="compact"
-                  :disabled="loading"
-                  :items="statisticOptions"
-                  item-title="label"
-                  item-value="value"
-                  :rules="statisticRules"
-                  hint="Choose the metric to analyze"
-                  class="mb-3"
-                >
-                  <template #item="{'props': itemProps, item}">
-                    <v-list-item
-                      v-bind="itemProps"
-                      :subtitle="item.raw.description"
-                    />
-                  </template>
-                </v-select>
-
-                <!-- Trace ID (single trace) -->
-                <v-text-field
-                  v-if="form.panelType === 'trace'"
-                  v-model="form.traceId"
-                  label="Trace ID"
-                  variant="outlined"
-                  density="compact"
-                  :disabled="loading"
-                  :rules="traceIdRules"
-                  validate-on="input"
-                  hint="The specific trace ID to display"
-                  class="mb-3"
-                  clearable
-                />
 
                 <!-- Trace List config -->
                 <template v-if="form.panelType === 'trace_list'">
@@ -461,7 +416,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BottleneckStatistic, CreatePanelRequest, CustomMetricAgg, CustomMetricViz, Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import type { CreatePanelRequest, CustomMetricAgg, CustomMetricViz, Panel, PanelType, TimeRangePreset } from '~/types/panel'
 
 const props = defineProps<{
   modelValue: boolean
@@ -491,7 +446,6 @@ const form = ref<{
   panelType: PanelType | null
   endpointUrl: string
   selectedRoutes: string[]
-  selectedStatistic: BottleneckStatistic | null
   period: TimeRangePreset | null
   periodFrom: string
   periodTo: string
@@ -500,7 +454,6 @@ const form = ref<{
   minDurationMs: number | null
   hasError: boolean | null
   traceLimit: number
-  traceId: string
   metricName: string
   metricAgg: CustomMetricAgg
   metricViz: CustomMetricViz
@@ -511,7 +464,6 @@ const form = ref<{
   panelType: null,
   endpointUrl: '',
   selectedRoutes: [],
-  selectedStatistic: null,
   period: null,
   periodFrom: '',
   periodTo: '',
@@ -520,7 +472,6 @@ const form = ref<{
   minDurationMs: null,
   hasError: null,
   traceLimit: 50,
-  traceId: '',
   metricName: '',
   metricAgg: 'avg',
   metricViz: 'line',
@@ -557,8 +508,7 @@ const allPanelTypeOptions = [
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Paginated list of recent errors with stack traces.', requires: null },
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Grouped bars comparing route latency or request count.', requires: null },
   { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate.', requires: null },
-  { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent traces filterable by service.' },
-  { label: 'Single Trace', value: 'trace', icon: 'mdi-chart-timeline-variant', description: 'Pinned waterfall view for a specific trace ID.' },
+  { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent traces. Click any row to pin it as a single-trace panel.' },
   { label: 'Custom Metric', value: 'custom_metric', icon: 'mdi-chart-line-variant', description: 'Line, bar, or single-stat panel for a custom metric.' },
 ]
 
@@ -567,16 +517,8 @@ const panelTypeOptions = allPanelTypeOptions
 const showAdvanced = computed(() => {
   const t = form.value.panelType
 
-  return t === 'metrics' || t === 'bottleneck' || t === 'trace' || t === 'trace_list' || t === 'custom_metric'
+  return t === 'metrics' || t === 'trace_list' || t === 'custom_metric'
 })
-
-const statisticOptions = [
-  { label: 'Average', value: 'avg', description: 'Average response time in milliseconds' },
-  { label: 'Minimum', value: 'min', description: 'Fastest response time' },
-  { label: 'Maximum', value: 'max', description: 'Slowest response time' },
-  { label: 'Median', value: 'median', description: 'Middle response time value' },
-  { label: 'Count', value: 'count', description: 'Number of requests (traffic volume)' },
-]
 
 const errorFilterOptions = [
   { label: 'All traces', value: null },
@@ -633,22 +575,10 @@ const endpointUrlRules = [
   (v: string) => !v || v.length <= 500 || 'Endpoint URL is too long',
 ]
 
-const routesRules = [
-  (v: string[]) => (v && v.length > 0) || 'At least one route is required',
-]
-
-const statisticRules = [
-  (v: BottleneckStatistic | null) => !!v || 'Statistic is required',
-]
-
 const traceLimitRules = [
   (v: number) => !!v || 'Required',
   (v: number) => v >= 1 || 'Min 1',
   (v: number) => v <= 500 || 'Max 500',
-]
-
-const traceIdRules = [
-  (v: string) => !!v?.trim() || 'Trace ID is required',
 ]
 
 const metricNameRules = [
@@ -700,14 +630,6 @@ const canSubmit = computed(() => {
   if (!isFormValid.value || !hasTimeRange.value || !form.value.panelType)
     return false
 
-  if (form.value.panelType === 'bottleneck') {
-    return form.value.selectedRoutes.length > 0 && !!form.value.selectedStatistic
-  }
-
-  if (form.value.panelType === 'trace') {
-    return !!form.value.traceId.trim()
-  }
-
   if (form.value.panelType === 'custom_metric') {
     return !!form.value.metricName.trim()
   }
@@ -732,7 +654,6 @@ watch(() => form.value.projectId, () => {
 
 watch(() => form.value.panelType, (type) => {
   form.value.selectedRoutes = []
-  form.value.selectedStatistic = null
   if (type === 'custom_metric') {
     customMetricsStore.fetchNames('')
   }
@@ -748,7 +669,6 @@ function resetForm() {
     panelType: null,
     endpointUrl: '',
     selectedRoutes: [],
-    selectedStatistic: null,
     period: null,
     periodFrom: '',
     periodTo: '',
@@ -757,7 +677,6 @@ function resetForm() {
     minDurationMs: null,
     hasError: null,
     traceLimit: 50,
-    traceId: '',
     metricName: '',
     metricAgg: 'avg',
     metricViz: 'line',
@@ -806,12 +725,8 @@ async function handleCreate() {
       endpoint: form.value.panelType === 'metrics'
         ? form.value.endpointUrl || undefined
         : undefined,
-      routes: form.value.panelType === 'bottleneck' && form.value.selectedRoutes.length > 0
-        ? form.value.selectedRoutes
-        : undefined,
-      statistic: form.value.panelType === 'bottleneck' && form.value.selectedStatistic
-        ? form.value.selectedStatistic
-        : undefined,
+      routes: undefined,
+      statistic: undefined,
       service_filter: form.value.panelType === 'trace_list'
         ? form.value.serviceFilter || undefined
         : undefined,
@@ -827,9 +742,7 @@ async function handleCreate() {
       limit: form.value.panelType === 'trace_list'
         ? form.value.traceLimit
         : undefined,
-      trace_id: form.value.panelType === 'trace'
-        ? form.value.traceId
-        : undefined,
+      trace_id: undefined,
       metric_name: form.value.panelType === 'custom_metric'
         ? form.value.metricName
         : undefined,

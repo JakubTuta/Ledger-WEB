@@ -1,6 +1,7 @@
 export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'custom_metric'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
+export type BottleneckSort = 'asc' | 'desc'
 
 export type TimeRangePreset = 'today' | 'last7days' | 'last30days' | 'currentWeek' | 'currentMonth' | 'currentYear'
 
@@ -37,6 +38,7 @@ export interface Panel {
   // logs filter fields
   statusClass?: '2xx' | '4xx' | '5xx'
   search?: string
+  sort?: BottleneckSort
 }
 
 export interface PanelListResponse {
@@ -68,6 +70,7 @@ export interface CreatePanelRequest {
   limit?: number
   statusClass?: '2xx' | '4xx' | '5xx'
   search?: string
+  sort?: BottleneckSort
 }
 
 export interface UpdatePanelRequest {
@@ -94,6 +97,7 @@ export interface UpdatePanelRequest {
   limit?: number | null
   statusClass?: '2xx' | '4xx' | '5xx' | null
   search?: string | null
+  sort?: BottleneckSort | null
 }
 
 export interface AggregatedMetricData {
@@ -133,18 +137,24 @@ export interface TimeRangeSelection {
   to: string
 }
 
-export interface BottleneckMetricData {
-  date: string
-  hour?: number | null
+export interface BottleneckListEntry {
   route: string
   value: number
+  request_count: number
+  min_value?: number | null
+  max_value?: number | null
+  avg_value?: number | null
+  median_value?: number | null
 }
 
-export interface BottleneckMetricsResponse {
+export interface BottleneckListResponse {
   project_id: number
-  statistic: BottleneckStatistic
-  granularity: 'hourly' | 'daily' | 'weekly' | 'monthly'
+  statistic: Exclude<BottleneckStatistic, 'count'>
+  sort: BottleneckSort
   start_date: string
   end_date: string
-  data: BottleneckMetricData[]
+  max_value: number
+  entries: BottleneckListEntry[]
+  total: number
+  has_more: boolean
 }

@@ -19,10 +19,68 @@
         />
       </div>
 
+      <!-- Empty state with SDK setup guidance -->
+      <div
+        v-else-if="!isLoading && traces.length === 0"
+        class="d-flex flex-column align-center justify-center gap-3 pa-6 text-center"
+      >
+        <v-icon
+          icon="mdi-timeline-outline"
+          size="40"
+          color="medium-emphasis"
+        />
+
+        <div>
+          <div class="text-body-2 font-weight-medium mb-1">
+            No traces yet
+          </div>
+
+          <div class="text-caption text-medium-emphasis mb-3">
+            Traces are collected when your app sends spans via the Ledger SDK.
+          </div>
+
+          <v-sheet
+            color="surface-variant"
+            rounded
+            class="pa-3 text-left mb-3"
+            style="font-family: monospace; font-size: 12px;"
+          >
+            <div>from ledger import init, get_tracer</div>
+            <div class="mt-1">
+              init(api_key="...", project_id={{ panel.project_id }})
+            </div>
+            <div class="mt-1">
+              tracer = get_tracer("my-service")
+            </div>
+            <div class="mt-1">
+              with tracer.start_span("operation"):
+            </div>
+            <div class="ml-4">
+              ...
+            </div>
+          </v-sheet>
+
+          <v-btn
+            href="https://github.com/ledger-sdk/python#tracing"
+            target="_blank"
+            variant="text"
+            size="small"
+            color="primary"
+            append-icon="mdi-open-in-new"
+          >
+            See setup guide
+          </v-btn>
+        </div>
+      </div>
+
       <TraceList
         v-else
         :traces="traces"
         :is-loading="isLoading"
+        :has-more="hasMore"
+        :offset="offset"
+        @pin-trace="handlePinTrace"
+        @load-page="handleLoadPage"
       />
     </template>
 
@@ -71,10 +129,19 @@
     :panel="panel"
     @saved="handleRefresh"
   />
+
+  <v-snackbar
+    v-model="pinSnackbar"
+    timeout="2500"
+    color="info"
+    location="bottom right"
+  >
+    {{ pinSnackbarMessage }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
-import type { Panel } from '~/types/panel'
+import type { CreatePanelRequest, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
 const props = defineProps<{
@@ -88,11 +155,16 @@ const emit = defineEmits<{
 }>()
 
 const configOpen = ref(false)
+const pinSnackbar = ref(false)
+const pinSnackbarMessage = ref('')
 
 const tracesStore = useTracesStore()
+const panelsStore = usePanelsStore()
 
 const traces = computed(() => tracesStore.getListForPanel(props.panel.id).value)
 const isLoading = computed(() => tracesStore.isListLoading(props.panel.id).value)
+const hasMore = computed(() => tracesStore.getListHasMore(props.panel.id).value)
+const offset = computed(() => tracesStore.getListOffset(props.panel.id).value)
 
 function buildFilters() {
   const now = new Date()
@@ -103,14 +175,54 @@ function buildFilters() {
     operation: props.panel.operation_filter,
     min_duration_ms: props.panel.min_duration_ms,
     has_error: props.panel.has_error,
-    limit: props.panel.limit ?? 50,
     from: props.panel.periodFrom || new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
     to: props.panel.periodTo || now.toISOString(),
   }
 }
 
 async function handleRefresh() {
-  await tracesStore.fetchList(props.panel.id, buildFilters(), true)
+  await tracesStore.fetchList(props.panel.id, buildFilters(), true, 0)
+}
+
+async function handleLoadPage(newOffset: number) {
+  await tracesStore.fetchList(props.panel.id, buildFilters(), false, newOffset)
+}
+
+async function handlePinTrace(payload: { trace_id: string }) {
+  const existing = panelsStore.findTracePanelByTraceId(payload.trace_id)
+
+  if (existing) {
+    pinSnackbarMessage.value = 'Trace panel already pinned'
+    pinSnackbar.value = true
+    await nextTick()
+    const el = document.getElementById(`panel-${existing.id}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+
+  const hasPeriod = !!props.panel.period
+  const hasDates = !!props.panel.periodFrom && !!props.panel.periodTo
+
+  const newPanel: CreatePanelRequest = {
+    name: `Trace ${payload.trace_id.slice(0, 8)}…`,
+    type: 'trace',
+    project_id: props.panel.project_id,
+    trace_id: payload.trace_id,
+    index: panelsStore.panels.length,
+    period: hasPeriod ? props.panel.period : (hasDates ? null : 'last7days'),
+    periodFrom: hasDates && !hasPeriod ? props.panel.periodFrom : null,
+    periodTo: hasDates && !hasPeriod ? props.panel.periodTo : null,
+  }
+
+  const result = await panelsStore.createPanel(newPanel)
+
+  if (result.success && result.panel) {
+    pinSnackbarMessage.value = 'Trace panel created'
+    pinSnackbar.value = true
+    await nextTick()
+    const el = document.getElementById(`panel-${result.panel.id}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
 
 onMounted(() => {

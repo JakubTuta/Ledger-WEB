@@ -8,13 +8,15 @@ export const useTracesStore = defineStore('traces', () => {
   const detailsById = ref<Map<string, Span[]>>(new Map())
   const listLoading = ref<Set<string | number>>(new Set())
   const detailLoading = ref<Set<string>>(new Set())
+  const listHasMore = ref<Map<string | number, boolean>>(new Map())
+  const listOffset = ref<Map<string | number, number>>(new Map())
 
-  const fetchList = async (panelId: string | number, filters: TraceListFilters, force = false) => {
-    if (listLoading.value.has(panelId) && !force)
+  const fetchList = async (panelId: string | number, filters: TraceListFilters, force = false, offset = 0) => {
+    if (listLoading.value.has(panelId) && !force && offset === 0)
       return
     listLoading.value.add(panelId)
     try {
-      const params: Record<string, any> = { limit: filters.limit ?? 50 }
+      const params: Record<string, any> = { limit: 25, offset }
       if (filters.project_id)
         params.project_id = filters.project_id
       if (filters.service)
@@ -29,14 +31,26 @@ export const useTracesStore = defineStore('traces', () => {
         params.from = filters.from
       if (filters.to)
         params.to = filters.to
-      if (filters.offset)
-        params.offset = filters.offset
 
       const response = await client.get<TraceListResponse>('/api/v1/traces', { params })
-      listsByPanel.value.set(panelId, response.data.traces ?? [])
+      const newTraces = response.data.traces ?? []
+
+      if (offset === 0) {
+        listsByPanel.value.set(panelId, newTraces)
+      }
+      else {
+        const current = listsByPanel.value.get(panelId) ?? []
+        listsByPanel.value.set(panelId, [...current, ...newTraces])
+      }
+
+      listOffset.value.set(panelId, offset)
+      listHasMore.value.set(panelId, response.data.has_more ?? false)
     }
     catch (error) {
       console.error('Error fetching trace list:', error)
+      if (offset === 0)
+        listsByPanel.value.set(panelId, [])
+      listHasMore.value.set(panelId, false)
     }
     finally {
       listLoading.value.delete(panelId)
@@ -69,6 +83,10 @@ export const useTracesStore = defineStore('traces', () => {
 
   const isDetailLoading = (traceId: string) => computed(() => detailLoading.value.has(traceId))
 
+  const getListHasMore = (panelId: string | number) => computed(() => listHasMore.value.get(panelId) ?? false)
+
+  const getListOffset = (panelId: string | number) => computed(() => listOffset.value.get(panelId) ?? 0)
+
   return {
     listsByPanel,
     detailsById,
@@ -78,5 +96,7 @@ export const useTracesStore = defineStore('traces', () => {
     getSpansForTrace,
     isListLoading,
     isDetailLoading,
+    getListHasMore,
+    getListOffset,
   }
 })

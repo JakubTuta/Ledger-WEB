@@ -6,32 +6,6 @@
       <NuxtPage />
     </v-main>
 
-    <!-- Global trace detail drawer -->
-    <v-navigation-drawer
-      v-model="traceDrawer.isOpen.value"
-      location="right"
-      temporary
-      width="560"
-    >
-      <div class="d-flex align-center justify-space-between border-b pa-3">
-        <span class="text-subtitle-1 font-weight-bold">Trace Detail</span>
-
-        <v-btn
-          icon="mdi-close"
-          variant="text"
-          size="small"
-          @click="traceDrawer.close()"
-        />
-      </div>
-
-      <TraceDetail
-        v-if="traceDrawer.currentTraceId.value"
-        :trace-id="traceDrawer.currentTraceId.value"
-        class="overflow-y-auto"
-        style="height: calc(100% - 56px);"
-      />
-    </v-navigation-drawer>
-
     <v-snackbar
       v-model="showConnectionError"
       location="top"
@@ -67,7 +41,6 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
 const streamStore = useNotificationStreamStore()
-const traceDrawer = useTraceDrawer()
 
 const showConnectionError = ref(false)
 

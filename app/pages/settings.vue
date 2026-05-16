@@ -43,12 +43,6 @@
         @click="mobileSectionClick('sharing')"
       />
 
-      <v-list-item
-        :active="activeSection === 'features'"
-        title="Project features"
-        prepend-icon="mdi-toggle-switch"
-        @click="mobileSectionClick('features')"
-      />
     </v-list>
   </v-navigation-drawer>
 
@@ -116,12 +110,6 @@
               @click="scrollToSection('sharing')"
             />
 
-            <v-list-item
-              :active="activeSection === 'features'"
-              title="Project features"
-              prepend-icon="mdi-toggle-switch"
-              @click="scrollToSection('features')"
-            />
           </v-list>
         </v-col>
 
@@ -299,21 +287,6 @@
               </v-card>
             </div>
 
-            <!-- Project Features Section -->
-            <div
-              ref="featuresSection"
-              style="min-height: calc(100vh - 120px);"
-            >
-              <v-card flat>
-                <v-card-title class="text-h5 font-weight-bold mb-4">
-                  Project Features
-                </v-card-title>
-
-                <v-card-text>
-                  <ProjectFeaturesSettings />
-                </v-card-text>
-              </v-card>
-            </div>
           </div>
         </v-col>
       </v-row>
@@ -345,7 +318,7 @@ const projectsStore = useProjectsStore()
 const { projects } = storeToRefs(projectsStore)
 const apiKeysStore = useApiKeysStore()
 
-const activeSection = ref<'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'features'>('projects')
+const activeSection = ref<'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing'>('projects')
 const selectedProjectId = ref<number | null>(null)
 const showJoinDialog = ref(false)
 const mobileNavDrawer = ref(false)
@@ -355,16 +328,15 @@ const notificationsSection = ref<HTMLElement | null>(null)
 const quotaSection = ref<HTMLElement | null>(null)
 const apiKeysSection = ref<HTMLElement | null>(null)
 const sharingSection = ref<HTMLElement | null>(null)
-const featuresSection = ref<HTMLElement | null>(null)
 
 let isScrolling = false
 
-function mobileSectionClick(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'features') {
+function mobileSectionClick(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing') {
   mobileNavDrawer.value = false
   nextTick(() => scrollToSection(section))
 }
 
-function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing' | 'features') {
+function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing') {
   if (!scrollContainer.value)
     return
 
@@ -385,9 +357,6 @@ function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiK
       break
     case 'sharing':
       targetElement = sharingSection.value
-      break
-    case 'features':
-      targetElement = featuresSection.value
       break
   }
 
@@ -422,7 +391,6 @@ function handleScroll() {
   const quotaOffset = quotaSection.value?.offsetTop ?? 0
   const apiKeysOffset = apiKeysSection.value?.offsetTop ?? 0
   const sharingOffset = sharingSection.value?.offsetTop ?? 0
-  const featuresOffset = featuresSection.value?.offsetTop ?? 0
 
   if (scrollTop < notificationsOffset - offset) {
     activeSection.value = 'projects'
@@ -436,11 +404,8 @@ function handleScroll() {
   else if (scrollTop < sharingOffset - offset) {
     activeSection.value = 'apiKeys'
   }
-  else if (scrollTop < featuresOffset - offset) {
-    activeSection.value = 'sharing'
-  }
   else {
-    activeSection.value = 'features'
+    activeSection.value = 'sharing'
   }
 }
 

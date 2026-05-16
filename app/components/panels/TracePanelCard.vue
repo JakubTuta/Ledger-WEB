@@ -11,7 +11,7 @@
     <template #content>
       <div
         v-if="!panel.trace_id"
-        class="d-flex flex-column align-center justify-center gap-2 pa-6"
+        class="d-flex flex-column align-center justify-center gap-2 pa-6 text-center"
       >
         <v-icon
           icon="mdi-chart-timeline-variant"
@@ -19,7 +19,11 @@
           color="medium-emphasis"
         />
 
-        <span class="text-body-2 text-medium-emphasis">No trace ID configured</span>
+        <span class="text-body-2 text-medium-emphasis">No trace pinned.</span>
+
+        <span class="text-caption text-medium-emphasis">
+          Click a row in a Trace List panel to pin a trace here.
+        </span>
       </div>
 
       <div
@@ -36,7 +40,6 @@
         v-else
         :spans="spans"
         class="pa-2"
-        @select="openSpanDetail"
       />
     </template>
   </BasePanelCard>
@@ -45,7 +48,6 @@
 <script setup lang="ts">
 import type { Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
-import type { Span } from '~/types/traces'
 
 const props = defineProps<{
   panel: Panel
@@ -58,7 +60,6 @@ const emit = defineEmits<{
 }>()
 
 const tracesStore = useTracesStore()
-const { openTrace } = useTraceDrawer()
 
 const spans = computed(() => (props.panel.trace_id
   ? tracesStore.getSpansForTrace(props.panel.trace_id).value
@@ -69,11 +70,6 @@ const isLoading = computed(() => (props.panel.trace_id
   ? tracesStore.isDetailLoading(props.panel.trace_id).value
   : false),
 )
-
-function openSpanDetail(_span: Span) {
-  if (props.panel.trace_id)
-    openTrace(props.panel.trace_id)
-}
 
 async function handleRefresh() {
   if (props.panel.trace_id) {

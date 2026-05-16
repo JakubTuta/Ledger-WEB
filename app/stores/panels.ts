@@ -1,6 +1,8 @@
 import type {
   AggregatedMetricsResponse,
-  BottleneckMetricsResponse,
+  BottleneckListEntry,
+  BottleneckListResponse,
+  BottleneckSort,
   BottleneckStatistic,
   CreatePanelRequest,
   MetricsQueryParams,
@@ -69,8 +71,10 @@ export const usePanelsStore = defineStore('panels', () => {
   const logsOffset = ref<Map<string, number>>(new Map())
   const logsHasMore = ref<Map<string, boolean>>(new Map())
 
-  const panelBottlenecks = ref<Map<string, BottleneckMetricsResponse>>(new Map())
-  const bottlenecksLoading = ref<Set<string>>(new Set())
+  const panelBottleneckEntries = ref<Map<string, (BottleneckListEntry & { max_value_route?: number })[]>>(new Map())
+  const panelBottleneckMeta = ref<Map<string, { max_value: number; total: number; has_more: boolean }>>(new Map())
+  const bottleneckListLoading = ref<Set<string>>(new Set())
+  const bottleneckOffset = ref<Map<string, number>>(new Map())
 
   const sortedPanels = computed(() => [...panels.value].sort((a, b) => a.index - b.index),
   )
@@ -352,26 +356,25 @@ export const usePanelsStore = defineStore('panels', () => {
     return logsOffset.value.get(panelId) || 0
   }
 
-  const fetchBottleneckForPanel = async (
-    panel: Panel,
-    routes: string[],
-    statistic: BottleneckStatistic,
-  ) => {
-    if (bottlenecksLoading.value.has(panel.id))
+  const fetchBottleneckListForPanel = async (panel: Panel, opts?: { append?: boolean }) => {
+    if (bottleneckListLoading.value.has(panel.id))
       return
 
-    if (routes.length === 0)
-      return
+    const limit = 25
+    const offset = opts?.append ? (bottleneckOffset.value.get(panel.id) ?? 0) : 0
 
-    bottlenecksLoading.value.add(panel.id)
+    bottleneckListLoading.value.add(panel.id)
 
     try {
       const searchParams = new URLSearchParams()
-
       searchParams.set('project_id', panel.project_id)
-      searchParams.set('statistic', statistic)
+      searchParams.set('statistic', (panel.statistic && panel.statistic !== 'count') ? panel.statistic : 'avg')
+      searchParams.set('sort', panel.sort ?? 'desc')
+      searchParams.set('limit', String(limit))
+      searchParams.set('offset', String(offset))
 
-      routes.forEach(route => searchParams.append('routes', route))
+      if (panel.search)
+        searchParams.set('search', panel.search)
 
       if (panel.period) {
         searchParams.set('period', panel.period)
@@ -384,26 +387,81 @@ export const usePanelsStore = defineStore('panels', () => {
         searchParams.set('period', 'last7days')
       }
 
-      const response = await client.get<BottleneckMetricsResponse>(
-        `/api/v1/metrics/bottleneck?${searchParams.toString()}`,
+      const response = await client.get<BottleneckListResponse>(
+        `/api/v1/metrics/bottleneck/list?${searchParams.toString()}`,
       )
 
-      panelBottlenecks.value.set(panel.id, response.data)
+      const data = response.data
+      const mapped = data.entries.map(e => ({
+        ...e,
+        max_value_route: e.max_value,
+      }))
+      if (opts?.append) {
+        const existing = panelBottleneckEntries.value.get(panel.id) ?? []
+        panelBottleneckEntries.value.set(panel.id, [...existing, ...mapped])
+      }
+      else {
+        panelBottleneckEntries.value.set(panel.id, mapped)
+      }
+
+      panelBottleneckMeta.value.set(panel.id, {
+        max_value: data.max_value,
+        total: data.total,
+        has_more: data.has_more,
+      })
+      bottleneckOffset.value.set(panel.id, offset + data.entries.length)
     }
     catch (error) {
-      console.error(`Error fetching bottleneck for panel ${panel.id}:`, error)
+      console.error(`Error fetching bottleneck list for panel ${panel.id}:`, error)
     }
     finally {
-      bottlenecksLoading.value.delete(panel.id)
+      bottleneckListLoading.value.delete(panel.id)
     }
   }
 
-  const getBottleneckForPanel = (panelId: string) => {
-    return panelBottlenecks.value.get(panelId)
+  const updateBottleneckListFilter = async (
+    panelId: string,
+    patch: { statistic?: Exclude<BottleneckStatistic, 'count'>; sort?: BottleneckSort; search?: string },
+  ) => {
+    const panel = panels.value.find(p => p.id === panelId)
+    if (!panel)
+      return
+
+    if (patch.statistic !== undefined)
+      panel.statistic = patch.statistic
+    if (patch.sort !== undefined)
+      panel.sort = patch.sort
+    if (patch.search !== undefined)
+      panel.search = patch.search || undefined
+
+    await updatePanel(panelId, {
+      name: panel.name,
+      index: panel.index,
+      project_id: panel.project_id,
+      type: panel.type,
+      statistic: panel.statistic ?? null,
+      sort: panel.sort ?? null,
+      search: panel.search ?? null,
+    })
+
+    bottleneckOffset.value.set(panelId, 0)
+    await fetchBottleneckListForPanel(panel)
   }
 
-  const isBottleneckLoading = (panelId: string) => {
-    return bottlenecksLoading.value.has(panelId)
+  const getBottleneckListForPanel = (panelId: string) => {
+    return panelBottleneckEntries.value.get(panelId) ?? []
+  }
+
+  const getBottleneckListMeta = (panelId: string) => {
+    return panelBottleneckMeta.value.get(panelId)
+  }
+
+  const isBottleneckListLoading = (panelId: string) => {
+    return bottleneckListLoading.value.has(panelId)
+  }
+
+  const getBottleneckListHasMore = (panelId: string) => {
+    return panelBottleneckMeta.value.get(panelId)?.has_more ?? false
   }
 
   const fetchHeatmapForPanel = async (panel: Panel) => {
@@ -617,7 +675,6 @@ export const usePanelsStore = defineStore('panels', () => {
       panelLogs.value.delete(panelId)
       logsOffset.value.delete(panelId)
       logsHasMore.value.delete(panelId)
-      panelBottlenecks.value.delete(panelId)
 
       // Remove from all tabs
       tabs.value.forEach((tab) => {
@@ -774,11 +831,7 @@ export const usePanelsStore = defineStore('panels', () => {
         await fetchLogsForPanel(response.data)
       }
       else if (response.data.type === 'bottleneck') {
-        const existingBottleneck = panelBottlenecks.value.get(response.data.id)
-        if (existingBottleneck) {
-          const routes = Array.from(new Set(existingBottleneck.data.map(d => d.route)))
-          await fetchBottleneckForPanel(response.data, routes, existingBottleneck.statistic)
-        }
+        await fetchBottleneckListForPanel(response.data)
       }
       else if (response.data.type === 'error_heatmap') {
         await fetchHeatmapForPanel(response.data)
@@ -966,6 +1019,10 @@ export const usePanelsStore = defineStore('panels', () => {
     return { tab, panels: created }
   }
 
+  const findTracePanelByTraceId = (traceId: string): Panel | undefined => {
+    return panels.value.find(p => p.type === 'trace' && p.trace_id === traceId)
+  }
+
   return {
     panels,
     sortedPanels,
@@ -992,9 +1049,12 @@ export const usePanelsStore = defineStore('panels', () => {
     getLogsOffset,
     updateLogsFilter,
     updateErrorListFilter,
-    fetchBottleneckForPanel,
-    getBottleneckForPanel,
-    isBottleneckLoading,
+    fetchBottleneckListForPanel,
+    updateBottleneckListFilter,
+    getBottleneckListForPanel,
+    getBottleneckListMeta,
+    isBottleneckListLoading,
+    getBottleneckListHasMore,
     fetchHeatmapForPanel,
     createPanel,
     updatePanel,
@@ -1016,5 +1076,6 @@ export const usePanelsStore = defineStore('panels', () => {
     removePanelFromTabs,
     migrateToTabs,
     applyTemplate,
+    findTracePanelByTraceId,
   }
 })

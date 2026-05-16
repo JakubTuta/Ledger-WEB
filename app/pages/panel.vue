@@ -234,6 +234,7 @@
       >
         <template #item="{'element': panel}">
           <v-col
+            :id="`panel-${panel.id}`"
             cols="12"
             :sm="gridCols >= 6
               ? 12
@@ -272,18 +273,20 @@
               @load-page="(offset) => panelsStore.fetchLogsForPanel(panel, offset)"
             />
 
-            <BottleneckPanelCard
+            <ListPanelCard
               v-else-if="panel.type === 'bottleneck'"
               :panel="panel"
               :project="getProjectForPanel(panel)"
-              :metrics="panelsStore.getBottleneckForPanel(panel.id)"
-              :loading="panelsStore.isBottleneckLoading(panel.id)"
+              :items="panelsStore.getBottleneckListForPanel(panel.id)"
+              :loading="panelsStore.isBottleneckListLoading(panel.id)"
+              :has-more="panelsStore.getBottleneckListHasMore(panel.id)"
+              :max-value="panelsStore.getBottleneckListMeta(panel.id)?.max_value ?? 0"
               :disabled="isEditMode"
+              type="bottleneck"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchBottleneckForPanel(panel, [], 'avg')"
-              @update="(routes, statistic) => panelsStore.fetchBottleneckForPanel(panel, routes, statistic)"
-              @update-panel="(routes, statistic) => updateBottleneckPanel(panel, routes, statistic)"
+              @refresh="() => panelsStore.fetchBottleneckListForPanel(panel)"
+              @load-page="() => panelsStore.fetchBottleneckListForPanel(panel, { append: true })"
             />
 
             <HeatmapPanelCard
@@ -365,7 +368,7 @@
 </template>
 
 <script setup lang="ts">
-import type { BottleneckStatistic, Panel, TimeRangePreset } from '~/types/panel'
+import type { Panel, TimeRangePreset } from '~/types/panel'
 import type { Project } from '~/types/project'
 import { useDisplay } from 'vuetify'
 
@@ -552,9 +555,7 @@ async function handlePanelCreated(panel: Panel) {
     await panelsStore.fetchLogsForPanel(panel)
   }
   else if (panel.type === 'bottleneck') {
-    if (panel.routes && panel.routes.length > 0 && panel.statistic) {
-      await panelsStore.fetchBottleneckForPanel(panel, panel.routes, panel.statistic)
-    }
+    await panelsStore.fetchBottleneckListForPanel(panel)
   }
   else if (panel.type === 'error_heatmap') {
     await panelsStore.fetchHeatmapForPanel(panel)
@@ -567,10 +568,6 @@ async function handlePanelCreated(panel: Panel) {
   }
 }
 
-async function updateBottleneckPanel(panel: Panel, routes: string[], statistic: BottleneckStatistic) {
-  await panelsStore.updatePanel(panel.id, { routes, statistic })
-}
-
 function fetchAllMetrics() {
   for (const panel of panelsStore.sortedPanels) {
     if (panel.type === 'error_list') {
@@ -580,9 +577,7 @@ function fetchAllMetrics() {
       panelsStore.fetchLogsForPanel(panel)
     }
     else if (panel.type === 'bottleneck') {
-      if (panel.routes && panel.routes.length > 0 && panel.statistic) {
-        panelsStore.fetchBottleneckForPanel(panel, panel.routes, panel.statistic)
-      }
+      panelsStore.fetchBottleneckListForPanel(panel)
     }
     else if (panel.type === 'error_heatmap') {
       panelsStore.fetchHeatmapForPanel(panel)

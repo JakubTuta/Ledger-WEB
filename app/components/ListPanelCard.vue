@@ -9,12 +9,16 @@
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
   >
-    <!-- Filter row (logs: status toggle + search; error_list: search only) -->
+    <!-- Filter row -->
     <template
-      v-if="type === 'logs' || type === 'error_list'"
+      v-if="type === 'logs' || type === 'error_list' || type === 'bottleneck'"
       #filters
     >
-      <div class="d-flex align-center flex-wrap gap-2">
+      <!-- Logs / error_list filters -->
+      <div
+        v-if="type !== 'bottleneck'"
+        class="d-flex align-center flex-wrap gap-2"
+      >
         <v-btn-toggle
           v-if="type === 'logs'"
           v-model="statusClassFilter"
@@ -69,6 +73,61 @@
           class="search-input"
         />
       </div>
+
+      <!-- Bottleneck filters: statistic + sort direction + search -->
+      <div
+        v-else
+        class="d-flex align-center flex-wrap gap-2"
+      >
+        <v-select
+          v-model="bottleneckStatisticFilter"
+          :items="bottleneckStatisticOptions"
+          density="compact"
+          variant="outlined"
+          hide-details
+          style="max-width: 130px;"
+        />
+
+        <v-btn-toggle
+          v-model="bottleneckSortFilter"
+          density="compact"
+          variant="outlined"
+          divided
+          mandatory
+          class="status-toggle gap-2"
+        >
+          <v-btn
+            value="desc"
+            size="x-small"
+            title="Slowest first"
+          >
+            <v-icon size="14">
+              mdi-sort-descending
+            </v-icon>
+          </v-btn>
+
+          <v-btn
+            value="asc"
+            size="x-small"
+            title="Fastest first"
+          >
+            <v-icon size="14">
+              mdi-sort-ascending
+            </v-icon>
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-text-field
+          v-model="searchFilter"
+          density="compact"
+          variant="outlined"
+          hide-details
+          placeholder="Filter by route..."
+          prepend-inner-icon="mdi-magnify"
+          clearable
+          class="search-input"
+        />
+      </div>
     </template>
 
     <template #content>
@@ -109,6 +168,55 @@
           v-else
           class="log-list"
         >
+          <!-- Column headers -->
+          <div class="log-header-row d-flex align-center">
+            <div class="status-bar flex-shrink-0" />
+
+            <template v-if="type === 'logs'">
+              <span class="text-caption font-weight-medium text-medium-emphasis method-chip mr-2 flex-shrink-0">Method</span>
+
+              <span class="text-caption font-weight-medium text-medium-emphasis log-path mr-2 flex-grow-1">Path</span>
+
+              <span
+                class="text-caption font-weight-medium text-medium-emphasis mr-3 flex-shrink-0"
+                style="min-width: 30px; text-align: right;"
+              >Status</span>
+
+              <span class="text-caption font-weight-medium text-medium-emphasis duration-col mr-3 flex-shrink-0">Duration</span>
+
+              <span class="text-caption font-weight-medium text-medium-emphasis time-col flex-shrink-0">Time</span>
+            </template>
+
+            <template v-else-if="type === 'bottleneck'">
+              <span class="text-caption font-weight-medium text-medium-emphasis method-chip mr-2 flex-shrink-0">Method</span>
+
+              <span class="text-caption font-weight-medium text-medium-emphasis log-path mr-2 flex-grow-1">Route</span>
+
+              <span
+                class="text-caption font-weight-medium text-medium-emphasis mr-3 flex-shrink-0"
+                style="min-width: 44px; text-align: right;"
+              >Value</span>
+
+              <span
+                class="text-caption font-weight-medium text-medium-emphasis flex-shrink-0"
+                style="min-width: 50px;"
+              >Requests</span>
+            </template>
+
+            <template v-else>
+              <span class="text-caption font-weight-medium text-medium-emphasis method-chip mr-2 flex-shrink-0">Type</span>
+
+              <span class="text-caption font-weight-medium text-medium-emphasis log-path mr-2 flex-grow-1">Message / Path</span>
+
+              <span
+                class="text-caption font-weight-medium text-medium-emphasis mr-3 flex-shrink-0"
+                style="min-width: 30px; text-align: right;"
+              >Count</span>
+
+              <span class="text-caption font-weight-medium text-medium-emphasis time-col flex-shrink-0">Last seen</span>
+            </template>
+          </div>
+
           <!-- Logs: compact HTTP request rows -->
           <template v-if="type === 'logs'">
             <div
@@ -157,9 +265,19 @@
                 </span>
 
                 <!-- Relative time -->
-                <span class="text-caption text-medium-emphasis time-col flex-shrink-0">
-                  {{ formatTimestamp(item.timestamp) }}
-                </span>
+                <v-tooltip
+                  :text="formatFullTimestamp(item.timestamp)"
+                  location="top"
+                >
+                  <template #activator="{'props': tooltipProps}">
+                    <span
+                      v-bind="tooltipProps"
+                      class="text-caption text-medium-emphasis time-col flex-shrink-0"
+                    >
+                      {{ formatTimestamp(item.timestamp) }}
+                    </span>
+                  </template>
+                </v-tooltip>
               </div>
 
               <!-- Expanded details -->
@@ -202,7 +320,6 @@
                       variant="flat"
                       color="info"
                       prepend-icon="mdi-link-variant"
-                      @click.stop="openTrace(item.trace_id)"
                     >
                       trace
                     </v-chip>
@@ -317,6 +434,118 @@
             </div>
           </template>
 
+          <!-- Bottleneck: per-route ranked rows -->
+          <template v-else-if="type === 'bottleneck'">
+            <div
+              v-for="item in items"
+              :key="item.route"
+              class="log-row"
+            >
+              <!-- Collapsed row -->
+              <div
+                class="log-row-header d-flex align-center cursor-pointer"
+                @click="toggleExpanded(item)"
+              >
+                <!-- Status bar: colour by value relative to max -->
+                <div
+                  class="status-bar flex-shrink-0"
+                  :class="getValueBarClass(item.value, maxValue)"
+                />
+
+                <!-- Method chip -->
+                <v-chip
+                  :color="getMethodColor(parseRoute(item.route).method)"
+                  size="x-small"
+                  variant="flat"
+                  class="method-chip font-weight-bold mr-2 flex-shrink-0"
+                  label
+                >
+                  {{ parseRoute(item.route).method || '?' }}
+                </v-chip>
+
+                <!-- Path -->
+                <span class="log-path text-caption text-mono mr-2 flex-grow-1 text-truncate">
+                  {{ parseRoute(item.route).path }}
+                </span>
+
+                <!-- Stat value -->
+                <span class="text-caption font-weight-medium mr-3 flex-shrink-0">
+                  {{ formatValue(item.value) }}
+                </span>
+
+                <!-- Request count -->
+                <v-chip
+                  color="default"
+                  variant="text"
+                  size="x-small"
+                  class="flex-shrink-0"
+                >
+                  {{ formatCount(item.request_count ?? 0) }}
+                </v-chip>
+              </div>
+
+              <!-- Progress bar -->
+              <v-progress-linear
+                :model-value="maxValue > 0 ? ((item.value ?? 0) / maxValue) * 100 : 0"
+                :color="getValueBarColor(item.value, maxValue)"
+                height="2"
+                bg-opacity="0.08"
+                rounded
+                class="mx-0"
+              />
+
+              <!-- Expanded details -->
+              <v-expand-transition>
+                <div
+                  v-if="item.expanded"
+                  class="log-row-detail pa-3"
+                >
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <v-chip
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      min {{ formatValue(item.min_value ?? 0) }}
+                    </v-chip>
+
+                    <v-chip
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      avg {{ formatValue(item.avg_value ?? 0) }}
+                    </v-chip>
+
+                    <v-chip
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      median {{ formatValue(item.median_value ?? 0) }}
+                    </v-chip>
+
+                    <v-chip
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      max {{ formatValue(item.max_value_route ?? 0) }}
+                    </v-chip>
+
+                    <v-chip
+                      size="x-small"
+                      variant="tonal"
+                      color="primary"
+                    >
+                      {{ formatCount(item.request_count ?? 0) }} requests
+                    </v-chip>
+                  </div>
+
+                  <div class="text-caption text-mono text-medium-emphasis">
+                    {{ item.route }}
+                  </div>
+                </div>
+              </v-expand-transition>
+            </div>
+          </template>
+
           <!-- Errors: compact grouped rows -->
           <template v-else>
             <div
@@ -378,9 +607,19 @@
                 </v-chip>
 
                 <!-- Last seen -->
-                <span class="text-caption text-medium-emphasis time-col flex-shrink-0">
-                  {{ formatTimestamp(item.last_seen || item.timestamp) }}
-                </span>
+                <v-tooltip
+                  :text="formatFullTimestamp(item.last_seen || item.timestamp)"
+                  location="top"
+                >
+                  <template #activator="{'props': tooltipProps}">
+                    <span
+                      v-bind="tooltipProps"
+                      class="text-caption text-medium-emphasis time-col flex-shrink-0"
+                    >
+                      {{ formatTimestamp(item.last_seen || item.timestamp) }}
+                    </span>
+                  </template>
+                </v-tooltip>
               </div>
 
               <!-- Expanded details -->
@@ -500,7 +739,8 @@ const props = defineProps<{
   disabled?: boolean
   hasMore?: boolean
   offset?: number
-  type: 'errors' | 'logs' | 'error_list'
+  maxValue?: number
+  type: 'errors' | 'logs' | 'error_list' | 'bottleneck'
 }>()
 
 const emit = defineEmits<{
@@ -511,19 +751,18 @@ const emit = defineEmits<{
   filterChange: []
 }>()
 
-const { openTrace } = useTraceDrawer()
 const panelsStore = usePanelsStore()
 
 type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'critical'
 type LogType = 'console' | 'logger' | 'exception' | 'network' | 'database' | 'endpoint' | 'custom'
 
 interface ListItem {
-  log_id: number
-  project_id: number
-  level: NotificationLevel | LogLevel
-  log_type: string | LogType
-  message: string
-  timestamp: string
+  log_id?: number
+  project_id?: number
+  level?: NotificationLevel | LogLevel
+  log_type?: string | LogType
+  message?: string
+  timestamp?: string
   error_type?: string
   error_message?: string
   error_fingerprint?: string
@@ -546,18 +785,40 @@ interface ListItem {
   occurrence_count?: number
   first_seen?: string
   last_seen?: string
-  stack_trace?: string
+  // Bottleneck fields
+  route?: string
+  value?: number
+  request_count?: number
+  min_value?: number
+  max_value_route?: number
+  avg_value?: number
+  median_value?: number
 }
 
 const currentTime = ref(Date.now())
 
-// Filter state (logs panel)
+// Filter state (logs / error_list)
 const statusClassFilter = ref<string>('all')
 const searchFilter = ref<string>('')
+
+// Filter state (bottleneck)
+const bottleneckStatisticFilter = ref<string>(props.panel.statistic && props.panel.statistic !== 'count' ? props.panel.statistic : 'avg')
+const bottleneckSortFilter = ref<string>(props.panel.sort ?? 'desc')
+
+const bottleneckStatisticOptions = [
+  { title: 'Average', value: 'avg' },
+  { title: 'Minimum', value: 'min' },
+  { title: 'Maximum', value: 'max' },
+  { title: 'Median', value: 'median' },
+]
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 watch(statusClassFilter, () => {
+  applyFilters()
+})
+
+watch([bottleneckStatisticFilter, bottleneckSortFilter], () => {
   applyFilters()
 })
 
@@ -571,6 +832,13 @@ function applyFilters() {
   if (props.type === 'error_list') {
     panelsStore.updateErrorListFilter(props.panel.id, searchFilter.value || undefined)
   }
+  else if (props.type === 'bottleneck') {
+    panelsStore.updateBottleneckListFilter(props.panel.id, {
+      statistic: bottleneckStatisticFilter.value as any,
+      sort: bottleneckSortFilter.value as 'asc' | 'desc',
+      search: searchFilter.value || undefined,
+    })
+  }
   else {
     const sc = statusClassFilter.value === 'all'
       ? undefined
@@ -582,24 +850,32 @@ function applyFilters() {
 const icon = computed(() => {
   if (props.type === 'logs')
     return 'mdi-text-box-outline'
+  if (props.type === 'bottleneck')
+    return 'mdi-speedometer'
 
   return 'mdi-format-list-bulleted'
 })
 const iconColor = computed(() => {
   if (props.type === 'logs')
     return 'primary'
+  if (props.type === 'bottleneck')
+    return 'warning'
 
   return 'error'
 })
 const emptyIcon = computed(() => {
   if (props.type === 'logs')
     return 'mdi-text-box-check'
+  if (props.type === 'bottleneck')
+    return 'mdi-speedometer'
 
   return 'mdi-check-circle'
 })
 const emptyMessage = computed(() => {
   if (props.type === 'logs')
     return 'No request logs found'
+  if (props.type === 'bottleneck')
+    return 'No endpoint data found'
 
   return 'No errors found'
 })
@@ -677,6 +953,60 @@ function formatDuration(ms?: number): string {
   return `${ms}ms`
 }
 
+function formatValue(ms?: number): string {
+  if (ms == null || ms === 0)
+    return '—'
+  if (ms >= 60000)
+    return `${(ms / 60000).toFixed(1)}m`
+  if (ms >= 1000)
+    return `${(ms / 1000).toFixed(1)}s`
+
+  return `${Math.round(ms)}ms`
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1000)
+    return `${(n / 1000).toFixed(1)}k`
+
+  return String(n)
+}
+
+function parseRoute(route?: string): { method: string; path: string } {
+  if (!route)
+    return { method: '?', path: '—' }
+  const idx = route.indexOf(' ')
+  if (idx === -1)
+    return { method: '?', path: route }
+
+  return { method: route.slice(0, idx), path: route.slice(idx + 1) }
+}
+
+function getValueBarClass(value?: number, max?: number): string {
+  if (!value || !max || max === 0)
+    return 'status-bar--grey'
+  const pct = (value / max) * 100
+  if (pct >= 80)
+    return 'status-bar--error'
+  if (pct >= 50)
+    return 'status-bar--warning'
+
+  return 'status-bar--success'
+}
+
+function getValueBarColor(value?: number, max?: number): string {
+  if (!value || !max || max === 0)
+    return 'grey'
+  const pct = (value / max) * 100
+  if (pct >= 80)
+    return 'error'
+  if (pct >= 50)
+    return 'warning'
+
+  return 'success'
+}
+
 // Error card helpers (for errors type)
 function getItemColor(item: ListItem): string {
   const colors: Record<NotificationLevel, string> = {
@@ -704,21 +1034,44 @@ function formatTimestamp(timestamp: string): string {
   try {
     const date = new Date(timestamp)
     const diff = currentTime.value - date.getTime()
-    const seconds = Math.floor(diff / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
 
-    if (days > 0)
-      return `${days}d ago`
-    if (hours > 0)
-      return `${hours}h ago`
-    if (minutes > 0)
-      return `${minutes}m ago`
-    if (seconds > 0)
-      return `${seconds}s ago`
+    if (diff < 24 * 60 * 60 * 1000) {
+      const seconds = Math.floor(diff / 1000)
+      const minutes = Math.floor(seconds / 60)
+      const hours = Math.floor(minutes / 60)
+      if (hours > 0)
+        return `${hours}h ago`
+      if (minutes > 0)
+        return `${minutes}m ago`
+      if (seconds > 0)
+        return `${seconds}s ago`
 
-    return 'Just now'
+      return 'Just now'
+    }
+
+    const dd = String(date.getDate()).padStart(2, '0')
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const hh = String(date.getHours()).padStart(2, '0')
+    const min = String(date.getMinutes()).padStart(2, '0')
+
+    return `${dd}-${mm} ${hh}:${min}`
+  }
+  catch {
+    return timestamp
+  }
+}
+
+function formatFullTimestamp(timestamp: string): string {
+  try {
+    const date = new Date(timestamp)
+    const dd = String(date.getDate()).padStart(2, '0')
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const yyyy = date.getFullYear()
+    const hh = String(date.getHours()).padStart(2, '0')
+    const min = String(date.getMinutes()).padStart(2, '0')
+    const ss = String(date.getSeconds()).padStart(2, '0')
+
+    return `${dd}-${mm}-${yyyy} ${hh}:${min}:${ss}`
   }
   catch {
     return timestamp
@@ -759,6 +1112,16 @@ onUnmounted(() => {
 .log-list {
   height: 100%;
   overflow-y: auto;
+}
+
+.log-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: rgb(var(--v-theme-surface));
+  padding: 4px 12px 4px 0;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  min-height: 28px;
 }
 
 .log-row {

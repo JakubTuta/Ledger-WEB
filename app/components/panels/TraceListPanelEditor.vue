@@ -62,16 +62,6 @@
           item-value="value"
         />
 
-        <v-text-field
-          v-model.number="form.limit"
-          label="Max results"
-          variant="outlined"
-          density="compact"
-          type="number"
-          min="1"
-          max="500"
-          :rules="limitRules"
-        />
       </v-card-text>
 
       <v-divider />
@@ -126,7 +116,6 @@ const form = reactive({
   operation_filter: props.panel.operation_filter ?? '',
   min_duration_ms: props.panel.min_duration_ms ?? null as number | null,
   has_error: props.panel.has_error ?? null as boolean | null,
-  limit: props.panel.limit ?? 50,
 })
 
 watch(() => props.panel, (p) => {
@@ -134,19 +123,12 @@ watch(() => props.panel, (p) => {
   form.operation_filter = p.operation_filter ?? ''
   form.min_duration_ms = p.min_duration_ms ?? null
   form.has_error = p.has_error ?? null
-  form.limit = p.limit ?? 50
 })
 
 const errorFilterOptions = [
   { label: 'All traces', value: null },
   { label: 'Errors only', value: true },
   { label: 'Success only', value: false },
-]
-
-const limitRules = [
-  (v: number) => !!v || 'Required',
-  (v: number) => v >= 1 || 'Min 1',
-  (v: number) => v <= 500 || 'Max 500',
 ]
 
 async function handleSave() {
@@ -157,7 +139,6 @@ async function handleSave() {
       operation_filter: form.operation_filter || null,
       min_duration_ms: form.min_duration_ms ?? null,
       has_error: form.has_error,
-      limit: form.limit,
     } as any)
     emit('saved')
     dialogOpen.value = false
