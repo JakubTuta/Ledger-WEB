@@ -26,6 +26,16 @@
           />
         </div>
 
+        <v-chip
+          v-if="panel.endpoint && !isEditingName"
+          size="x-small"
+          variant="tonal"
+          class="text-mono flex-shrink-0"
+          style="max-width: 180px;"
+        >
+          <span class="text-truncate">{{ panel.endpoint }}</span>
+        </v-chip>
+
         <v-text-field
           v-else
           v-model="editedName"

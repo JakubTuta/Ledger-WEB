@@ -57,14 +57,16 @@ export const useTracesStore = defineStore('traces', () => {
     }
   }
 
-  const fetchDetail = async (traceId: string, force = false) => {
+  const fetchDetail = async (traceId: string, projectId: string | number, force = false) => {
     if (detailLoading.value.has(traceId) && !force)
       return
     if (!force && detailsById.value.has(traceId))
       return
     detailLoading.value.add(traceId)
     try {
-      const response = await client.get<TraceDetailResponse>(`/api/v1/traces/${traceId}`)
+      const response = await client.get<TraceDetailResponse>(`/api/v1/traces/${traceId}`, {
+        params: { project_id: projectId },
+      })
       detailsById.value.set(traceId, response.data.spans ?? [])
     }
     catch (error) {

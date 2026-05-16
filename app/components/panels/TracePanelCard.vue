@@ -73,13 +73,13 @@ const isLoading = computed(() => (props.panel.trace_id
 
 async function handleRefresh() {
   if (props.panel.trace_id) {
-    await tracesStore.fetchDetail(props.panel.trace_id, true)
+    await tracesStore.fetchDetail(props.panel.trace_id, props.panel.project_id, true)
   }
 }
 
 onMounted(() => {
   if (props.panel.trace_id) {
-    tracesStore.fetchDetail(props.panel.trace_id)
+    tracesStore.fetchDetail(props.panel.trace_id, props.panel.project_id)
   }
 })
 </script>

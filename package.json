@@ -3,13 +3,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "lint": "eslint --ext .ts,.js,.vue .",
-    "lint:fix": "eslint --ext .ts,.js,.vue . --fix"
+    "build": "bun --bun run nuxt build",
+    "dev": "bun --bun run nuxt dev",
+    "generate": "bun --bun run nuxt generate",
+    "preview": "bun --bun run nuxt preview",
+    "start": "bun run ./.output/server/index.mjs",
+    "postinstall": "bun --bun run nuxt prepare",
+    "lint": "bun --bun run eslint --ext .ts,.js,.vue .",
+    "lint:fix": "bun --bun run eslint --ext .ts,.js,.vue . --fix"
   },
   "dependencies": {
     "@antfu/eslint-config": "^6.2.0",
