@@ -301,13 +301,6 @@
               @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
             />
 
-            <CustomMetricPanelCard
-              v-else-if="panel.type === 'custom_metric'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-            />
 
             <TracePanelCard
               v-else-if="panel.type === 'trace'"
@@ -560,7 +553,7 @@ async function handlePanelCreated(panel: Panel) {
   else if (panel.type === 'error_heatmap') {
     await panelsStore.fetchHeatmapForPanel(panel)
   }
-  else if (panel.type === 'trace_list' || panel.type === 'trace' || panel.type === 'custom_metric') {
+  else if (panel.type === 'trace_list' || panel.type === 'trace') {
     // These panels fetch their own data on mount
   }
   else {
@@ -582,7 +575,7 @@ function fetchAllMetrics() {
     else if (panel.type === 'error_heatmap') {
       panelsStore.fetchHeatmapForPanel(panel)
     }
-    else if (panel.type === 'trace_list' || panel.type === 'trace' || panel.type === 'custom_metric') {
+    else if (panel.type === 'trace_list' || panel.type === 'trace') {
       // These panels self-manage data fetching
     }
     else {

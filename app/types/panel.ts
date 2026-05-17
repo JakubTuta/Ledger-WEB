@@ -1,12 +1,9 @@
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'custom_metric'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 export type BottleneckSort = 'asc' | 'desc'
 
 export type TimeRangePreset = 'today' | 'last7days' | 'last30days' | 'currentWeek' | 'currentMonth' | 'currentYear'
-
-export type CustomMetricAgg = 'sum' | 'avg' | 'rate' | 'p50' | 'p95' | 'p99'
-export type CustomMetricViz = 'line' | 'bar' | 'single_stat'
 
 export interface Panel {
   id: string
@@ -22,12 +19,6 @@ export interface Panel {
   index: number
   created_at: string
   updated_at: string
-  // custom_metric fields
-  metric_name?: string
-  tag_filter?: Record<string, string>
-  agg?: CustomMetricAgg
-  viz?: CustomMetricViz
-  step?: string
   // trace fields
   trace_id?: string
   service_filter?: string
@@ -57,11 +48,6 @@ export interface CreatePanelRequest {
   periodFrom?: string | null
   periodTo?: string | null
   index: number
-  metric_name?: string
-  tag_filter?: Record<string, string>
-  agg?: CustomMetricAgg
-  viz?: CustomMetricViz
-  step?: string
   trace_id?: string
   service_filter?: string
   operation_filter?: string
@@ -84,11 +70,6 @@ export interface UpdatePanelRequest {
   period?: TimeRangePreset | null
   periodFrom?: string | null
   periodTo?: string | null
-  metric_name?: string | null
-  tag_filter?: Record<string, string> | null
-  agg?: CustomMetricAgg | null
-  viz?: CustomMetricViz | null
-  step?: string | null
   trace_id?: string | null
   service_filter?: string | null
   operation_filter?: string | null

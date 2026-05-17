@@ -500,7 +500,7 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'custom_metric']
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
     const payload: Record<string, any> = {}
@@ -522,11 +522,6 @@ export const usePanelsStore = defineStore('panels', () => {
       'min_duration_ms',
       'has_error',
       'limit',
-      'metric_name',
-      'tag_filter',
-      'agg',
-      'viz',
-      'step',
       'statusClass',
       'search',
     ]
@@ -603,21 +598,6 @@ export const usePanelsStore = defineStore('panels', () => {
         periodTo: data.periodTo !== undefined
           ? data.periodTo
           : panel.periodTo || null,
-        metric_name: data.metric_name !== undefined
-          ? data.metric_name
-          : panel.metric_name ?? null,
-        tag_filter: data.tag_filter !== undefined
-          ? data.tag_filter
-          : panel.tag_filter ?? null,
-        agg: data.agg !== undefined
-          ? data.agg
-          : panel.agg ?? null,
-        viz: data.viz !== undefined
-          ? data.viz
-          : panel.viz ?? null,
-        step: data.step !== undefined
-          ? data.step
-          : panel.step ?? null,
         trace_id: data.trace_id !== undefined
           ? data.trace_id
           : panel.trace_id ?? null,
@@ -712,11 +692,6 @@ export const usePanelsStore = defineStore('panels', () => {
             period: panel.period || null,
             periodFrom: panel.periodFrom || null,
             periodTo: panel.periodTo || null,
-            metric_name: panel.metric_name ?? null,
-            tag_filter: panel.tag_filter ?? null,
-            agg: panel.agg ?? null,
-            viz: panel.viz ?? null,
-            step: panel.step ?? null,
             trace_id: panel.trace_id ?? null,
             service_filter: panel.service_filter ?? null,
             operation_filter: panel.operation_filter ?? null,
@@ -836,7 +811,7 @@ export const usePanelsStore = defineStore('panels', () => {
       else if (response.data.type === 'error_heatmap') {
         await fetchHeatmapForPanel(response.data)
       }
-      else if (response.data.type !== 'trace' && response.data.type !== 'trace_list' && response.data.type !== 'custom_metric') {
+      else if (response.data.type !== 'trace' && response.data.type !== 'trace_list') {
         await fetchMetricsForPanel(response.data)
       }
 

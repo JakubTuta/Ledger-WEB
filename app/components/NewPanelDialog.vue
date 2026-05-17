@@ -261,114 +261,6 @@
                     :rules="traceLimitRules"
                   />
                 </template>
-
-                <!-- Custom Metric config -->
-                <template v-if="form.panelType === 'custom_metric'">
-                  <v-autocomplete
-                    v-model="form.metricName"
-                    label="Metric name"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-3"
-                    :items="metricNames"
-                    :loading="customMetricsStore.namesLoading"
-                    :rules="metricNameRules"
-                    clearable
-                    @update:search="onMetricSearch"
-                    @update:model-value="onMetricSelected"
-                  />
-
-                  <div
-                    v-if="tagKeys.length > 0"
-                    class="mb-3"
-                  >
-                    <div class="text-caption text-medium-emphasis mb-2">
-                      Tag filters
-                    </div>
-
-                    <div
-                      v-for="key in tagKeys"
-                      :key="key"
-                      class="d-flex align-center mb-2 gap-2"
-                    >
-                      <span class="text-body-2 w-25">{{ key }}</span>
-
-                      <v-select
-                        v-model="tagFilter[key]"
-                        :items="tagValues(key)"
-                        variant="outlined"
-                        density="compact"
-                        hide-details
-                        clearable
-                        placeholder="Any"
-                        style="flex: 1;"
-                      />
-                    </div>
-                  </div>
-
-                  <v-select
-                    v-model="form.metricAgg"
-                    label="Aggregation"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-3"
-                    :items="aggOptions"
-                    item-title="label"
-                    item-value="value"
-                  />
-
-                  <v-btn-toggle
-                    v-model="form.metricViz"
-                    mandatory
-                    density="compact"
-                    color="primary"
-                    variant="outlined"
-                    class="mb-3"
-                  >
-                    <v-btn
-                      value="line"
-                      size="small"
-                    >
-                      <v-icon
-                        icon="mdi-chart-line"
-                        class="mr-1"
-                      />
-                      Line
-                    </v-btn>
-
-                    <v-btn
-                      value="bar"
-                      size="small"
-                    >
-                      <v-icon
-                        icon="mdi-chart-bar"
-                        class="mr-1"
-                      />
-                      Bar
-                    </v-btn>
-
-                    <v-btn
-                      value="single_stat"
-                      size="small"
-                    >
-                      <v-icon
-                        icon="mdi-numeric"
-                        class="mr-1"
-                      />
-                      Single Stat
-                    </v-btn>
-                  </v-btn-toggle>
-
-                  <v-select
-                    v-model="form.metricStep"
-                    label="Step (auto)"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-3"
-                    clearable
-                    :items="stepOptions"
-                  />
-                </template>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
@@ -416,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CreatePanelRequest, CustomMetricAgg, CustomMetricViz, Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import type { CreatePanelRequest, Panel, PanelType, TimeRangePreset } from '~/types/panel'
 
 const props = defineProps<{
   modelValue: boolean
@@ -430,7 +322,6 @@ const emit = defineEmits<{
 
 const panelsStore = usePanelsStore()
 const projectsStore = useProjectsStore()
-const customMetricsStore = useCustomMetricsStore()
 
 const formRef = ref()
 const isFormValid = ref(false)
@@ -454,10 +345,6 @@ const form = ref<{
   minDurationMs: number | null
   hasError: boolean | null
   traceLimit: number
-  metricName: string
-  metricAgg: CustomMetricAgg
-  metricViz: CustomMetricViz
-  metricStep: string
 }>({
   name: '',
   projectId: null,
@@ -472,13 +359,7 @@ const form = ref<{
   minDurationMs: null,
   hasError: null,
   traceLimit: 50,
-  metricName: '',
-  metricAgg: 'avg',
-  metricViz: 'line',
-  metricStep: '',
 })
-
-const tagFilter = reactive<Record<string, string>>({})
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -509,7 +390,6 @@ const allPanelTypeOptions = [
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Grouped bars comparing route latency or request count.', requires: null },
   { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate.', requires: null },
   { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent traces. Click any row to pin it as a single-trace panel.' },
-  { label: 'Custom Metric', value: 'custom_metric', icon: 'mdi-chart-line-variant', description: 'Line, bar, or single-stat panel for a custom metric.' },
 ]
 
 const panelTypeOptions = allPanelTypeOptions
@@ -517,7 +397,7 @@ const panelTypeOptions = allPanelTypeOptions
 const showAdvanced = computed(() => {
   const t = form.value.panelType
 
-  return t === 'metrics' || t === 'trace_list' || t === 'custom_metric'
+  return t === 'metrics' || t === 'trace_list'
 })
 
 const errorFilterOptions = [
@@ -525,40 +405,6 @@ const errorFilterOptions = [
   { label: 'Errors only', value: true },
   { label: 'Success only', value: false },
 ]
-
-const aggOptions = [
-  { label: 'Sum', value: 'sum' },
-  { label: 'Average', value: 'avg' },
-  { label: 'Rate', value: 'rate' },
-  { label: 'P50', value: 'p50' },
-  { label: 'P95', value: 'p95' },
-  { label: 'P99', value: 'p99' },
-]
-
-const stepOptions = ['1m', '5m', '15m', '1h', '1d']
-
-const metricNames = computed(() => customMetricsStore.names)
-
-const tagInfo = computed(() => (form.value.metricName
-  ? customMetricsStore.tagsByMetric.get(form.value.metricName)
-  : null),
-)
-
-const tagKeys = computed(() => tagInfo.value?.keys ?? [])
-
-function tagValues(key: string): string[] {
-  return tagInfo.value?.sample_values[key] ?? []
-}
-
-function onMetricSearch(val: string) {
-  if (val)
-    customMetricsStore.fetchNames(val)
-}
-
-function onMetricSelected(name: string | null) {
-  if (name)
-    customMetricsStore.fetchTags(name)
-}
 
 const nameRules = [
   (v: string) => !!v || 'Title is required',
@@ -579,10 +425,6 @@ const traceLimitRules = [
   (v: number) => !!v || 'Required',
   (v: number) => v >= 1 || 'Min 1',
   (v: number) => v <= 500 || 'Max 500',
-]
-
-const metricNameRules = [
-  (v: string) => !!v?.trim() || 'Metric name is required',
 ]
 
 const panelTypeError = computed(() => hasAttemptedSubmit.value && !form.value.panelType)
@@ -630,10 +472,6 @@ const canSubmit = computed(() => {
   if (!isFormValid.value || !hasTimeRange.value || !form.value.panelType)
     return false
 
-  if (form.value.panelType === 'custom_metric') {
-    return !!form.value.metricName.trim()
-  }
-
   return true
 })
 
@@ -652,11 +490,8 @@ watch(() => form.value.projectId, () => {
   form.value.selectedRoutes = []
 })
 
-watch(() => form.value.panelType, (type) => {
+watch(() => form.value.panelType, () => {
   form.value.selectedRoutes = []
-  if (type === 'custom_metric') {
-    customMetricsStore.fetchNames('')
-  }
   if (showAdvanced.value) {
     advancedOpen.value = 'advanced'
   }
@@ -677,12 +512,7 @@ function resetForm() {
     minDurationMs: null,
     hasError: null,
     traceLimit: 50,
-    metricName: '',
-    metricAgg: 'avg',
-    metricViz: 'line',
-    metricStep: '',
   }
-  Object.keys(tagFilter).forEach(k => delete tagFilter[k])
   error.value = ''
   hasAttemptedSubmit.value = false
   advancedOpen.value = undefined
@@ -714,10 +544,6 @@ async function handleCreate() {
   loading.value = true
 
   try {
-    const activeTagFilter = Object.fromEntries(
-      Object.entries(tagFilter).filter(([, v]) => !!v),
-    )
-
     const panelData: CreatePanelRequest = {
       name: form.value.name,
       project_id: form.value.projectId,
@@ -743,21 +569,6 @@ async function handleCreate() {
         ? form.value.traceLimit
         : undefined,
       trace_id: undefined,
-      metric_name: form.value.panelType === 'custom_metric'
-        ? form.value.metricName
-        : undefined,
-      tag_filter: form.value.panelType === 'custom_metric' && Object.keys(activeTagFilter).length > 0
-        ? activeTagFilter
-        : undefined,
-      agg: form.value.panelType === 'custom_metric'
-        ? form.value.metricAgg
-        : undefined,
-      viz: form.value.panelType === 'custom_metric'
-        ? form.value.metricViz
-        : undefined,
-      step: form.value.panelType === 'custom_metric' && form.value.metricStep
-        ? form.value.metricStep
-        : undefined,
       index: panelsStore.panels.length,
       period: form.value.period || null,
       periodFrom: form.value.period

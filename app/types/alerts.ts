@@ -12,7 +12,6 @@ export interface AlertRule {
   name: string
   enabled: boolean
   metric: string
-  tag_filter: string
   comparator: AlertComparator
   threshold: number
   window_seconds: number
@@ -33,7 +32,6 @@ export interface CreateAlertRuleRequest {
   project_id: number
   name: string
   metric: string
-  tag_filter?: string
   comparator: AlertComparator
   threshold: number
   window_seconds?: number

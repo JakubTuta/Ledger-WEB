@@ -79,7 +79,6 @@ const errorMessage = ref('')
 
 const featureList: { key: FeatureKey, label: string, description: string }[] = [
   { key: 'tracing', label: 'Tracing', description: 'Required for Trace List and Single Trace panels.' },
-  { key: 'custom_metrics', label: 'Custom Metrics', description: 'Required for Custom Metric panels.' },
   { key: 'alert_rules', label: 'Alert Rules', description: 'Enable alert rules for this project.' },
 ]
 

@@ -47,23 +47,6 @@
             :rules="[v => !!v || 'Metric is required']"
           />
 
-          <div
-            v-if="!isEdit && isCustomMetric"
-            class="mb-3"
-          >
-            <v-combobox
-              v-model="tagFilterPairs"
-              label="Tag filter (key=value)"
-              variant="outlined"
-              density="compact"
-              multiple
-              chips
-              closable-chips
-              hint="Enter as key=value pairs"
-              persistent-hint
-            />
-          </div>
-
           <div class="d-flex ga-3 mb-3">
             <v-btn-toggle
               v-if="!isEdit"
@@ -177,7 +160,6 @@ const emit = defineEmits<{
 }>()
 
 const alertsStore = useAlertsStore()
-const customMetricsStore = useCustomMetricsStore()
 
 const isEdit = computed(() => !!props.rule)
 const dialogOpen = computed({
@@ -198,8 +180,6 @@ const form = reactive({
   severity: 1,
 })
 
-const tagFilterPairs = ref<string[]>([])
-
 watch(() => props.rule, (rule) => {
   if (rule) {
     form.name = rule.name
@@ -209,15 +189,6 @@ watch(() => props.rule, (rule) => {
     form.window_seconds = rule.window_seconds
     form.cooldown_seconds = rule.cooldown_seconds
     form.severity = rule.severity
-    if (rule.tag_filter && rule.tag_filter !== '{}') {
-      try {
-        const parsed = JSON.parse(rule.tag_filter)
-        tagFilterPairs.value = Object.entries(parsed).map(([k, v]) => `${k}=${v}`)
-      }
-      catch {
-        tagFilterPairs.value = []
-      }
-    }
   }
   else {
     form.name = ''
@@ -227,11 +198,8 @@ watch(() => props.rule, (rule) => {
     form.window_seconds = 300
     form.cooldown_seconds = 300
     form.severity = 1
-    tagFilterPairs.value = []
   }
 }, { immediate: true })
-
-const isCustomMetric = computed(() => form.metric.startsWith('custom:'))
 
 const builtInMetrics = [
   { label: 'Error rate', value: 'error_rate' },
@@ -239,10 +207,7 @@ const builtInMetrics = [
   { label: 'Endpoint p95 latency', value: 'endpoint_p95' },
 ]
 
-const customMetricOptions = computed(() => customMetricsStore.names.map(n => ({ label: `Custom: ${n}`, value: `custom:${n}` })),
-)
-
-const metricOptions = computed(() => [...builtInMetrics, ...customMetricOptions.value])
+const metricOptions = computed(() => builtInMetrics)
 
 const comparatorOptions = ['>', '<', '>=', '<=']
 
@@ -259,20 +224,6 @@ function formatSeconds(s: number): string {
     return `${s / 60}m`
 
   return `${s}s`
-}
-
-function buildTagFilter(): string {
-  if (!isCustomMetric.value || tagFilterPairs.value.length === 0)
-    return '{}'
-  const result: Record<string, string> = {}
-  for (const pair of tagFilterPairs.value) {
-    const eqIdx = pair.indexOf('=')
-    if (eqIdx > 0) {
-      result[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1)
-    }
-  }
-
-  return JSON.stringify(result)
 }
 
 async function handleSubmit() {
@@ -300,7 +251,6 @@ async function handleSubmit() {
         window_seconds: form.window_seconds,
         cooldown_seconds: form.cooldown_seconds,
         severity: form.severity,
-        tag_filter: buildTagFilter(),
       }
       await alertsStore.createRule(data)
     }
@@ -316,7 +266,4 @@ async function handleSubmit() {
   }
 }
 
-onMounted(() => {
-  customMetricsStore.fetchNames('')
-})
 </script>
