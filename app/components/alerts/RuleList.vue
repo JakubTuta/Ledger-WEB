@@ -54,16 +54,6 @@
 
         <div class="col-name">
           <div class="d-flex align-center gap-2">
-            <v-icon
-              :icon="rule.last_state === 'firing'
-                ? 'mdi-fire'
-                : 'mdi-check-circle'"
-              :color="rule.last_state === 'firing'
-                ? 'error'
-                : 'success'"
-              size="16"
-            />
-
             <span class="text-body-2 font-weight-medium text-truncate">{{ rule.name }}</span>
 
             <v-chip
@@ -87,9 +77,9 @@
           <v-icon
             v-for="kind in connectorKinds(rule)"
             :key="kind"
-            :icon="kindIcon(kind)"
+            :icon="connectorMeta(kind).icon"
+            :color="connectorMeta(kind).color"
             size="16"
-            class="text-medium-emphasis"
           />
 
           <span
@@ -127,7 +117,7 @@
 
 <script setup lang="ts">
 import type { AlertRule, Connector, ConnectorKind } from '~/types/alerts'
-import { metricLabel, SEVERITY_LABELS } from '~/types/alerts'
+import { connectorMeta, metricLabel, SEVERITY_LABELS } from '~/types/alerts'
 
 const props = defineProps<{
   rules: AlertRule[]
@@ -171,10 +161,6 @@ function connectorKinds(rule: AlertRule): ConnectorKind[] {
   })
 
   return [...kinds]
-}
-
-function kindIcon(kind: ConnectorKind): string {
-  return { webhook: 'mdi-webhook', email: 'mdi-email', in_app: 'mdi-bell' }[kind]
 }
 
 function severityLabel(s: number): string {

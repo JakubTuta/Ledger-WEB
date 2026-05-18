@@ -19,7 +19,7 @@
       <v-divider />
 
       <v-card-text class="pa-4">
-          <v-text-field
+        <v-text-field
           v-model="form.service_filter"
           label="Service (optional)"
           variant="outlined"
@@ -61,7 +61,6 @@
           item-title="label"
           item-value="value"
         />
-
       </v-card-text>
 
       <v-divider />

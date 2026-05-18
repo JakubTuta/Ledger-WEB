@@ -2,7 +2,6 @@ export type AlertComparator = '>' | '<' | '>=' | '<='
 export type ConnectorKind = 'in_app' | 'email' | 'webhook'
 export type AlertSeverity = 'info' | 'warning' | 'critical'
 export type AlertUnit = 'ms' | 's' | '%' | 'count'
-export type AlertEventState = 'firing' | 'resolved'
 
 export const SEVERITY_LABELS: Record<number, AlertSeverity> = { 0: 'info', 1: 'warning', 2: 'critical' }
 export const SEVERITY_VALUES: Record<AlertSeverity, number> = { info: 0, warning: 1, critical: 2 }
@@ -23,6 +22,22 @@ export const METRIC_CATALOG: MetricDef[] = [
 ]
 
 export const COMPARATOR_OPTIONS: AlertComparator[] = ['>', '<', '>=', '<=']
+
+export interface ConnectorMeta {
+  label: string
+  icon: string
+  color: string
+}
+
+export const CONNECTOR_META: Record<ConnectorKind, ConnectorMeta> = {
+  webhook: { label: 'Webhook', icon: 'mdi-webhook', color: 'deep-purple' },
+  email: { label: 'Email', icon: 'mdi-email', color: 'blue' },
+  in_app: { label: 'In-app', icon: 'mdi-bell', color: 'amber-darken-2' },
+}
+
+export function connectorMeta(kind: ConnectorKind): ConnectorMeta {
+  return CONNECTOR_META[kind] ?? { label: kind, icon: 'mdi-send', color: 'grey' }
+}
 
 export function metricLabel(key: string): string {
   return METRIC_CATALOG.find(m => m.key === key)?.label ?? key
@@ -62,7 +77,6 @@ export interface AlertRule {
   severity: number
   connector_ids: number[]
   last_fired_at: string | null
-  last_state: string
   created_at: string
   updated_at: string
 }
@@ -106,7 +120,6 @@ export interface AlertEvent {
   unit: AlertUnit
   value: number
   severity: number
-  state: AlertEventState
   connectors_sent: string
   fired_at: string
 }

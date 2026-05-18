@@ -24,8 +24,6 @@
 
     <div v-else>
       <div class="hist-header d-flex align-center px-3 py-2">
-        <span class="col-state text-caption font-weight-medium text-medium-emphasis">Status</span>
-
         <span class="col-name text-caption font-weight-medium text-medium-emphasis">Rule</span>
 
         <span class="col-cond text-caption font-weight-medium text-medium-emphasis">Condition</span>
@@ -42,23 +40,14 @@
         :key="ev.id"
         class="hist-row d-flex align-center px-3 py-2"
       >
-        <div class="col-state">
-          <v-chip
-            :color="ev.state === 'firing'
-              ? 'error'
-              : 'success'"
-            size="x-small"
-            variant="tonal"
-            :prepend-icon="ev.state === 'firing'
-              ? 'mdi-fire'
-              : 'mdi-check'"
-          >
-            {{ ev.state }}
-          </v-chip>
-        </div>
+        <div class="col-name d-flex align-center gap-2 text-truncate">
+          <v-icon
+            icon="mdi-fire"
+            color="error"
+            size="16"
+          />
 
-        <div class="col-name text-body-2 text-truncate">
-          {{ ev.rule_name }}
+          <span class="text-body-2 text-truncate">{{ ev.rule_name }}</span>
         </div>
 
         <div class="col-cond text-caption text-mono text-medium-emphasis">
@@ -68,7 +57,7 @@
         </div>
 
         <div class="col-val text-caption font-weight-medium">
-          {{ formatValue(ev.value) }}{{ ev.unit === 'count'
+          {{ formatValue(ev.value, ev.unit) }}{{ ev.unit === 'count'
             ? ''
             : ev.unit }}
         </div>
@@ -77,9 +66,9 @@
           <v-icon
             v-for="(c, i) in parseConnectors(ev.connectors_sent)"
             :key="i"
-            :icon="kindIcon(c.kind)"
+            :icon="connectorMeta(c.kind).icon"
+            :color="connectorMeta(c.kind).color"
             size="16"
-            class="text-medium-emphasis"
           />
 
           <span
@@ -115,8 +104,8 @@
 </template>
 
 <script setup lang="ts">
-import type { AlertEvent, ConnectorKind } from '~/types/alerts'
-import { metricLabel } from '~/types/alerts'
+import type { AlertEvent, AlertUnit, ConnectorKind } from '~/types/alerts'
+import { connectorMeta, metricLabel } from '~/types/alerts'
 
 const props = defineProps<{
   events: AlertEvent[]
@@ -156,17 +145,20 @@ function parseConnectors(json: string): { kind: ConnectorKind, name: string }[] 
   }
 }
 
-function kindIcon(kind: ConnectorKind): string {
-  return { webhook: 'mdi-webhook', email: 'mdi-email', in_app: 'mdi-bell' }[kind] ?? 'mdi-send'
-}
+function formatValue(v: number, unit: AlertUnit): string {
+  if (unit === 'count') {
+    if (v >= 1000)
+      return `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
 
-function formatValue(v: number): string {
-  if (v >= 1000)
-    return `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
+    return String(Math.round(v))
+  }
+
+  if (unit === 'ms')
+    return String(Math.round(v))
 
   return Number.isInteger(v)
     ? String(v)
-    : v.toFixed(2)
+    : v.toFixed(2).replace(/\.?0+$/, '')
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -212,9 +204,8 @@ function formatTimestamp(timestamp: string): string {
   border-bottom: none;
 }
 
-.col-state { flex: 0 0 110px; }
-.col-name { flex: 1 1 24%; min-width: 0; }
-.col-cond { flex: 1 1 26%; min-width: 0; }
+.col-name { flex: 1 1 30%; min-width: 0; }
+.col-cond { flex: 1 1 30%; min-width: 0; }
 .col-val { flex: 0 0 90px; }
 .col-sent { flex: 0 0 80px; }
 .col-time { flex: 0 0 90px; text-align: right; }

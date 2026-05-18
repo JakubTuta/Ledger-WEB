@@ -108,6 +108,7 @@
 
 <script setup lang="ts">
 import type { Connector, ConnectorKind } from '~/types/alerts'
+import { connectorMeta } from '~/types/alerts'
 
 const props = defineProps<{
   kind: ConnectorKind
@@ -123,11 +124,7 @@ const emit = defineEmits<{
 
 const testResult = ref<Record<number, boolean>>({})
 
-const meta = computed(() => ({
-  webhook: { label: 'Webhook', icon: 'mdi-webhook', color: 'deep-purple' },
-  email: { label: 'Email', icon: 'mdi-email', color: 'blue' },
-  in_app: { label: 'In-app', icon: 'mdi-bell', color: 'amber-darken-2' },
-}[props.kind]))
+const meta = computed(() => connectorMeta(props.kind))
 
 const label = computed(() => meta.value.label)
 const icon = computed(() => meta.value.icon)

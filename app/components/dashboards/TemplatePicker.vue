@@ -47,13 +47,17 @@
 
                   <span
                     class="text-subtitle-2 font-weight-bold"
-                    :class="selected === template.id ? 'text-on-primary' : ''"
+                    :class="selected === template.id
+                      ? 'text-on-primary'
+                      : ''"
                   >{{ template.name }}</span>
                 </div>
 
                 <span
                   class="text-caption"
-                  :class="selected === template.id ? 'text-on-primary' : 'text-medium-emphasis'"
+                  :class="selected === template.id
+                    ? 'text-on-primary'
+                    : 'text-medium-emphasis'"
                 >{{ template.description }}</span>
 
                 <div class="d-flex mt-1 flex-wrap gap-1">
@@ -62,7 +66,9 @@
                     :key="panel.name"
                     size="x-small"
                     variant="outlined"
-                    :color="selected === template.id ? 'on-primary' : undefined"
+                    :color="selected === template.id
+                      ? 'on-primary'
+                      : undefined"
                   >
                     {{ panel.name }}
                   </v-chip>
@@ -71,7 +77,9 @@
                     v-if="template.panels.length > 3"
                     size="x-small"
                     variant="outlined"
-                    :color="selected === template.id ? 'on-primary' : 'medium-emphasis'"
+                    :color="selected === template.id
+                      ? 'on-primary'
+                      : 'medium-emphasis'"
                   >
                     +{{ template.panels.length - 3 }} more
                   </v-chip>

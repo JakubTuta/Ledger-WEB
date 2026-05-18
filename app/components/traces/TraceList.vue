@@ -8,9 +8,9 @@
 
       <span class="text-caption font-weight-medium text-medium-emphasis mr-2 flex-grow-1">Service · Operation</span>
 
-      <span class="text-caption font-weight-medium text-medium-emphasis mr-3 flex-shrink-0 trace-duration-col">Duration</span>
+      <span class="text-caption font-weight-medium text-medium-emphasis trace-duration-col mr-3 flex-shrink-0">Duration</span>
 
-      <span class="text-caption font-weight-medium text-medium-emphasis mr-3 flex-shrink-0 trace-spans-col">Spans</span>
+      <span class="text-caption font-weight-medium text-medium-emphasis trace-spans-col mr-3 flex-shrink-0">Spans</span>
 
       <span class="text-caption font-weight-medium text-medium-emphasis trace-time-col flex-shrink-0">Time</span>
 
@@ -25,24 +25,30 @@
       <div class="trace-row-inner d-flex align-center">
         <div
           class="trace-status-bar flex-shrink-0"
-          :class="trace.has_error ? 'trace-bar--error' : 'trace-bar--success'"
+          :class="trace.has_error
+            ? 'trace-bar--error'
+            : 'trace-bar--success'"
         />
 
         <v-chip
-          :color="trace.has_error ? 'error' : 'success'"
+          :color="trace.has_error
+            ? 'error'
+            : 'success'"
           size="x-small"
           variant="flat"
           class="trace-status-chip font-weight-bold mr-2 flex-shrink-0"
           label
         >
-          {{ trace.has_error ? 'ERR' : 'OK' }}
+          {{ trace.has_error
+            ? 'ERR'
+            : 'OK' }}
         </v-chip>
 
         <span class="text-caption text-mono mr-2 flex-grow-1 text-truncate">
           {{ trace.root_service }} · {{ trace.root_operation }}
         </span>
 
-        <span class="text-caption text-medium-emphasis mr-3 flex-shrink-0 trace-duration-col">
+        <span class="text-caption text-medium-emphasis trace-duration-col mr-3 flex-shrink-0">
           {{ formatDuration(trace.duration_ms) }}
         </span>
 
@@ -50,7 +56,7 @@
           color="default"
           variant="text"
           size="x-small"
-          class="mr-3 flex-shrink-0 trace-spans-col"
+          class="trace-spans-col mr-3 flex-shrink-0"
         >
           {{ trace.span_count }}
         </v-chip>
@@ -75,7 +81,7 @@
           size="x-small"
           class="trace-pin-col flex-shrink-0"
           title="Pin trace"
-          @click="emit('pin-trace', { trace_id: trace.trace_id })"
+          @click="emit('pin-trace', {'trace_id': trace.trace_id})"
         />
       </div>
     </div>
@@ -120,7 +126,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'pin-trace': [payload: { trace_id: string; project_id?: string }]
+  'pin-trace': [payload: { trace_id: string, project_id?: string }]
   'load-page': [offset: number]
 }>()
 

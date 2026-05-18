@@ -6,6 +6,8 @@
       <NuxtPage />
     </v-main>
 
+    <AlertToast v-if="authStore.isAuthenticated" />
+
     <v-snackbar
       v-model="showConnectionError"
       location="top"

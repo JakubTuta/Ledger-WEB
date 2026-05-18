@@ -286,7 +286,7 @@
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
               @refresh="() => panelsStore.fetchBottleneckListForPanel(panel)"
-              @load-page="() => panelsStore.fetchBottleneckListForPanel(panel, { append: true })"
+              @load-page="() => panelsStore.fetchBottleneckListForPanel(panel, {'append': true})"
             />
 
             <HeatmapPanelCard
@@ -300,7 +300,6 @@
               @time-options="openTimeOptionsDialog(panel)"
               @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
             />
-
 
             <TracePanelCard
               v-else-if="panel.type === 'trace'"

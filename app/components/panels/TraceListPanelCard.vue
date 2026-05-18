@@ -42,19 +42,23 @@
           <v-sheet
             color="surface-variant"
             rounded
-            class="pa-3 text-left mb-3"
+            class="mb-3 pa-3 text-left"
             style="font-family: monospace; font-size: 12px;"
           >
             <div>from ledger import init, get_tracer</div>
+
             <div class="mt-1">
               init(api_key="...", project_id={{ panel.project_id }})
             </div>
+
             <div class="mt-1">
               tracer = get_tracer("my-service")
             </div>
+
             <div class="mt-1">
               with tracer.start_span("operation"):
             </div>
+
             <div class="ml-4">
               ...
             </div>
@@ -197,6 +201,7 @@ async function handlePinTrace(payload: { trace_id: string }) {
     await nextTick()
     const el = document.getElementById(`panel-${existing.id}`)
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
     return
   }
 
@@ -209,9 +214,17 @@ async function handlePinTrace(payload: { trace_id: string }) {
     project_id: props.panel.project_id,
     trace_id: payload.trace_id,
     index: panelsStore.panels.length,
-    period: hasPeriod ? props.panel.period : (hasDates ? null : 'last7days'),
-    periodFrom: hasDates && !hasPeriod ? props.panel.periodFrom : null,
-    periodTo: hasDates && !hasPeriod ? props.panel.periodTo : null,
+    period: hasPeriod
+      ? props.panel.period
+      : (hasDates
+          ? null
+          : 'last7days'),
+    periodFrom: hasDates && !hasPeriod
+      ? props.panel.periodFrom
+      : null,
+    periodTo: hasDates && !hasPeriod
+      ? props.panel.periodTo
+      : null,
   }
 
   const result = await panelsStore.createPanel(newPanel)

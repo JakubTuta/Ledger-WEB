@@ -2,11 +2,73 @@ import type {
   InboxNotification,
   NotificationFilters,
   NotificationItem,
+  NotificationLevel,
   NotificationsListResponse,
+  RawInboxListResponse,
+  RawInboxNotification,
   SSEConnectedEvent,
   SSEErrorNotification,
 } from '~/types/notifications'
 import { defineStore } from 'pinia'
+
+const SEVERITY_TO_LEVEL: Record<number, NotificationLevel> = {
+  0: 'info',
+  1: 'warning',
+  2: 'critical',
+}
+
+function formatMetricNumber(value: unknown): string {
+  const n = Number(value)
+  if (!Number.isFinite(n))
+    return String(value ?? '')
+
+  return Number.isInteger(n)
+    ? String(n)
+    : n.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function adaptRawNotification(raw: RawInboxNotification): InboxNotification {
+  let payload: Record<string, any> = {}
+  try {
+    payload = raw.payload
+      ? JSON.parse(raw.payload)
+      : {}
+  }
+  catch {
+    payload = {}
+  }
+
+  const level = SEVERITY_TO_LEVEL[raw.severity] ?? 'info'
+  let message: string = payload.message ?? ''
+  let errorType: string = payload.error_type ?? ''
+
+  if (raw.kind === 'alert_firing') {
+    const unit = payload.unit && payload.unit !== 'count'
+      ? payload.unit
+      : ''
+    const name = payload.name ?? 'Alert rule'
+    errorType = 'Alert firing'
+    message = `${name}: ${payload.metric} ${payload.comparator} `
+      + `${formatMetricNumber(payload.threshold)}${unit} `
+      + `(now ${formatMetricNumber(payload.value)}${unit})`
+  }
+  else if (raw.kind === 'quota_warning') {
+    errorType = errorType || 'Quota warning'
+  }
+
+  return {
+    id: String(raw.id),
+    kind: raw.kind,
+    level,
+    message,
+    error_type: errorType || undefined,
+    project_id: raw.project_id,
+    project_name: payload.project_name,
+    timestamp: payload.fired_at || raw.created_at,
+    read_at: raw.read_at,
+    expanded: false,
+  }
+}
 
 export const useNotificationStreamStore = defineStore('notificationStream', () => {
   const authStore = useAuthStore()
@@ -26,7 +88,24 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   const inboxHasMore = ref(false)
   const inboxTotal = ref(0)
 
-  const unreadCount = computed(() => inbox.value.filter(n => !n.read_at).length)
+  const serverUnreadCount = ref(0)
+  const unreadCount = computed(() => Math.max(
+    serverUnreadCount.value,
+    inbox.value.filter(n => !n.read_at).length,
+  ))
+
+  // Transient top-right alert toasts
+  const toasts = ref<InboxNotification[]>([])
+
+  const dismissToast = (id: string) => {
+    toasts.value = toasts.value.filter(t => t.id !== id)
+  }
+
+  const pushToast = (notification: InboxNotification) => {
+    if (toasts.value.some(t => t.id === notification.id))
+      return
+    toasts.value = [notification, ...toasts.value].slice(0, 4)
+  }
 
   // Alert sound
   const soundEnabled = ref(true)
@@ -75,8 +154,11 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
       if (kind && kind.startsWith('alert_')) {
         if (!seenAlertIds.has(n.id)) {
           seenAlertIds.add(n.id)
-          if (alertSeedDone && !n.read_at)
+          if (alertSeedDone && !n.read_at) {
             triggered = true
+            if (kind === 'alert_firing')
+              pushToast(n)
+          }
         }
       }
     }
@@ -93,6 +175,18 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
 
   // --- Inbox REST methods ---
 
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await client.get<{ count: number }>(
+        '/api/v1/notifications/unread-count',
+      )
+      serverUnreadCount.value = response.data.count
+    }
+    catch {
+      /* non-critical */
+    }
+  }
+
   const fetchInbox = async (force = false) => {
     if (inboxLoading.value)
       return
@@ -101,14 +195,15 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
 
     inboxLoading.value = true
     try {
-      const response = await client.get<NotificationsListResponse>('/api/v1/notifications', {
-        params: { limit: 50, offset: 0 },
+      const response = await client.get<RawInboxListResponse>('/api/v1/notifications', {
+        params: { limit: 50 },
       })
-      inbox.value = response.data.notifications.map(n => ({ ...n, expanded: false }))
-      inboxTotal.value = response.data.total
+      inbox.value = response.data.notifications.map(adaptRawNotification)
       inboxHasMore.value = response.data.has_more
+      inboxTotal.value = inbox.value.length
       inboxLastFetch.value = Date.now()
       detectNewAlerts(inbox.value)
+      fetchUnreadCount()
     }
     catch (error) {
       console.error('Error fetching notification inbox:', error)
@@ -118,13 +213,59 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     }
   }
 
-  const fetchHistory = async (filters: NotificationFilters = {}) => {
-    try {
-      const response = await client.get<NotificationsListResponse>('/api/v1/notifications', {
-        params: filters,
-      })
+  const fetchMoreInbox = async () => {
+    if (inboxLoading.value || !inboxHasMore.value || inbox.value.length === 0)
+      return
 
-      return response.data
+    const numericIds = inbox.value
+      .map(n => Number(n.id))
+      .filter(id => Number.isFinite(id))
+    if (numericIds.length === 0)
+      return
+    const beforeId = Math.min(...numericIds)
+
+    inboxLoading.value = true
+    try {
+      const response = await client.get<RawInboxListResponse>('/api/v1/notifications', {
+        params: { limit: 50, before_id: beforeId },
+      })
+      const adapted = response.data.notifications.map(adaptRawNotification)
+      const existing = new Set(inbox.value.map(n => n.id))
+      inbox.value.push(...adapted.filter(n => !existing.has(n.id)))
+      inboxHasMore.value = response.data.has_more
+      inboxTotal.value = inbox.value.length
+    }
+    catch (error) {
+      console.error('Error fetching more notifications:', error)
+    }
+    finally {
+      inboxLoading.value = false
+    }
+  }
+
+  const fetchHistory = async (
+    filters: NotificationFilters = {},
+  ): Promise<NotificationsListResponse | null> => {
+    const params: Record<string, any> = {
+      limit: filters.limit ?? 50,
+    }
+    if (filters.unread)
+      params.unread_only = true
+    if ((filters as any).before_id)
+      params.before_id = (filters as any).before_id
+
+    try {
+      const response = await client.get<RawInboxListResponse>(
+        '/api/v1/notifications',
+        { params },
+      )
+      const notifications = response.data.notifications.map(adaptRawNotification)
+
+      return {
+        notifications,
+        total: notifications.length,
+        has_more: response.data.has_more,
+      }
     }
     catch (error) {
       console.error('Error fetching notification history:', error)
@@ -137,8 +278,11 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     try {
       await client.post(`/api/v1/notifications/${id}/read`)
       const item = inbox.value.find(n => n.id === id)
-      if (item)
+      if (item && !item.read_at) {
         item.read_at = new Date().toISOString()
+        serverUnreadCount.value = Math.max(0, serverUnreadCount.value - 1)
+      }
+      dismissToast(id)
     }
     catch (error) {
       console.error('Error marking notification read:', error)
@@ -149,6 +293,7 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     try {
       await client.post('/api/v1/notifications/read-all')
       inbox.value.forEach(n => (n.read_at = new Date().toISOString()))
+      serverUnreadCount.value = 0
     }
     catch (error) {
       console.error('Error marking all notifications read:', error)
@@ -158,7 +303,11 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   const deleteNotificationFromInbox = async (id: string) => {
     try {
       await client.delete(`/api/v1/notifications/${id}`)
+      const removed = inbox.value.find(n => n.id === id)
+      if (removed && !removed.read_at)
+        serverUnreadCount.value = Math.max(0, serverUnreadCount.value - 1)
       inbox.value = inbox.value.filter(n => n.id !== id)
+      dismissToast(id)
     }
     catch (error) {
       console.error('Error deleting notification:', error)
@@ -199,9 +348,13 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
         notifications.value.unshift(notification)
 
         // Add to inbox
+        const isAlert = (parsedData as any).log_type === 'alert'
+
         const inboxItem: InboxNotification = {
           id: notification.id,
-          kind: 'error_notification',
+          kind: isAlert
+            ? 'alert_firing'
+            : 'error_notification',
           level: parsedData.level,
           message: parsedData.message,
           error_type: parsedData.error_type,
@@ -383,11 +536,16 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     inboxTotal,
     unreadCount,
     fetchInbox,
+    fetchMoreInbox,
+    fetchUnreadCount,
     fetchHistory,
     markRead,
     markAllRead,
     deleteNotificationFromInbox,
     soundEnabled,
     toggleSound,
+    toasts,
+    pushToast,
+    dismissToast,
   }
 })

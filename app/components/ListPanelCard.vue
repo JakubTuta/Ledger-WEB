@@ -486,7 +486,9 @@
 
               <!-- Progress bar -->
               <v-progress-linear
-                :model-value="maxValue > 0 ? ((item.value ?? 0) / maxValue) * 100 : 0"
+                :model-value="maxValue > 0
+                  ? (item.value ?? 0) / maxValue * 100
+                  : 0"
                 :color="getValueBarColor(item.value, maxValue)"
                 height="2"
                 bg-opacity="0.08"
@@ -500,7 +502,7 @@
                   v-if="item.expanded"
                   class="log-row-detail pa-3"
                 >
-                  <div class="d-flex flex-wrap gap-2 mb-2">
+                  <div class="d-flex mb-2 flex-wrap gap-2">
                     <v-chip
                       size="x-small"
                       variant="outlined"
@@ -802,7 +804,9 @@ const statusClassFilter = ref<string>('all')
 const searchFilter = ref<string>('')
 
 // Filter state (bottleneck)
-const bottleneckStatisticFilter = ref<string>(props.panel.statistic && props.panel.statistic !== 'count' ? props.panel.statistic : 'avg')
+const bottleneckStatisticFilter = ref<string>(props.panel.statistic && props.panel.statistic !== 'count'
+  ? props.panel.statistic
+  : 'avg')
 const bottleneckSortFilter = ref<string>(props.panel.sort ?? 'desc')
 
 const bottleneckStatisticOptions = [
@@ -973,7 +977,7 @@ function formatCount(n: number): string {
   return String(n)
 }
 
-function parseRoute(route?: string): { method: string; path: string } {
+function parseRoute(route?: string): { method: string, path: string } {
   if (!route)
     return { method: '?', path: '—' }
   const idx = route.indexOf(' ')

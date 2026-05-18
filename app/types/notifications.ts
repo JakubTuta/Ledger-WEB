@@ -2,7 +2,13 @@ export type NotificationLevel = 'error' | 'critical' | 'info' | 'warning'
 
 export type NotificationType = 'exception'
 
-export type NotificationKind = 'error_notification' | 'alert' | 'info'
+export type NotificationKind
+  = | 'error_notification'
+    | 'error'
+    | 'alert_firing'
+    | 'quota_warning'
+    | 'alert'
+    | 'info'
 
 export interface ProjectNotificationSettings {
   enabled: boolean
@@ -61,6 +67,23 @@ export interface InboxNotification {
 export interface NotificationsListResponse {
   notifications: InboxNotification[]
   total: number
+  has_more: boolean
+}
+
+export interface RawInboxNotification {
+  id: number
+  user_id: number
+  project_id: number
+  kind: NotificationKind
+  severity: number
+  payload: string
+  created_at: string
+  read_at: string | null
+  expires_at: string
+}
+
+export interface RawInboxListResponse {
+  notifications: RawInboxNotification[]
   has_more: boolean
 }
 

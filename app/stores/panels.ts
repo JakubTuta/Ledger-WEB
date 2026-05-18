@@ -72,7 +72,7 @@ export const usePanelsStore = defineStore('panels', () => {
   const logsHasMore = ref<Map<string, boolean>>(new Map())
 
   const panelBottleneckEntries = ref<Map<string, (BottleneckListEntry & { max_value_route?: number })[]>>(new Map())
-  const panelBottleneckMeta = ref<Map<string, { max_value: number; total: number; has_more: boolean }>>(new Map())
+  const panelBottleneckMeta = ref<Map<string, { max_value: number, total: number, has_more: boolean }>>(new Map())
   const bottleneckListLoading = ref<Set<string>>(new Set())
   const bottleneckOffset = ref<Map<string, number>>(new Map())
 
@@ -361,14 +361,18 @@ export const usePanelsStore = defineStore('panels', () => {
       return
 
     const limit = 25
-    const offset = opts?.append ? (bottleneckOffset.value.get(panel.id) ?? 0) : 0
+    const offset = opts?.append
+      ? (bottleneckOffset.value.get(panel.id) ?? 0)
+      : 0
 
     bottleneckListLoading.value.add(panel.id)
 
     try {
       const searchParams = new URLSearchParams()
       searchParams.set('project_id', panel.project_id)
-      searchParams.set('statistic', (panel.statistic && panel.statistic !== 'count') ? panel.statistic : 'avg')
+      searchParams.set('statistic', (panel.statistic && panel.statistic !== 'count')
+        ? panel.statistic
+        : 'avg')
       searchParams.set('sort', panel.sort ?? 'desc')
       searchParams.set('limit', String(limit))
       searchParams.set('offset', String(offset))
@@ -421,7 +425,7 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const updateBottleneckListFilter = async (
     panelId: string,
-    patch: { statistic?: Exclude<BottleneckStatistic, 'count'>; sort?: BottleneckSort; search?: string },
+    patch: { statistic?: Exclude<BottleneckStatistic, 'count'>, sort?: BottleneckSort, search?: string },
   ) => {
     const panel = panels.value.find(p => p.id === panelId)
     if (!panel)
@@ -545,7 +549,9 @@ export const usePanelsStore = defineStore('panels', () => {
       total.value += 1
 
       const panelProjectId = response.data.project_id
-      let targetTab = activeTab.value?.projectId === panelProjectId ? activeTab.value : null
+      let targetTab = activeTab.value?.projectId === panelProjectId
+        ? activeTab.value
+        : null
       if (!targetTab) {
         const projectTabs = tabsForProject(panelProjectId)
         targetTab = projectTabs.find(t => t.projectId === panelProjectId) ?? null
@@ -934,10 +940,12 @@ export const usePanelsStore = defineStore('panels', () => {
         for (const [pid, ids] of byProject) {
           const t = addTab('Default', null, pid)
           t.panelIds = ids
-          if (!firstTabId) firstTabId = t.id
+          if (!firstTabId)
+            firstTabId = t.id
         }
         saveTabsToStorage(tabs.value)
-        if (firstTabId) setActiveTab(firstTabId)
+        if (firstTabId)
+          setActiveTab(firstTabId)
       }
       localStorage.setItem(TABS_VERSION_KEY, '1')
     }
@@ -949,7 +957,8 @@ export const usePanelsStore = defineStore('panels', () => {
         const byProject = new Map<string, string[]>()
         for (const panelId of tab.panelIds) {
           const panel = panels.value.find(p => p.id === panelId)
-          if (!panel) continue
+          if (!panel)
+            continue
           const ids = byProject.get(panel.project_id) ?? []
           ids.push(panelId)
           byProject.set(panel.project_id, ids)
@@ -958,7 +967,8 @@ export const usePanelsStore = defineStore('panels', () => {
         for (const [pid, ids] of byProject) {
           const newTab = addTab(tab.name, tab.templateId, pid)
           newTab.panelIds = ids
-          if (activeTabId.value === tab.id) setActiveTab(newTab.id)
+          if (activeTabId.value === tab.id)
+            setActiveTab(newTab.id)
         }
       }
       saveTabsToStorage(tabs.value)

@@ -106,9 +106,12 @@
             </v-list-item-title>
 
             <v-list-item-subtitle class="text-caption">
-              <span>{{ notification.project_name }}</span>
+              <span v-if="notification.project_name">{{ notification.project_name }}</span>
 
-              <span class="mx-1">·</span>
+              <span
+                v-if="notification.project_name"
+                class="mx-1"
+              >·</span>
 
               <span>{{ formatRelativeTime(notification.timestamp) }}</span>
             </v-list-item-subtitle>
