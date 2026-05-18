@@ -28,6 +28,63 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
 
   const unreadCount = computed(() => inbox.value.filter(n => !n.read_at).length)
 
+  // Alert sound
+  const soundEnabled = ref(true)
+  if (import.meta.client)
+    soundEnabled.value = localStorage.getItem('alertSoundEnabled') !== 'false'
+
+  const seenAlertIds = new Set<string>()
+  let alertSeedDone = false
+
+  const toggleSound = () => {
+    soundEnabled.value = !soundEnabled.value
+    if (import.meta.client)
+      localStorage.setItem('alertSoundEnabled', String(soundEnabled.value))
+  }
+
+  const playAlertSound = () => {
+    if (!soundEnabled.value || !import.meta.client)
+      return
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext
+      if (!Ctx)
+        return
+      const ctx = new Ctx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = 880
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.42)
+      osc.onended = () => ctx.close()
+    }
+    catch {
+      /* audio not available */
+    }
+  }
+
+  const detectNewAlerts = (items: InboxNotification[]) => {
+    let triggered = false
+    for (const n of items) {
+      const kind = (n as any).kind as string | undefined
+      if (kind && kind.startsWith('alert_')) {
+        if (!seenAlertIds.has(n.id)) {
+          seenAlertIds.add(n.id)
+          if (alertSeedDone && !n.read_at)
+            triggered = true
+        }
+      }
+    }
+    alertSeedDone = true
+    if (triggered)
+      playAlertSound()
+  }
+
   let abortController: AbortController | null = null
   let reconnectTimeout: NodeJS.Timeout | null = null
   let reconnectAttempts = 0
@@ -51,6 +108,7 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
       inboxTotal.value = response.data.total
       inboxHasMore.value = response.data.has_more
       inboxLastFetch.value = Date.now()
+      detectNewAlerts(inbox.value)
     }
     catch (error) {
       console.error('Error fetching notification inbox:', error)
@@ -112,6 +170,7 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
       return
     inbox.value.unshift({ ...notification, expanded: false })
     inboxTotal.value++
+    detectNewAlerts([notification])
   }
 
   // --- SSE handling ---
@@ -328,5 +387,7 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     markRead,
     markAllRead,
     deleteNotificationFromInbox,
+    soundEnabled,
+    toggleSound,
   }
 })

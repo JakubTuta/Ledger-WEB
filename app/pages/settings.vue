@@ -42,7 +42,6 @@
         prepend-icon="mdi-account-group"
         @click="mobileSectionClick('sharing')"
       />
-
     </v-list>
   </v-navigation-drawer>
 
@@ -109,7 +108,6 @@
               prepend-icon="mdi-account-group"
               @click="scrollToSection('sharing')"
             />
-
           </v-list>
         </v-col>
 
@@ -179,14 +177,6 @@
 
                 <v-card-text>
                   <NotificationPreferences />
-
-                  <v-divider class="my-6" />
-
-                  <div class="text-h6 font-weight-bold mb-4">
-                    Alert channel preferences
-                  </div>
-
-                  <AlertsPreferenceMatrix />
                 </v-card-text>
               </v-card>
             </div>
@@ -286,7 +276,6 @@
                 </v-card-text>
               </v-card>
             </div>
-
           </div>
         </v-col>
       </v-row>

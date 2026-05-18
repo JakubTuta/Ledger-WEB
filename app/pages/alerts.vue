@@ -3,238 +3,107 @@
     fluid
     class="pa-4"
   >
-    <div class="d-flex align-center mb-4">
-      <v-icon
-        icon="mdi-bell-alert"
-        class="mr-2"
-      />
-
-      <span class="text-h5 font-weight-bold">Alerts</span>
-
-      <v-spacer />
-
-      <v-select
-        v-model="selectedProjectId"
-        label="Project"
-        variant="outlined"
-        density="compact"
-        :items="projectOptions"
-        item-title="name"
-        item-value="id"
-        hide-details
-        style="max-width: 230px"
-      />
-    </div>
-
     <v-card
+      class="pa-4"
       elevation="1"
     >
-      <v-tabs
-        v-model="activeTab"
-        color="primary"
+      <div class="d-flex align-center mb-2">
+        <v-spacer />
+
+        <v-select
+          v-model="selectedProjectId"
+          label="Project"
+          variant="outlined"
+          density="compact"
+          :items="projectOptions"
+          item-title="name"
+          item-value="id"
+          hide-details
+          style="max-width: 230px"
+        />
+      </div>
+
+      <!-- Connectors -->
+      <div class="text-overline mb-2">
+        Channels
+      </div>
+
+      <div class="d-flex mb-6 flex-wrap gap-3">
+        <ConnectorCard
+          v-for="kind in connectorKinds"
+          :key="kind"
+          :kind="kind"
+          :items="connectorsByKind(kind)"
+          :loading="connectorsLoading"
+          @connect="openConnectDialog"
+          @edit="editConnector"
+          @delete="confirmDeleteConnector"
+        />
+      </div>
+      <!-- /connectors -->
+
+      <!-- Alert rules -->
+      <div class="d-flex align-center mb-2">
+        <span class="text-overline">Alert rules</span>
+
+        <v-spacer />
+
+        <v-btn
+          color="primary"
+          size="small"
+          prepend-icon="mdi-plus"
+          :disabled="!selectedProjectId"
+          @click="openRuleDialog()"
+        >
+          New rule
+        </v-btn>
+      </div>
+
+      <v-card
+        variant="outlined"
+        class="mb-6"
       >
-        <v-tab value="rules">
-          <v-icon
-            icon="mdi-bell-check"
-            class="mr-2"
-          />
-          Rules
-        </v-tab>
+        <RuleList
+          :rules="rules"
+          :connectors="connectors"
+          :loading="rulesLoading"
+          @edit="openRuleDialog"
+          @delete="confirmDeleteRule"
+          @toggle="handleToggleRule"
+        />
+      </v-card>
 
-        <v-tab value="channels">
-          <v-icon
-            icon="mdi-send-circle"
-            class="mr-2"
-          />
-          Channels
-        </v-tab>
-      </v-tabs>
+      <!-- History -->
+      <div class="text-overline mb-2">
+        History
+      </div>
 
-      <v-divider />
-
-      <v-window v-model="activeTab">
-        <!-- Rules tab -->
-        <v-window-item value="rules">
-          <div class="d-flex justify-end pa-3">
-            <v-btn
-              color="primary"
-              prepend-icon="mdi-plus"
-              size="small"
-              @click="openRuleEditor()"
-            >
-              New rule
-            </v-btn>
-          </div>
-
-          <v-data-table
-            :headers="ruleHeaders"
-            :items="rules"
-            :loading="rulesLoading"
-            :items-per-page="-1"
-            hide-default-footer
-            no-data-text="No alert rules yet"
-            item-value="id"
-          >
-            <template #item.last_state="{item}">
-              <v-chip
-                :color="statusColor(item.last_state)"
-                size="small"
-                variant="flat"
-              >
-                {{ item.last_state }}
-              </v-chip>
-            </template>
-
-            <template #item.enabled="{item}">
-              <v-switch
-                :model-value="item.enabled"
-                color="primary"
-                density="compact"
-                hide-details
-                @update:model-value="handleToggleRule(item, $event)"
-              />
-            </template>
-
-            <template #item.last_fired_at="{item}">
-              <span class="text-caption">
-                {{ item.last_fired_at
-                  ? formatRelative(item.last_fired_at)
-                  : 'Never' }}
-              </span>
-            </template>
-
-            <template #item.actions="{item}">
-              <div class="d-flex gap-1">
-                <v-btn
-                  icon="mdi-pencil"
-                  variant="text"
-                  size="x-small"
-                  @click="openRuleEditor(item)"
-                />
-
-                <v-btn
-                  icon="mdi-delete"
-                  variant="text"
-                  size="x-small"
-                  color="error"
-                  @click="confirmDeleteRule(item)"
-                />
-              </div>
-            </template>
-          </v-data-table>
-        </v-window-item>
-
-        <!-- Channels tab -->
-        <v-window-item value="channels">
-          <div class="d-flex justify-end pa-3">
-            <v-btn
-              color="primary"
-              prepend-icon="mdi-plus"
-              size="small"
-              @click="openChannelEditor()"
-            >
-              New channel
-            </v-btn>
-          </div>
-
-          <v-data-table
-            :headers="channelHeaders"
-            :items="channels"
-            :loading="channelsLoading"
-            :items-per-page="-1"
-            hide-default-footer
-            no-data-text="No alert channels yet"
-            item-value="id"
-          >
-            <template #item.kind="{item}">
-              <v-chip
-                :prepend-icon="channelIcon(item.kind)"
-                size="small"
-                variant="flat"
-              >
-                {{ item.kind }}
-              </v-chip>
-            </template>
-
-            <template #item.config="{item}">
-              <span class="text-caption">{{ maskTarget(item) }}</span>
-            </template>
-
-            <template #item.enabled="{item}">
-              <v-switch
-                :model-value="item.enabled"
-                color="primary"
-                density="compact"
-                hide-details
-                :disabled="item.kind === 'in_app'"
-                @update:model-value="handleToggleChannel(item, $event)"
-              />
-            </template>
-
-            <template #item.actions="{item}">
-              <div class="d-flex align-center gap-1">
-                <v-btn
-                  variant="flat"
-                  size="x-small"
-                  :loading="testingChannelId === item.id"
-                  @click="handleTestChannel(item)"
-                >
-                  Test
-                </v-btn>
-
-                <v-icon
-                  v-if="testResults[item.id]?.success === true"
-                  icon="mdi-check-circle"
-                  color="success"
-                  size="18"
-                />
-
-                <v-icon
-                  v-else-if="testResults[item.id]?.success === false"
-                  icon="mdi-close-circle"
-                  color="error"
-                  size="18"
-                />
-
-                <v-btn
-                  icon="mdi-pencil"
-                  variant="text"
-                  size="x-small"
-                  :disabled="item.kind === 'in_app'"
-                  @click="openChannelEditor(item)"
-                />
-
-                <v-btn
-                  icon="mdi-delete"
-                  variant="text"
-                  size="x-small"
-                  color="error"
-                  :disabled="item.kind === 'in_app'"
-                  @click="confirmDeleteChannel(item)"
-                />
-              </div>
-            </template>
-          </v-data-table>
-        </v-window-item>
-      </v-window>
+      <v-card
+        variant="outlined"
+      >
+        <HistoryList
+          :events="history"
+          :has-more="historyHasMore"
+          :loading="historyLoading"
+          @load-more="loadMoreHistory"
+        />
+      </v-card>
     </v-card>
 
-    <!-- Rule editor dialog -->
-    <AlertsRuleEditorDialog
-      v-if="selectedProjectId"
-      v-model="ruleEditorOpen"
-      :project-id="selectedProjectId"
-      :rule="editingRule"
-      @saved="onRuleSaved"
+    <!-- Connect dialog -->
+    <ConnectDialog
+      v-model="connectDialogOpen"
+      :kind="connectDialogKind"
+      :connector="editingConnector"
+      @saved="onConnectorSaved"
     />
 
-    <!-- Channel editor dialog -->
-    <AlertsChannelEditorDialog
-      v-if="selectedProjectId"
-      v-model="channelEditorOpen"
-      :project-id="selectedProjectId"
-      :channel="editingChannel"
-      @saved="onChannelSaved"
+    <!-- Rule dialog -->
+    <RuleDialog
+      v-model="ruleDialogOpen"
+      :default-project-id="selectedProjectId"
+      :rule="editingRule"
+      @saved="onRuleSaved"
     />
 
     <!-- Delete confirm -->
@@ -244,9 +113,7 @@
     >
       <v-card>
         <v-card-title class="pa-4">
-          Delete {{ deletingItem?.type === 'rule'
-            ? 'Rule'
-            : 'Channel' }}?
+          Delete {{ deleteTarget?.type }}?
         </v-card-title>
 
         <v-card-text>
@@ -278,7 +145,12 @@
 </template>
 
 <script setup lang="ts">
-import type { AlertChannel, AlertRule } from '~/types/alerts'
+import type { AlertRule, Connector, ConnectorKind } from '~/types/alerts'
+import ConnectDialog from '~/components/alerts/ConnectDialog.vue'
+import ConnectorCard from '~/components/alerts/ConnectorCard.vue'
+import HistoryList from '~/components/alerts/HistoryList.vue'
+import RuleDialog from '~/components/alerts/RuleDialog.vue'
+import RuleList from '~/components/alerts/RuleList.vue'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -290,158 +162,87 @@ useSeoMeta({
 const alertsStore = useAlertsStore()
 const projectsStore = useProjectsStore()
 const { projects } = storeToRefs(projectsStore)
+const { connectors } = storeToRefs(alertsStore)
 
-const activeTab = ref('rules')
+const connectorKinds: ConnectorKind[] = ['webhook', 'email', 'in_app']
 const selectedProjectId = ref<number | null>(null)
 
-const selectedProject = computed(() => projects.value.find(p => p.project_id === selectedProjectId.value) ?? null,
-)
+const connectDialogOpen = ref(false)
+const connectDialogKind = ref<ConnectorKind>('webhook')
+const editingConnector = ref<Connector | undefined>()
 
-const ruleEditorOpen = ref(false)
+const ruleDialogOpen = ref(false)
 const editingRule = ref<AlertRule | undefined>()
-const channelEditorOpen = ref(false)
-const editingChannel = ref<AlertChannel | undefined>()
-const deleteConfirmOpen = ref(false)
-const deletingItem = ref<{ type: 'rule' | 'channel', id: number } | null>(null)
-const deleting = ref(false)
-const testingChannelId = ref<number | null>(null)
-const testResults = ref<Record<number, { success: boolean }>>({})
 
-const projectOptions = computed(() => projects.value.map(p => ({ id: p.project_id, name: p.name })),
-)
+const deleteConfirmOpen = ref(false)
+const deleteTarget = ref<{ type: 'rule' | 'connector', id: number } | null>(null)
+const deleting = ref(false)
+
+const projectOptions = computed(() => projects.value.map(p => ({ id: p.project_id, name: p.name })))
+
+const connectorsLoading = computed(() => alertsStore.connectorsLoading)
 
 const rules = computed(() => (selectedProjectId.value
   ? alertsStore.getRulesForProject(selectedProjectId.value).value
-  : []),
-)
-
-const channels = computed(() => (selectedProjectId.value
-  ? alertsStore.getChannelsForProject(selectedProjectId.value).value
-  : []),
-)
+  : []))
 
 const rulesLoading = computed(() => (selectedProjectId.value
   ? alertsStore.rulesLoading.has(selectedProjectId.value)
-  : false),
-)
+  : false))
 
-const channelsLoading = computed(() => (selectedProjectId.value
-  ? alertsStore.channelsLoading.has(selectedProjectId.value)
-  : false),
-)
+const history = computed(() => (selectedProjectId.value
+  ? alertsStore.getHistoryForProject(selectedProjectId.value).value
+  : []))
 
-const ruleHeaders = [
-  { title: 'Name', key: 'name' },
-  { title: 'Metric', key: 'metric' },
-  { title: 'Condition', key: 'comparator', value: (r: AlertRule) => `${r.comparator} ${r.threshold}` },
-  { title: 'Last fired', key: 'last_fired_at' },
-  { title: 'Status', key: 'last_state' },
-  { title: 'Enabled', key: 'enabled' },
-  { title: '', key: 'actions', sortable: false },
-]
+const historyLoading = computed(() => (selectedProjectId.value
+  ? alertsStore.historyLoading.has(selectedProjectId.value)
+  : false))
 
-const channelHeaders = [
-  { title: 'Name', key: 'name' },
-  { title: 'Kind', key: 'kind' },
-  { title: 'Target', key: 'config' },
-  { title: 'Enabled', key: 'enabled' },
-  { title: '', key: 'actions', sortable: false },
-]
+const historyHasMore = computed(() => (selectedProjectId.value
+  ? alertsStore.historyHasMore.get(selectedProjectId.value) ?? false
+  : false))
 
-function statusColor(status: string): string {
-  const map: Record<string, string> = { firing: 'error', ok: 'success', disabled: 'default' }
-
-  return map[status] ?? 'default'
+function connectorsByKind(kind: ConnectorKind): Connector[] {
+  return connectors.value.filter(c => c.kind === kind)
 }
 
-function channelIcon(kind: string): string {
-  const map: Record<string, string> = {
-    in_app: 'mdi-bell',
-    email: 'mdi-email',
-    webhook: 'mdi-webhook',
-  }
-
-  return map[kind] ?? 'mdi-send'
+function openConnectDialog(kind: ConnectorKind) {
+  editingConnector.value = undefined
+  connectDialogKind.value = kind
+  connectDialogOpen.value = true
 }
 
-function maskTarget(channel: AlertChannel): string {
-  let cfg: Record<string, string> = {}
-  try { cfg = JSON.parse(channel.config) }
-  catch { /* noop */ }
-
-  if (channel.kind === 'email') {
-    const addr = cfg.address ?? cfg.email ?? ''
-    if (!addr)
-      return '—'
-    const [user, domain] = addr.split('@')
-
-    return `${user?.slice(0, 2) ?? ''}***@${domain}`
-  }
-  if (channel.kind === 'webhook') {
-    const url = cfg.url ?? ''
-    if (!url)
-      return '—'
-    try {
-      return new URL(url).hostname
-    }
-    catch {
-      return url.slice(0, 30)
-    }
-  }
-
-  return '—'
+function editConnector(connector: Connector) {
+  editingConnector.value = connector
+  connectDialogKind.value = connector.kind
+  connectDialogOpen.value = true
 }
 
-function formatRelative(ts: string): string {
-  try {
-    const diff = Date.now() - new Date(ts).getTime()
-    const mins = Math.floor(diff / 60000)
-    const hours = Math.floor(mins / 60)
-    const days = Math.floor(hours / 24)
-    if (days > 0)
-      return `${days}d ago`
-    if (hours > 0)
-      return `${hours}h ago`
-    if (mins > 0)
-      return `${mins}m ago`
-
-    return 'Just now'
-  }
-  catch {
-    return ts
-  }
-}
-
-function openRuleEditor(rule?: AlertRule) {
-  editingRule.value = rule
-  ruleEditorOpen.value = true
-}
-
-function openChannelEditor(channel?: AlertChannel) {
-  editingChannel.value = channel
-  channelEditorOpen.value = true
-}
-
-function confirmDeleteRule(rule: AlertRule) {
-  deletingItem.value = { type: 'rule', id: rule.id }
+function confirmDeleteConnector(connector: Connector) {
+  deleteTarget.value = { type: 'connector', id: connector.id }
   deleteConfirmOpen.value = true
 }
 
-function confirmDeleteChannel(channel: AlertChannel) {
-  deletingItem.value = { type: 'channel', id: channel.id }
+function openRuleDialog(rule?: AlertRule) {
+  editingRule.value = rule
+  ruleDialogOpen.value = true
+}
+
+function confirmDeleteRule(rule: AlertRule) {
+  deleteTarget.value = { type: 'rule', id: rule.id }
   deleteConfirmOpen.value = true
 }
 
 async function executeDelete() {
-  if (!deletingItem.value || !selectedProjectId.value)
+  if (!deleteTarget.value)
     return
   deleting.value = true
   try {
-    if (deletingItem.value.type === 'rule') {
-      await alertsStore.deleteRule(deletingItem.value.id, selectedProjectId.value)
+    if (deleteTarget.value.type === 'connector') {
+      await alertsStore.deleteConnector(deleteTarget.value.id)
     }
-    else {
-      await alertsStore.deleteChannel(deletingItem.value.id, selectedProjectId.value)
+    else if (selectedProjectId.value) {
+      await alertsStore.deleteRule(deleteTarget.value.id, selectedProjectId.value)
     }
     deleteConfirmOpen.value = false
   }
@@ -451,55 +252,38 @@ async function executeDelete() {
 }
 
 async function handleToggleRule(rule: AlertRule, enabled: boolean) {
-  if (!selectedProjectId.value)
-    return
-  await alertsStore.toggleRule(rule.id, selectedProjectId.value, enabled)
+  if (selectedProjectId.value)
+    await alertsStore.toggleRule(rule.id, selectedProjectId.value, enabled)
 }
 
-async function handleToggleChannel(channel: AlertChannel, enabled: boolean) {
-  if (!selectedProjectId.value)
-    return
-  await alertsStore.updateChannel(channel.id, selectedProjectId.value, { enabled })
-}
-
-async function handleTestChannel(channel: AlertChannel) {
-  testingChannelId.value = channel.id
-  const result = await alertsStore.testChannel(channel.id)
-  testResults.value = { ...testResults.value, [channel.id]: result }
-  testingChannelId.value = null
-  setTimeout(() => {
-    const r = { ...testResults.value }
-    delete r[channel.id]
-    testResults.value = r
-  }, 5000)
+function onConnectorSaved() {
+  alertsStore.refreshConnectors()
 }
 
 function onRuleSaved() {
-  if (selectedProjectId.value) {
+  if (selectedProjectId.value)
     alertsStore.fetchRules(selectedProjectId.value, true)
-  }
 }
 
-function onChannelSaved() {
-  if (selectedProjectId.value) {
-    alertsStore.fetchChannels(selectedProjectId.value, true)
-  }
+function loadMoreHistory() {
+  if (selectedProjectId.value)
+    alertsStore.fetchHistory(selectedProjectId.value, { append: true })
 }
 
 watch(selectedProjectId, (id) => {
   if (id) {
     alertsStore.fetchRules(id)
-    alertsStore.fetchChannels(id)
+    alertsStore.fetchHistory(id)
   }
 })
 
 watch(projects, (list) => {
-  if (list.length > 0 && !selectedProjectId.value) {
+  if (list.length > 0 && !selectedProjectId.value)
     selectedProjectId.value = list[0]!.project_id
-  }
 }, { immediate: true })
 
 onMounted(() => {
   projectsStore.fetchProjects()
+  alertsStore.fetchConnectors()
 })
 </script>

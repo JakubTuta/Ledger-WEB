@@ -82,6 +82,7 @@ export default defineNuxtConfig({
     '/login': { ssr: false },
     '/register': { ssr: false },
     '/panel': { ssr: false },
+    '/alerts': { ssr: false },
     '/account': { ssr: false },
   },
 
@@ -91,7 +92,7 @@ export default defineNuxtConfig({
   },
 
   sitemap: {
-    exclude: ['/login', '/register', '/panel', '/account'],
+    exclude: ['/login', '/register', '/panel', '/alerts', '/account'],
   },
 
   nitro: {

@@ -35,6 +35,18 @@
 
         <div class="d-flex align-center gap-1">
           <v-btn
+            :icon="soundEnabled
+              ? 'mdi-volume-high'
+              : 'mdi-volume-off'"
+            variant="text"
+            size="small"
+            :title="soundEnabled
+              ? 'Mute alert sound'
+              : 'Unmute alert sound'"
+            @click="streamStore.toggleSound"
+          />
+
+          <v-btn
             v-if="unreadCount > 0"
             variant="text"
             size="small"
@@ -164,7 +176,7 @@
 import type { NotificationLevel } from '~/types/notifications'
 
 const streamStore = useNotificationStreamStore()
-const { inbox, unreadCount } = storeToRefs(streamStore)
+const { inbox, unreadCount, soundEnabled } = storeToRefs(streamStore)
 
 const menuOpen = ref(false)
 const currentTime = ref(Date.now())

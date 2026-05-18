@@ -1,0 +1,225 @@
+<template>
+  <div>
+    <div
+      v-if="loading && events.length === 0"
+      class="d-flex align-center justify-center pa-8"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+      />
+    </div>
+
+    <div
+      v-else-if="events.length === 0"
+      class="text-grey d-flex flex-column align-center justify-center gap-2 pa-8"
+    >
+      <v-icon
+        icon="mdi-history"
+        size="40"
+      />
+
+      <span class="text-body-2">No alert history yet</span>
+    </div>
+
+    <div v-else>
+      <div class="hist-header d-flex align-center px-3 py-2">
+        <span class="col-state text-caption font-weight-medium text-medium-emphasis">Status</span>
+
+        <span class="col-name text-caption font-weight-medium text-medium-emphasis">Rule</span>
+
+        <span class="col-cond text-caption font-weight-medium text-medium-emphasis">Condition</span>
+
+        <span class="col-val text-caption font-weight-medium text-medium-emphasis">Value</span>
+
+        <span class="col-sent text-caption font-weight-medium text-medium-emphasis">Sent to</span>
+
+        <span class="col-time text-caption font-weight-medium text-medium-emphasis">When</span>
+      </div>
+
+      <div
+        v-for="ev in events"
+        :key="ev.id"
+        class="hist-row d-flex align-center px-3 py-2"
+      >
+        <div class="col-state">
+          <v-chip
+            :color="ev.state === 'firing'
+              ? 'error'
+              : 'success'"
+            size="x-small"
+            variant="tonal"
+            :prepend-icon="ev.state === 'firing'
+              ? 'mdi-fire'
+              : 'mdi-check'"
+          >
+            {{ ev.state }}
+          </v-chip>
+        </div>
+
+        <div class="col-name text-body-2 text-truncate">
+          {{ ev.rule_name }}
+        </div>
+
+        <div class="col-cond text-caption text-mono text-medium-emphasis">
+          {{ metricLabel(ev.metric) }} {{ ev.comparator }} {{ ev.threshold }}{{ ev.unit === 'count'
+            ? ''
+            : ev.unit }}
+        </div>
+
+        <div class="col-val text-caption font-weight-medium">
+          {{ formatValue(ev.value) }}{{ ev.unit === 'count'
+            ? ''
+            : ev.unit }}
+        </div>
+
+        <div class="col-sent d-flex align-center gap-1">
+          <v-icon
+            v-for="(c, i) in parseConnectors(ev.connectors_sent)"
+            :key="i"
+            :icon="kindIcon(c.kind)"
+            size="16"
+            class="text-medium-emphasis"
+          />
+
+          <span
+            v-if="parseConnectors(ev.connectors_sent).length === 0"
+            class="text-caption text-medium-emphasis"
+          >—</span>
+        </div>
+
+        <div class="col-time text-caption text-medium-emphasis">
+          {{ formatTimestamp(ev.fired_at) }}
+        </div>
+      </div>
+
+      <div
+        v-if="hasMore"
+        v-intersect="onIntersect"
+        class="d-flex align-center my-4 justify-center"
+      >
+        <v-progress-circular
+          v-if="loading"
+          indeterminate
+          color="primary"
+          size="22"
+        />
+
+        <span
+          v-else
+          class="text-caption text-grey"
+        >Scroll to load more...</span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { AlertEvent, ConnectorKind } from '~/types/alerts'
+import { metricLabel } from '~/types/alerts'
+
+const props = defineProps<{
+  events: AlertEvent[]
+  hasMore?: boolean
+  loading?: boolean
+}>()
+
+const emit = defineEmits<{
+  loadMore: []
+}>()
+
+const currentTime = ref(Date.now())
+let timer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  timer = setInterval(() => {
+    currentTime.value = Date.now()
+  }, 30000)
+})
+
+onUnmounted(() => {
+  if (timer)
+    clearInterval(timer)
+})
+
+function onIntersect(isIntersecting: boolean) {
+  if (isIntersecting && props.hasMore && !props.loading)
+    emit('loadMore')
+}
+
+function parseConnectors(json: string): { kind: ConnectorKind, name: string }[] {
+  try {
+    return JSON.parse(json)
+  }
+  catch {
+    return []
+  }
+}
+
+function kindIcon(kind: ConnectorKind): string {
+  return { webhook: 'mdi-webhook', email: 'mdi-email', in_app: 'mdi-bell' }[kind] ?? 'mdi-send'
+}
+
+function formatValue(v: number): string {
+  if (v >= 1000)
+    return `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
+
+  return Number.isInteger(v)
+    ? String(v)
+    : v.toFixed(2)
+}
+
+function formatTimestamp(timestamp: string): string {
+  try {
+    const date = new Date(timestamp)
+    const diff = currentTime.value - date.getTime()
+    if (diff < 24 * 60 * 60 * 1000) {
+      const seconds = Math.floor(diff / 1000)
+      const minutes = Math.floor(seconds / 60)
+      const hours = Math.floor(minutes / 60)
+      if (hours > 0)
+        return `${hours}h ago`
+      if (minutes > 0)
+        return `${minutes}m ago`
+      if (seconds > 0)
+        return `${seconds}s ago`
+
+      return 'Just now'
+    }
+    const dd = String(date.getDate()).padStart(2, '0')
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const hh = String(date.getHours()).padStart(2, '0')
+    const min = String(date.getMinutes()).padStart(2, '0')
+
+    return `${dd}-${mm} ${hh}:${min}`
+  }
+  catch {
+    return timestamp
+  }
+}
+</script>
+
+<style scoped>
+.hist-header {
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.hist-row {
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.hist-row:last-child {
+  border-bottom: none;
+}
+
+.col-state { flex: 0 0 110px; }
+.col-name { flex: 1 1 24%; min-width: 0; }
+.col-cond { flex: 1 1 26%; min-width: 0; }
+.col-val { flex: 0 0 90px; }
+.col-sent { flex: 0 0 80px; }
+.col-time { flex: 0 0 90px; text-align: right; }
+
+.text-mono {
+  font-family: 'Courier New', monospace;
+}
+</style>

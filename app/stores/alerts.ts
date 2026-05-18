@@ -1,23 +1,93 @@
 import type {
-  AlertChannel,
+  AlertEvent,
+  AlertEventListResponse,
   AlertRule,
-  ChannelTestResult,
-  CreateAlertChannelRequest,
+  Connector,
   CreateAlertRuleRequest,
-  UpdateAlertChannelRequest,
+  CreateConnectorRequest,
   UpdateAlertRuleRequest,
+  UpdateConnectorRequest,
 } from '~/types/alerts'
 import { defineStore } from 'pinia'
 
 export const useAlertsStore = defineStore('alerts', () => {
   const { client } = useApiStore()
 
-  const rulesByProject = ref<Map<number, AlertRule[]>>(new Map())
-  const channelsByProject = ref<Map<number, AlertChannel[]>>(new Map())
-  const rulesLoading = ref<Set<number>>(new Set())
-  const channelsLoading = ref<Set<number>>(new Set())
+  // --- Connectors (account-wide) ---
 
-  // --- Rules ---
+  const connectors = ref<Connector[]>([])
+  const connectorsLoading = ref(false)
+  const connectorsLastFetch = ref<number | null>(null)
+  const hasConnectors = computed(() => connectors.value.length > 0)
+
+  const fetchConnectors = async (force = false) => {
+    if (connectorsLoading.value)
+      return
+    if (!force && connectorsLastFetch.value)
+      return
+
+    connectorsLoading.value = true
+    try {
+      const response = await client.get<Connector[]>('/api/v1/connectors')
+      connectors.value = response.data
+      connectorsLastFetch.value = Date.now()
+    }
+    catch (error) {
+      console.error('Error fetching connectors:', error)
+    }
+    finally {
+      connectorsLoading.value = false
+    }
+  }
+
+  const refreshConnectors = () => fetchConnectors(true)
+
+  const createConnector = async (data: CreateConnectorRequest) => {
+    try {
+      const response = await client.post<Connector>('/api/v1/connectors', data)
+      connectors.value = [...connectors.value, response.data]
+
+      return { success: true, connector: response.data }
+    }
+    catch (error: any) {
+      return { success: false, error: error.response?.data?.message ?? 'Failed to create connector' }
+    }
+  }
+
+  const updateConnector = async (id: number, data: UpdateConnectorRequest) => {
+    try {
+      const response = await client.patch<Connector>(`/api/v1/connectors/${id}`, data)
+      connectors.value = connectors.value.map(c => (c.id === id
+        ? response.data
+        : c))
+
+      return { success: true, connector: response.data }
+    }
+    catch (error: any) {
+      return { success: false, error: error.response?.data?.message ?? 'Failed to update connector' }
+    }
+  }
+
+  const deleteConnector = async (id: number) => {
+    await client.delete(`/api/v1/connectors/${id}`)
+    connectors.value = connectors.value.filter(c => c.id !== id)
+  }
+
+  const testConnector = async (id: number) => {
+    try {
+      await client.post(`/api/v1/connectors/${id}/test`)
+
+      return { success: true }
+    }
+    catch (error: any) {
+      return { success: false, error: error.response?.data?.message ?? 'Test failed' }
+    }
+  }
+
+  // --- Rules (per project) ---
+
+  const rulesByProject = ref<Map<number, AlertRule[]>>(new Map())
+  const rulesLoading = ref<Set<number>>(new Set())
 
   const getRulesForProject = (projectId: number) => computed(() => rulesByProject.value.get(projectId) ?? [])
 
@@ -29,11 +99,10 @@ export const useAlertsStore = defineStore('alerts', () => {
 
     rulesLoading.value.add(projectId)
     try {
-      const response = await client.get('/api/v1/alerts/rules', {
+      const response = await client.get<AlertRule[]>('/api/v1/alerts/rules', {
         params: { project_id: projectId },
       })
-      const rules: AlertRule[] = response.data.rules ?? response.data
-      rulesByProject.value.set(projectId, rules)
+      rulesByProject.value.set(projectId, response.data)
     }
     catch (error) {
       console.error('Error fetching alert rules:', error)
@@ -44,26 +113,33 @@ export const useAlertsStore = defineStore('alerts', () => {
   }
 
   const createRule = async (data: CreateAlertRuleRequest) => {
-    const response = await client.post<AlertRule>('/api/v1/alerts/rules', data)
-    const rules = rulesByProject.value.get(data.project_id) ?? []
-    rulesByProject.value.set(data.project_id, [...rules, response.data])
+    try {
+      const response = await client.post<AlertRule>('/api/v1/alerts/rules', data)
+      const rules = rulesByProject.value.get(data.project_id) ?? []
+      rulesByProject.value.set(data.project_id, [...rules, response.data])
 
-    return response.data
+      return { success: true, rule: response.data }
+    }
+    catch (error: any) {
+      return { success: false, error: error.response?.data?.message ?? 'Failed to create rule' }
+    }
   }
 
   const updateRule = async (id: number, projectId: number, data: UpdateAlertRuleRequest) => {
-    const response = await client.patch<AlertRule>(`/api/v1/alerts/rules/${id}`, data, {
-      params: { project_id: projectId },
-    })
-    const rules = rulesByProject.value.get(projectId) ?? []
-    rulesByProject.value.set(
-      projectId,
-      rules.map(r => (r.id === id
+    try {
+      const response = await client.patch<AlertRule>(`/api/v1/alerts/rules/${id}`, data, {
+        params: { project_id: projectId },
+      })
+      const rules = rulesByProject.value.get(projectId) ?? []
+      rulesByProject.value.set(projectId, rules.map(r => (r.id === id
         ? response.data
-        : r)),
-    )
+        : r)))
 
-    return response.data
+      return { success: true, rule: response.data }
+    }
+    catch (error: any) {
+      return { success: false, error: error.response?.data?.message ?? 'Failed to update rule' }
+    }
   }
 
   const deleteRule = async (id: number, projectId: number) => {
@@ -74,97 +150,68 @@ export const useAlertsStore = defineStore('alerts', () => {
     rulesByProject.value.set(projectId, rules.filter(r => r.id !== id))
   }
 
-  const toggleRule = async (id: number, projectId: number, enabled: boolean) => {
+  const toggleRule = (id: number, projectId: number, enabled: boolean) => {
     return updateRule(id, projectId, { enabled })
   }
 
-  // --- Channels ---
+  // --- History (per project, cursor paginated) ---
 
-  const getChannelsForProject = (projectId: number) => computed(() => channelsByProject.value.get(projectId) ?? [])
+  const historyByProject = ref<Map<number, AlertEvent[]>>(new Map())
+  const historyLoading = ref<Set<number>>(new Set())
+  const historyHasMore = ref<Map<number, boolean>>(new Map())
 
-  const fetchChannels = async (projectId: number, force = false) => {
-    if (channelsLoading.value.has(projectId))
+  const getHistoryForProject = (projectId: number) => computed(() => historyByProject.value.get(projectId) ?? [])
+
+  const fetchHistory = async (projectId: number, opts: { append?: boolean } = {}) => {
+    if (historyLoading.value.has(projectId))
       return
-    if (!force && channelsByProject.value.has(projectId))
-      return
 
-    channelsLoading.value.add(projectId)
+    const current = historyByProject.value.get(projectId) ?? []
+    const beforeId = opts.append && current.length > 0
+      ? current[current.length - 1]!.id
+      : undefined
+
+    historyLoading.value.add(projectId)
     try {
-      const response = await client.get('/api/v1/alerts/channels', {
-        params: { project_id: projectId },
+      const response = await client.get<AlertEventListResponse>('/api/v1/alerts/history', {
+        params: { project_id: projectId, limit: 25, before_id: beforeId },
       })
-      const channels: AlertChannel[] = response.data.channels ?? response.data
-      channelsByProject.value.set(projectId, channels)
+      const next = opts.append
+        ? [...current, ...response.data.events]
+        : response.data.events
+      historyByProject.value.set(projectId, next)
+      historyHasMore.value.set(projectId, response.data.has_more)
     }
     catch (error) {
-      console.error('Error fetching alert channels:', error)
+      console.error('Error fetching alert history:', error)
     }
     finally {
-      channelsLoading.value.delete(projectId)
-    }
-  }
-
-  const createChannel = async (data: CreateAlertChannelRequest) => {
-    const response = await client.post<AlertChannel>('/api/v1/alerts/channels', data)
-    const channels = channelsByProject.value.get(data.project_id) ?? []
-    channelsByProject.value.set(data.project_id, [...channels, response.data])
-
-    return response.data
-  }
-
-  const updateChannel = async (id: number, projectId: number, data: UpdateAlertChannelRequest) => {
-    const response = await client.patch<AlertChannel>(`/api/v1/alerts/channels/${id}`, data, {
-      params: { project_id: projectId },
-    })
-    const channels = channelsByProject.value.get(projectId) ?? []
-    channelsByProject.value.set(
-      projectId,
-      channels.map(c => (c.id === id
-        ? response.data
-        : c)),
-    )
-
-    return response.data
-  }
-
-  const deleteChannel = async (id: number, projectId: number) => {
-    await client.delete(`/api/v1/alerts/channels/${id}`, {
-      params: { project_id: projectId },
-    })
-    const channels = channelsByProject.value.get(projectId) ?? []
-    channelsByProject.value.set(projectId, channels.filter(c => c.id !== id))
-  }
-
-  const testChannel = async (id: number): Promise<ChannelTestResult> => {
-    try {
-      const response = await client.post<ChannelTestResult>(`/api/v1/alerts/channels/${id}/test`)
-
-      return response.data
-    }
-    catch (error: any) {
-      return {
-        success: false,
-        message: error.response?.data?.message ?? 'Test failed',
-      }
+      historyLoading.value.delete(projectId)
     }
   }
 
   return {
+    connectors,
+    connectorsLoading,
+    hasConnectors,
+    fetchConnectors,
+    refreshConnectors,
+    createConnector,
+    updateConnector,
+    deleteConnector,
+    testConnector,
     rulesByProject,
-    channelsByProject,
     rulesLoading,
-    channelsLoading,
     getRulesForProject,
     fetchRules,
     createRule,
     updateRule,
     deleteRule,
     toggleRule,
-    getChannelsForProject,
-    fetchChannels,
-    createChannel,
-    updateChannel,
-    deleteChannel,
-    testChannel,
+    historyByProject,
+    historyLoading,
+    historyHasMore,
+    getHistoryForProject,
+    fetchHistory,
   }
 })
