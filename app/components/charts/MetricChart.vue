@@ -119,21 +119,22 @@ function buildVolumeOption() {
   const rawLogs = data.value.map(d => d.log_count)
   const rawErrors = data.value.map(d => d.error_count)
 
-  const errorData = isCumulative.value
-    ? cumulate(rawErrors)
-    : rawErrors
-  const logData = isCumulative.value
-    ? cumulate(rawLogs)
-    : rawLogs
-  const logOnlyData = logData.map((v, i) => v - errorData[i]!)
+  const errorData = isCumulative.value ? cumulate(rawErrors) : rawErrors
+  const logData = isCumulative.value ? cumulate(rawLogs) : rawLogs
 
-  const suffix = isCumulative.value
-    ? ' (cumulative)'
-    : ''
+  const suffix = isCumulative.value ? ' (cumulative)' : ''
+
+  const errorRates = logData.map((logs, i) => {
+    if (logs === 0)
+      return '0%'
+    return `${((errorData[i]! / logs) * 100).toFixed(1)}%`
+  })
+
+  const rotate = xAxisData.value.length > 20 ? 45 : 0
 
   return {
     backgroundColor: 'transparent',
-    grid: { top: 8, right: 8, bottom: 56, left: 48, containLabel: true },
+    grid: { top: 8, right: 8, bottom: 64, left: 48, containLabel: true },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -141,13 +142,9 @@ function buildVolumeOption() {
         const label = params[0]?.axisValue ?? ''
         const logs = params.find((p: any) => p.seriesName === `Logs${suffix}`)?.value ?? 0
         const errors = params.find((p: any) => p.seriesName === `Errors${suffix}`)?.value ?? 0
-        const totalLogs = (Number(logs) + Number(errors)).toLocaleString()
+        const cumLabel = isCumulative.value ? ' cumul.' : ''
 
-        return `<b>${label}</b><br/>Logs: ${totalLogs}${isCumulative.value
-          ? ' cumul.'
-          : ''}<br/>Errors: ${Number(errors).toLocaleString()}${isCumulative.value
-          ? ' cumul.'
-          : ''}`
+        return `<b>${label}</b><br/>Logs: ${Number(logs).toLocaleString()}${cumLabel}<br/>Errors: ${Number(errors).toLocaleString()}${cumLabel}`
       },
     },
     xAxis: {
@@ -156,11 +153,18 @@ function buildVolumeOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        rotate: xAxisData.value.length > 20
-          ? 45
-          : 0,
+        rotate,
         interval: axisInterval(xAxisData.value.length),
         hideOverlap: true,
+        formatter: (_value: string, index: number) => {
+          const date = xAxisData.value[index] ?? ''
+          const rate = errorRates[index] ?? '0%'
+          return `{date|${date}}\n{rate|${rate}}`
+        },
+        rich: {
+          date: { fontSize: 10, color: textColor.value, lineHeight: 16 },
+          rate: { fontSize: 9, color: '#ef5350', lineHeight: 14 },
+        },
       },
       axisLine: { lineStyle: { color: surfaceColor.value } },
       axisTick: { show: false },
@@ -170,28 +174,24 @@ function buildVolumeOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        formatter: (v: number) => (v >= 1000
-          ? `${(v / 1000).toFixed(0)}k`
-          : String(v)),
+        formatter: (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)),
       },
       splitLine: { lineStyle: { color: surfaceColor.value, type: 'dashed' } },
     },
     series: [
       {
-        name: `Errors${suffix}`,
-        type: 'bar',
-        stack: 'total',
-        data: errorData,
-        itemStyle: { color: '#ef5350' },
-        emphasis: { itemStyle: { color: '#e53935' } },
-      },
-      {
         name: `Logs${suffix}`,
         type: 'bar',
-        stack: 'total',
-        data: logOnlyData,
+        data: logData,
         itemStyle: { color: '#42a5f5', borderRadius: [2, 2, 0, 0] },
         emphasis: { itemStyle: { opacity: 0.8 } },
+      },
+      {
+        name: `Errors${suffix}`,
+        type: 'bar',
+        data: errorData,
+        itemStyle: { color: '#ef5350', borderRadius: [2, 2, 0, 0] },
+        emphasis: { itemStyle: { color: '#e53935' } },
       },
     ],
     legend: {

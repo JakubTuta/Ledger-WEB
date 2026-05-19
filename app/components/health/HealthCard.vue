@@ -2,7 +2,7 @@
   <v-card
     class="health-card"
     :class="[
-      `health-card--${summary.status}`,
+      `health-card--${derivedStatus}`,
       {'health-card--selected': selected},
     ]"
     variant="elevated"
@@ -16,10 +16,23 @@
       :class="`bg-${statusColor}`"
     />
 
+    <!-- Selected indicator -->
+    <div
+      v-if="selected"
+      class="health-card__selected-badge"
+    >
+      <v-icon
+        size="14"
+        color="white"
+      >
+        mdi-check
+      </v-icon>
+    </div>
+
     <v-card-text class="pa-3">
       <!-- Header -->
       <div class="d-flex align-center justify-space-between mb-2">
-        <div class="text-title-medium font-weight-bold text-on-surface text-truncate">
+        <div class="text-title-large font-weight-bold text-on-surface text-truncate">
           {{ projectName }}
         </div>
 
@@ -147,8 +160,27 @@ const emit = defineEmits<{
   click: [projectId: string]
 }>()
 
+// "down" only when there is genuinely no traffic. High error/p95 with live traffic = "degraded".
+const derivedStatus = computed(() => {
+  const s = props.summary
+  const hasTraffic = s.rps > 0.01 || s.sparkline.some(v => v > 0)
+
+  if (!hasTraffic)
+    return 'down'
+
+  if (
+    s.error_rate >= s.thresholds.error_rate_crit
+    || s.p95_ms >= s.thresholds.p95_crit_ms
+    || s.error_rate >= s.thresholds.error_rate_warn
+    || s.p95_ms >= s.thresholds.p95_warn_ms
+  )
+    return 'degraded'
+
+  return 'healthy'
+})
+
 const statusColor = computed(() => {
-  switch (props.summary.status) {
+  switch (derivedStatus.value) {
     case 'healthy': return 'success'
     case 'degraded': return 'warning'
     case 'down': return 'error'
@@ -156,7 +188,7 @@ const statusColor = computed(() => {
 })
 
 const statusLabel = computed(() => {
-  switch (props.summary.status) {
+  switch (derivedStatus.value) {
     case 'healthy': return 'Healthy'
     case 'degraded': return 'Degraded'
     case 'down': return 'Down'
@@ -164,7 +196,7 @@ const statusLabel = computed(() => {
 })
 
 const sparklineColor = computed(() => {
-  switch (props.summary.status) {
+  switch (derivedStatus.value) {
     case 'healthy': return '#66bb6a'
     case 'degraded': return '#ffa726'
     case 'down': return '#ef5350'
@@ -180,11 +212,12 @@ const p95Display = computed(() => {
     : `${Math.round(ms)}ms`
 })
 const rpsDisplay = computed(() => {
-  const r = props.summary.rps
+  const r = Number(props.summary.rps) || 0
 
-  return r >= 100
-    ? `${Math.round(r)}`
-    : r.toFixed(1)
+  if (r >= 100) return `${Math.round(r)}`
+  if (r >= 1) return r.toFixed(1)
+  if (r >= 0.01) return r.toFixed(2)
+  return '< 0.01'
 })
 
 const errorRateClass = computed(() => {
@@ -231,9 +264,25 @@ const p95Class = computed(() => {
   outline-offset: 2px;
   transform: translateY(-4px) scale(1.03);
   box-shadow:
-    0 0 0 4px rgba(var(--v-theme-primary), 0.18),
-    0 8px 20px rgba(var(--v-theme-primary), 0.35) !important;
-  z-index: 1;
+    0 0 0 5px rgba(var(--v-theme-primary), 0.18),
+    0 0 20px 6px rgba(var(--v-theme-primary), 0.22),
+    0 10px 24px rgba(0, 0, 0, 0.3) !important;
+  z-index: 2;
+}
+
+.health-card__selected-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(var(--v-theme-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(var(--v-theme-primary), 0.5);
 }
 
 .health-status-bar {

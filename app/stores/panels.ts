@@ -49,6 +49,8 @@ function saveTabsToStorage(tabs: DashboardTab[]) {
   catch { /* noop */ }
 }
 
+let _syncTabsTimer: ReturnType<typeof setTimeout> | null = null
+
 export const usePanelsStore = defineStore('panels', () => {
   const { client } = useApiStore()
 
@@ -855,10 +857,49 @@ export const usePanelsStore = defineStore('panels', () => {
       .sort((a, b) => a.index - b.index)
   })
 
+  async function fetchTabs() {
+    try {
+      const response = await client.get<{ tabs: DashboardTab[], active_tab_id: string | null }>('/api/v1/dashboard/tabs')
+      const serverTabs = response.data.tabs
+      const serverActiveTabId = response.data.active_tab_id
+
+      if (serverTabs.length > 0) {
+        tabs.value = serverTabs
+        saveTabsToStorage(serverTabs)
+        if (serverActiveTabId) {
+          activeTabId.value = serverActiveTabId
+          if (import.meta.client)
+            localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, serverActiveTabId)
+        }
+      }
+    }
+    catch (error) {
+      console.error('Error fetching tabs from server:', error)
+    }
+  }
+
+  function syncTabsToServer(currentTabs: DashboardTab[], currentActiveTabId: string) {
+    if (_syncTabsTimer !== null)
+      clearTimeout(_syncTabsTimer)
+
+    _syncTabsTimer = setTimeout(async () => {
+      try {
+        await client.put('/api/v1/dashboard/tabs', {
+          tabs: currentTabs,
+          active_tab_id: currentActiveTabId || null,
+        })
+      }
+      catch (error) {
+        console.error('Error syncing tabs to server:', error)
+      }
+    }, 500)
+  }
+
   function setActiveTab(tabId: string) {
     activeTabId.value = tabId
     if (import.meta.client)
       localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabId)
+    syncTabsToServer(tabs.value, tabId)
   }
 
   function addTab(name: string, templateId: string | null = null, projectId: string | null = null): DashboardTab {
@@ -870,7 +911,7 @@ export const usePanelsStore = defineStore('panels', () => {
       projectId,
     }
     tabs.value.push(tab)
-    saveTabsToStorage(tabs.value)
+    persistTabs(tabs.value)
 
     return tab
   }
@@ -882,11 +923,16 @@ export const usePanelsStore = defineStore('panels', () => {
     return tabs.value.filter(t => t.projectId === projectId || t.projectId === null)
   }
 
+  function persistTabs(updatedTabs: DashboardTab[]) {
+    saveTabsToStorage(updatedTabs)
+    syncTabsToServer(updatedTabs, activeTabId.value)
+  }
+
   function renameTab(tabId: string, name: string) {
     const tab = tabs.value.find(t => t.id === tabId)
     if (tab) {
       tab.name = name
-      saveTabsToStorage(tabs.value)
+      persistTabs(tabs.value)
     }
   }
 
@@ -896,7 +942,7 @@ export const usePanelsStore = defineStore('panels', () => {
       await Promise.all(tab.panelIds.map(id => deletePanel(id)))
     }
     tabs.value = tabs.value.filter(t => t.id !== tabId)
-    saveTabsToStorage(tabs.value)
+    persistTabs(tabs.value)
     if (activeTabId.value === tabId && tabs.value.length > 0) {
       setActiveTab(tabs.value[0]!.id)
     }
@@ -905,14 +951,14 @@ export const usePanelsStore = defineStore('panels', () => {
   function reorderTabs(newOrder: string[]) {
     const tabMap = new Map(tabs.value.map(t => [t.id, t]))
     tabs.value = newOrder.map(id => tabMap.get(id)!).filter(Boolean)
-    saveTabsToStorage(tabs.value)
+    persistTabs(tabs.value)
   }
 
   function addPanelToTab(tabId: string, panelId: string) {
     const tab = tabs.value.find(t => t.id === tabId)
     if (tab && !tab.panelIds.includes(panelId)) {
       tab.panelIds.push(panelId)
-      saveTabsToStorage(tabs.value)
+      persistTabs(tabs.value)
     }
   }
 
@@ -920,7 +966,7 @@ export const usePanelsStore = defineStore('panels', () => {
     tabs.value.forEach((tab) => {
       tab.panelIds = tab.panelIds.filter(id => id !== panelId)
     })
-    saveTabsToStorage(tabs.value)
+    persistTabs(tabs.value)
   }
 
   function migrateToTabs() {
@@ -943,7 +989,7 @@ export const usePanelsStore = defineStore('panels', () => {
           if (!firstTabId)
             firstTabId = t.id
         }
-        saveTabsToStorage(tabs.value)
+        persistTabs(tabs.value)
         if (firstTabId)
           setActiveTab(firstTabId)
       }
@@ -971,7 +1017,7 @@ export const usePanelsStore = defineStore('panels', () => {
             setActiveTab(newTab.id)
         }
       }
-      saveTabsToStorage(tabs.value)
+      persistTabs(tabs.value)
       localStorage.setItem(TABS_VERSION_KEY_V2, '1')
     }
   }
@@ -1051,6 +1097,7 @@ export const usePanelsStore = defineStore('panels', () => {
     activeTabId,
     activeTab,
     activePanels,
+    fetchTabs,
     setActiveTab,
     addTab,
     tabsForProject,

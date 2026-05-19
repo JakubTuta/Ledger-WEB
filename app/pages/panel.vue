@@ -182,38 +182,17 @@
       </v-col>
     </v-row>
 
-    <!-- Empty State -->
+    <!-- Empty State / Onboarding -->
     <v-row v-else-if="!panelsStore.hasData && !panelsStore.isLoading">
-      <v-col cols="12">
-        <v-card
-          variant="outlined"
-          class="pa-10 text-center"
-        >
-          <v-icon
-            icon="mdi-view-dashboard-outline"
-            size="64"
-            color="medium-emphasis"
-            class="mb-4"
-          />
-
-          <div class="text-h6 mb-2">
-            No panels yet
-          </div>
-
-          <div class="text-body-2 text-medium-emphasis mb-6">
-            Create your first panel to start monitoring your logs and metrics.
-          </div>
-
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-plus"
-            :disabled="!filters.projectId"
-            variant="elevated"
-            @click="newPanelDialog = true"
-          >
-            Create First Panel
-          </v-btn>
-        </v-card>
+      <v-col
+        cols="12"
+        md="8"
+        offset-md="2"
+      >
+        <OnboardingGuide
+          :selected-project-id="filters.projectId"
+          @add-panel="newPanelDialog = true"
+        />
       </v-col>
     </v-row>
 
@@ -639,8 +618,9 @@ onMounted(async () => {
 
   await fetchAllMetrics()
 
-  // Migrate legacy single-array panels to first tab
+  // Migrate legacy single-array panels to first tab, then load server tabs
   panelsStore.migrateToTabs()
+  await panelsStore.fetchTabs()
 
   const projectIds = projectsStore.projects.map(p => String(p.project_id))
   if (projectIds.length > 0) {

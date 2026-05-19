@@ -2,6 +2,7 @@
   "name": "Ledger-web",
   "type": "module",
   "private": true,
+  "packageManager": "bun",
   "scripts": {
     "build": "bun --bun run nuxt build",
     "dev": "bun --bun run nuxt dev",
