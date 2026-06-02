@@ -119,18 +119,27 @@ function buildVolumeOption() {
   const rawLogs = data.value.map(d => d.log_count)
   const rawErrors = data.value.map(d => d.error_count)
 
-  const errorData = isCumulative.value ? cumulate(rawErrors) : rawErrors
-  const logData = isCumulative.value ? cumulate(rawLogs) : rawLogs
+  const errorData = isCumulative.value
+    ? cumulate(rawErrors)
+    : rawErrors
+  const logData = isCumulative.value
+    ? cumulate(rawLogs)
+    : rawLogs
 
-  const suffix = isCumulative.value ? ' (cumulative)' : ''
+  const suffix = isCumulative.value
+    ? ' (cumulative)'
+    : ''
 
   const errorRates = logData.map((logs, i) => {
     if (logs === 0)
       return '0%'
+
     return `${((errorData[i]! / logs) * 100).toFixed(1)}%`
   })
 
-  const rotate = xAxisData.value.length > 20 ? 45 : 0
+  const rotate = xAxisData.value.length > 20
+    ? 45
+    : 0
 
   return {
     backgroundColor: 'transparent',
@@ -142,7 +151,9 @@ function buildVolumeOption() {
         const label = params[0]?.axisValue ?? ''
         const logs = params.find((p: any) => p.seriesName === `Logs${suffix}`)?.value ?? 0
         const errors = params.find((p: any) => p.seriesName === `Errors${suffix}`)?.value ?? 0
-        const cumLabel = isCumulative.value ? ' cumul.' : ''
+        const cumLabel = isCumulative.value
+          ? ' cumul.'
+          : ''
 
         return `<b>${label}</b><br/>Logs: ${Number(logs).toLocaleString()}${cumLabel}<br/>Errors: ${Number(errors).toLocaleString()}${cumLabel}`
       },
@@ -159,6 +170,7 @@ function buildVolumeOption() {
         formatter: (_value: string, index: number) => {
           const date = xAxisData.value[index] ?? ''
           const rate = errorRates[index] ?? '0%'
+
           return `{date|${date}}\n{rate|${rate}}`
         },
         rich: {
@@ -174,7 +186,9 @@ function buildVolumeOption() {
       axisLabel: {
         color: textColor.value,
         fontSize: 10,
-        formatter: (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)),
+        formatter: (v: number) => (v >= 1000
+          ? `${(v / 1000).toFixed(0)}k`
+          : String(v)),
       },
       splitLine: { lineStyle: { color: surfaceColor.value, type: 'dashed' } },
     },

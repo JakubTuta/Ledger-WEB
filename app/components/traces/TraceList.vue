@@ -155,6 +155,8 @@ onUnmounted(() => {
 function formatDuration(ms: number): string {
   if (ms >= 1000)
     return `${(ms / 1000).toFixed(1)}s`
+  if (ms <= 0)
+    return '<1ms'
 
   return `${ms}ms`
 }

@@ -84,6 +84,7 @@ export default defineNuxtConfig({
     '/panel': { ssr: false },
     '/alerts': { ssr: false },
     '/account': { ssr: false },
+    '/settings': { ssr: false },
   },
 
   site: {

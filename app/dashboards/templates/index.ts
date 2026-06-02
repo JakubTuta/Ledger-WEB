@@ -28,7 +28,7 @@ export const database: DashboardTemplate = {
   description: 'Track database query traces and errors',
   icon: 'mdi-database',
   panels: [
-    { name: 'DB Traces', type: 'trace_list', operation_filter: 'db', limit: 50, period: 'today' },
+    { name: 'DB Traces', type: 'trace_list', operation_filter: 'db', period: 'today' },
     { name: 'DB Errors', type: 'error_list', period: 'today' },
     { name: 'Query Volume', type: 'metrics', period: 'last7days' },
   ],

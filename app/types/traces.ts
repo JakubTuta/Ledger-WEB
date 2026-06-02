@@ -12,12 +12,15 @@ export interface Span {
   parent_span_id?: string | null
   name: string
   service_name: string
+  kind?: number
   start_time: string
   end_time: string
   duration_ms: number
   status: SpanStatus
+  status_message?: string
   attributes?: Record<string, any>
   events?: SpanEvent[]
+  error_fingerprint?: string
 }
 
 export interface TraceSummary {

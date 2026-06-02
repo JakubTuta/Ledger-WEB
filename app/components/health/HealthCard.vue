@@ -173,8 +173,9 @@ const derivedStatus = computed(() => {
     || s.p95_ms >= s.thresholds.p95_crit_ms
     || s.error_rate >= s.thresholds.error_rate_warn
     || s.p95_ms >= s.thresholds.p95_warn_ms
-  )
+  ) {
     return 'degraded'
+  }
 
   return 'healthy'
 })
@@ -214,9 +215,13 @@ const p95Display = computed(() => {
 const rpsDisplay = computed(() => {
   const r = Number(props.summary.rps) || 0
 
-  if (r >= 100) return `${Math.round(r)}`
-  if (r >= 1) return r.toFixed(1)
-  if (r >= 0.01) return r.toFixed(2)
+  if (r >= 100)
+    return `${Math.round(r)}`
+  if (r >= 1)
+    return r.toFixed(1)
+  if (r >= 0.01)
+    return r.toFixed(2)
+
   return '< 0.01'
 })
 

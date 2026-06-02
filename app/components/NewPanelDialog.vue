@@ -249,17 +249,6 @@
                     item-value="value"
                   />
 
-                  <v-text-field
-                    v-model.number="form.traceLimit"
-                    label="Max results"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-3"
-                    type="number"
-                    min="1"
-                    max="500"
-                    :rules="traceLimitRules"
-                  />
                 </template>
               </v-expansion-panel-text>
             </v-expansion-panel>
@@ -344,21 +333,19 @@ const form = ref<{
   operationFilter: string
   minDurationMs: number | null
   hasError: boolean | null
-  traceLimit: number
 }>({
   name: '',
   projectId: null,
   panelType: null,
   endpointUrl: '',
   selectedRoutes: [],
-  period: null,
+  period: 'last7days',
   periodFrom: '',
   periodTo: '',
   serviceFilter: '',
   operationFilter: '',
   minDurationMs: null,
   hasError: null,
-  traceLimit: 50,
 })
 
 const isOpen = computed({
@@ -419,12 +406,6 @@ const projectRules = [
 const endpointUrlRules = [
   (v: string) => !v || v.startsWith('/') || 'Endpoint must start with /',
   (v: string) => !v || v.length <= 500 || 'Endpoint URL is too long',
-]
-
-const traceLimitRules = [
-  (v: number) => !!v || 'Required',
-  (v: number) => v >= 1 || 'Min 1',
-  (v: number) => v <= 500 || 'Max 500',
 ]
 
 const panelTypeError = computed(() => hasAttemptedSubmit.value && !form.value.panelType)
@@ -504,14 +485,13 @@ function resetForm() {
     panelType: null,
     endpointUrl: '',
     selectedRoutes: [],
-    period: null,
+    period: 'last7days',
     periodFrom: '',
     periodTo: '',
     serviceFilter: '',
     operationFilter: '',
     minDurationMs: null,
     hasError: null,
-    traceLimit: 50,
   }
   error.value = ''
   hasAttemptedSubmit.value = false
@@ -564,9 +544,6 @@ async function handleCreate() {
         : undefined,
       has_error: form.value.panelType === 'trace_list' && form.value.hasError != null
         ? form.value.hasError
-        : undefined,
-      limit: form.value.panelType === 'trace_list'
-        ? form.value.traceLimit
         : undefined,
       trace_id: undefined,
       index: panelsStore.panels.length,

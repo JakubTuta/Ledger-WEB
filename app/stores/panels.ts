@@ -527,7 +527,6 @@ export const usePanelsStore = defineStore('panels', () => {
       'operation_filter',
       'min_duration_ms',
       'has_error',
-      'limit',
       'statusClass',
       'search',
     ]
@@ -563,7 +562,7 @@ export const usePanelsStore = defineStore('panels', () => {
         setActiveTab(targetTab.id)
       }
       targetTab.panelIds.push(response.data.id)
-      saveTabsToStorage(tabs.value)
+      persistTabs(tabs.value)
 
       return { success: true, panel: response.data }
     }
@@ -621,9 +620,6 @@ export const usePanelsStore = defineStore('panels', () => {
         has_error: data.has_error !== undefined
           ? data.has_error
           : panel.has_error ?? null,
-        limit: data.limit !== undefined
-          ? data.limit
-          : panel.limit ?? null,
         statusClass: data.statusClass !== undefined
           ? data.statusClass
           : panel.statusClass ?? null,
@@ -705,7 +701,6 @@ export const usePanelsStore = defineStore('panels', () => {
             operation_filter: panel.operation_filter ?? null,
             min_duration_ms: panel.min_duration_ms ?? null,
             has_error: panel.has_error ?? null,
-            limit: panel.limit ?? null,
             statusClass: panel.statusClass ?? null,
             search: panel.search ?? null,
           }

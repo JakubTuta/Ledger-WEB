@@ -25,7 +25,6 @@ export interface Panel {
   operation_filter?: string
   min_duration_ms?: number
   has_error?: boolean
-  limit?: number
   // logs filter fields
   statusClass?: '2xx' | '4xx' | '5xx'
   search?: string
@@ -53,7 +52,6 @@ export interface CreatePanelRequest {
   operation_filter?: string
   min_duration_ms?: number
   has_error?: boolean
-  limit?: number
   statusClass?: '2xx' | '4xx' | '5xx'
   search?: string
   sort?: BottleneckSort
@@ -75,7 +73,6 @@ export interface UpdatePanelRequest {
   operation_filter?: string | null
   min_duration_ms?: number | null
   has_error?: boolean | null
-  limit?: number | null
   statusClass?: '2xx' | '4xx' | '5xx' | null
   search?: string | null
   sort?: BottleneckSort | null
