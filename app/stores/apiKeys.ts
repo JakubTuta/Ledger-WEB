@@ -85,6 +85,38 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
     }
   }
 
+  const regenerateApiKey = async (keyId: number, projectId: number, name: string, currentStatus: string) => {
+    try {
+      if (currentStatus === 'active') {
+        await client.delete(`/api/v1/api-keys/${keyId}`)
+      }
+
+      const response = await client.post<CreateApiKeyResponse>(`/api/v1/projects/${projectId}/api-keys`, { name })
+
+      const newKey: ApiKey = {
+        key_id: response.data.key_id,
+        project_id: projectId,
+        name,
+        key_prefix: response.data.key_prefix,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        last_used_at: null,
+      }
+
+      apiKeys.value = apiKeys.value.filter(key => key.key_id !== keyId)
+      apiKeys.value.push(newKey)
+
+      return { success: true, apiKey: response.data }
+    }
+    catch (error: any) {
+      console.error('Error regenerating API key:', error)
+
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to regenerate API key'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
   return {
     apiKeys,
     total,
@@ -95,5 +127,6 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
     refreshApiKeys,
     createApiKey,
     revokeApiKey,
+    regenerateApiKey,
   }
 })
