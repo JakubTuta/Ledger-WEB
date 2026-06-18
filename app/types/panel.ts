@@ -1,4 +1,4 @@
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 export type BottleneckSort = 'asc' | 'desc'
@@ -127,7 +127,7 @@ export interface BottleneckListEntry {
 
 export interface BottleneckListResponse {
   project_id: number
-  statistic: Exclude<BottleneckStatistic, 'count'>
+  statistic: BottleneckStatistic
   sort: BottleneckSort
   start_date: string
   end_date: string

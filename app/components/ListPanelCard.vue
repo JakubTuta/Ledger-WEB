@@ -74,49 +74,11 @@
         />
       </div>
 
-      <!-- Bottleneck filters: statistic + sort direction + search -->
+      <!-- Bottleneck filters: search only (sorting via clickable column headers) -->
       <div
         v-else
-        class="d-flex align-center flex-wrap gap-2"
+        class="d-flex align-center"
       >
-        <v-select
-          v-model="bottleneckStatisticFilter"
-          :items="bottleneckStatisticOptions"
-          density="compact"
-          variant="outlined"
-          hide-details
-          style="max-width: 130px;"
-        />
-
-        <v-btn-toggle
-          v-model="bottleneckSortFilter"
-          density="compact"
-          variant="outlined"
-          divided
-          mandatory
-          class="status-toggle gap-2"
-        >
-          <v-btn
-            value="desc"
-            size="x-small"
-            title="Slowest first"
-          >
-            <v-icon size="14">
-              mdi-sort-descending
-            </v-icon>
-          </v-btn>
-
-          <v-btn
-            value="asc"
-            size="x-small"
-            title="Fastest first"
-          >
-            <v-icon size="14">
-              mdi-sort-ascending
-            </v-icon>
-          </v-btn>
-        </v-btn-toggle>
-
         <v-text-field
           v-model="searchFilter"
           density="compact"
@@ -192,15 +154,22 @@
 
               <span class="text-caption font-weight-medium text-medium-emphasis log-path mr-2 flex-grow-1">Route</span>
 
-              <span
-                class="text-caption font-weight-medium text-medium-emphasis mr-3 flex-shrink-0"
-                style="min-width: 44px; text-align: right;"
-              >Value</span>
-
-              <span
-                class="text-caption font-weight-medium text-medium-emphasis flex-shrink-0"
-                style="min-width: 50px;"
-              >Requests</span>
+              <button
+                v-for="col in bottleneckColumns"
+                :key="col.stat"
+                class="sort-col-header text-caption font-weight-medium flex-shrink-0"
+                :class="bottleneckStatisticFilter === col.stat ? 'active-sort-col' : 'text-medium-emphasis'"
+                @click.stop="setBottleneckSort(col.stat)"
+              >
+                {{ col.label }}
+                <v-icon
+                  v-if="bottleneckStatisticFilter === col.stat"
+                  size="10"
+                  class="ml-1"
+                >
+                  {{ bottleneckSortFilter === 'desc' ? 'mdi-arrow-down' : 'mdi-arrow-up' }}
+                </v-icon>
+              </button>
             </template>
 
             <template v-else>
@@ -446,7 +415,7 @@
                 class="log-row-header d-flex align-center cursor-pointer"
                 @click="toggleExpanded(item)"
               >
-                <!-- Status bar: colour by value relative to max -->
+                <!-- Status bar: colour by active stat relative to max -->
                 <div
                   class="status-bar flex-shrink-0"
                   :class="getValueBarClass(item.value, maxValue)"
@@ -468,23 +437,48 @@
                   {{ parseRoute(item.route).path }}
                 </span>
 
-                <!-- Stat value -->
-                <span class="text-caption font-weight-medium mr-3 flex-shrink-0">
-                  {{ formatValue(item.value) }}
-                </span>
-
-                <!-- Request count -->
-                <v-chip
-                  color="default"
-                  variant="text"
-                  size="x-small"
-                  class="flex-shrink-0"
+                <!-- Count -->
+                <span
+                  class="sort-col-value text-caption flex-shrink-0"
+                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'count' }"
                 >
                   {{ formatCount(item.request_count ?? 0) }}
-                </v-chip>
+                </span>
+
+                <!-- Avg -->
+                <span
+                  class="sort-col-value text-caption flex-shrink-0"
+                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'avg' }"
+                >
+                  {{ formatValue(item.avg_value) }}
+                </span>
+
+                <!-- Min -->
+                <span
+                  class="sort-col-value text-caption flex-shrink-0"
+                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'min' }"
+                >
+                  {{ formatValue(item.min_value) }}
+                </span>
+
+                <!-- Max -->
+                <span
+                  class="sort-col-value text-caption flex-shrink-0"
+                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'max' }"
+                >
+                  {{ formatValue(item.max_value_route) }}
+                </span>
+
+                <!-- Median -->
+                <span
+                  class="sort-col-value text-caption flex-shrink-0"
+                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'median' }"
+                >
+                  {{ formatValue(item.median_value) }}
+                </span>
               </div>
 
-              <!-- Progress bar -->
+              <!-- Progress bar driven by active statistic -->
               <v-progress-linear
                 :model-value="maxValue > 0
                   ? (item.value ?? 0) / maxValue * 100
@@ -496,50 +490,12 @@
                 class="mx-0"
               />
 
-              <!-- Expanded details -->
+              <!-- Expanded: full route -->
               <v-expand-transition>
                 <div
                   v-if="item.expanded"
                   class="log-row-detail pa-3"
                 >
-                  <div class="d-flex mb-2 flex-wrap gap-2">
-                    <v-chip
-                      size="x-small"
-                      variant="outlined"
-                    >
-                      min {{ formatValue(item.min_value ?? 0) }}
-                    </v-chip>
-
-                    <v-chip
-                      size="x-small"
-                      variant="outlined"
-                    >
-                      avg {{ formatValue(item.avg_value ?? 0) }}
-                    </v-chip>
-
-                    <v-chip
-                      size="x-small"
-                      variant="outlined"
-                    >
-                      median {{ formatValue(item.median_value ?? 0) }}
-                    </v-chip>
-
-                    <v-chip
-                      size="x-small"
-                      variant="outlined"
-                    >
-                      max {{ formatValue(item.max_value_route ?? 0) }}
-                    </v-chip>
-
-                    <v-chip
-                      size="x-small"
-                      variant="tonal"
-                      color="primary"
-                    >
-                      {{ formatCount(item.request_count ?? 0) }} requests
-                    </v-chip>
-                  </div>
-
                   <div class="text-caption text-mono text-medium-emphasis">
                     {{ item.route }}
                   </div>
@@ -730,7 +686,7 @@
 
 <script setup lang="ts">
 import type { NotificationLevel } from '~/types/notifications'
-import type { Panel } from '~/types/panel'
+import type { BottleneckStatistic, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
 const props = defineProps<{
@@ -804,17 +760,25 @@ const statusClassFilter = ref<string>('all')
 const searchFilter = ref<string>('')
 
 // Filter state (bottleneck)
-const bottleneckStatisticFilter = ref<string>(props.panel.statistic && props.panel.statistic !== 'count'
-  ? props.panel.statistic
-  : 'avg')
-const bottleneckSortFilter = ref<string>(props.panel.sort ?? 'desc')
+const bottleneckStatisticFilter = ref<BottleneckStatistic>(props.panel.statistic ?? 'avg')
+const bottleneckSortFilter = ref<'asc' | 'desc'>(props.panel.sort ?? 'desc')
 
-const bottleneckStatisticOptions = [
-  { title: 'Average', value: 'avg' },
-  { title: 'Minimum', value: 'min' },
-  { title: 'Maximum', value: 'max' },
-  { title: 'Median', value: 'median' },
+const bottleneckColumns: { label: string, stat: BottleneckStatistic }[] = [
+  { label: 'Count', stat: 'count' },
+  { label: 'Avg', stat: 'avg' },
+  { label: 'Min', stat: 'min' },
+  { label: 'Max', stat: 'max' },
+  { label: 'Median', stat: 'median' },
 ]
+
+function setBottleneckSort(stat: BottleneckStatistic) {
+  if (bottleneckStatisticFilter.value === stat) {
+    bottleneckSortFilter.value = bottleneckSortFilter.value === 'desc' ? 'asc' : 'desc'
+  }
+  else {
+    bottleneckStatisticFilter.value = stat
+  }
+}
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -838,8 +802,8 @@ function applyFilters() {
   }
   else if (props.type === 'bottleneck') {
     panelsStore.updateBottleneckListFilter(props.panel.id, {
-      statistic: bottleneckStatisticFilter.value as any,
-      sort: bottleneckSortFilter.value as 'asc' | 'desc',
+      statistic: bottleneckStatisticFilter.value,
+      sort: bottleneckSortFilter.value,
       search: searchFilter.value || undefined,
     })
   }
@@ -1205,6 +1169,38 @@ onUnmounted(() => {
 .search-input {
   max-width: 280px;
   flex: 1;
+}
+
+/* Bottleneck sortable column headers */
+.sort-col-header {
+  min-width: 46px;
+  text-align: right;
+  padding: 0 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  line-height: 1;
+}
+.sort-col-header:hover {
+  color: rgba(var(--v-theme-on-surface), 0.9) !important;
+}
+.active-sort-col {
+  color: rgb(var(--v-theme-primary)) !important;
+}
+
+/* Bottleneck row stat value cells */
+.sort-col-value {
+  min-width: 46px;
+  text-align: right;
+  padding: 0 4px;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+}
+.active-col-value {
+  font-weight: 600;
+  color: rgba(var(--v-theme-on-surface), 0.9);
 }
 
 /* Error cards (errors type) */

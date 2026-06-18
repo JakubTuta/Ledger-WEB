@@ -29,47 +29,48 @@
             class="mb-4"
           />
 
-          <!-- Panel Type Tile Grid -->
+          <!-- Panel Type List -->
           <div class="mb-4">
             <div class="text-caption text-medium-emphasis mb-2">
               Type <span class="text-error">*</span>
             </div>
 
-            <v-row
-              dense
-              class="ma-0"
-            >
-              <v-col
+            <div class="panel-type-list">
+              <v-card
                 v-for="option in panelTypeOptions"
                 :key="option.value"
-                cols="6"
-                sm="4"
-                class="pa-1"
+                :variant="form.panelType === option.value ? 'tonal' : 'outlined'"
+                :color="form.panelType === option.value ? 'primary' : undefined"
+                class="panel-type-row cursor-pointer mb-1"
+                :class="{ 'row-selected': form.panelType === option.value }"
+                @click="form.panelType = option.value as PanelType"
               >
-                <v-card
-                  :variant="form.panelType === option.value
-                    ? 'tonal'
-                    : 'outlined'"
-                  :color="form.panelType === option.value
-                    ? 'primary'
-                    : undefined"
-                  class="panel-type-tile cursor-pointer pa-2 text-center"
-                  :class="{'tile-selected': form.panelType === option.value}"
-                  height="72"
-                  @click="form.panelType = option.value as PanelType"
-                >
+                <div class="d-flex align-center pa-2 gap-3">
                   <v-icon
                     :icon="option.icon"
                     size="20"
-                    class="mb-1"
+                    class="flex-shrink-0"
+                    :color="form.panelType === option.value ? 'primary' : undefined"
                   />
 
-                  <div class="text-caption">
-                    {{ option.label }}
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="text-caption font-weight-medium">
+                      {{ option.label }}
+                    </div>
+
+                    <div class="text-caption text-medium-emphasis type-description">
+                      {{ option.description }}
+                    </div>
                   </div>
-                </v-card>
-              </v-col>
-            </v-row>
+
+                  <PanelTypePreview
+                    :type="option.value as PanelType"
+                    class="flex-shrink-0 opacity-70"
+                    :class="{ 'opacity-100': form.panelType === option.value }"
+                  />
+                </div>
+              </v-card>
+            </div>
 
             <div
               v-if="panelTypeError"
@@ -371,12 +372,15 @@ const selectedProject = computed(() => {
 const availableRoutes = computed(() => selectedProject.value?.available_routes || [])
 
 const allPanelTypeOptions = [
-  { label: 'HTTP Request Log', value: 'logs', icon: 'mdi-web', description: 'Live log of HTTP requests with status, method, path, and duration. Filter by status class (2xx/4xx/5xx) or path/method search.', requires: null },
-  { label: 'Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines for a specific endpoint.', requires: null },
-  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Paginated list of recent errors with stack traces.', requires: null },
-  { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Grouped bars comparing route latency or request count.', requires: null },
-  { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate.', requires: null },
-  { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent traces. Click any row to pin it as a single-trace panel.' },
+  { label: 'Traffic & Errors', value: 'errors', icon: 'mdi-chart-bar', description: 'Total request volume and error count over time with error-rate trend.' },
+  { label: 'Summary KPIs', value: 'summary', icon: 'mdi-view-dashboard-outline', description: 'At-a-glance tiles: total requests, error rate %, avg latency, p95, and throughput.' },
+  { label: 'Latency Overview', value: 'latency_overview', icon: 'mdi-chart-timeline-variant', description: 'Project-wide latency lines (avg, p95, p99) aggregated across all endpoints.' },
+  { label: 'Endpoint Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines (avg/p95/p99) for one specific endpoint URL.' },
+  { label: 'HTTP Request Log', value: 'logs', icon: 'mdi-web', description: 'Live log of HTTP requests with status, method, path, and duration.' },
+  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Grouped list of recent errors with occurrence counts and stack traces.' },
+  { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Routes ranked by latency or request count. Click column headers to sort.' },
+  { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate — spot recurring failure patterns.' },
+  { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent distributed traces. Click a row to pin it as a trace panel.' },
 ]
 
 const panelTypeOptions = allPanelTypeOptions
@@ -580,17 +584,24 @@ function handleCancel() {
 </script>
 
 <style scoped>
-.panel-type-tile {
+.panel-type-list {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.panel-type-row {
   transition: all 0.15s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   user-select: none;
 }
 
-.panel-type-tile:hover:not(.tile-selected) {
-  border-color: rgba(var(--v-theme-primary), 0.5) !important;
+.panel-type-row:hover:not(.row-selected) {
+  border-color: rgba(var(--v-theme-primary), 0.4) !important;
+}
+
+.type-description {
+  font-size: 10px;
+  line-height: 1.3;
+  opacity: 0.85;
 }
 
 .time-range-btn {

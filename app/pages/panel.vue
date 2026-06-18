@@ -296,6 +296,30 @@
               @time-options="openTimeOptionsDialog(panel)"
             />
 
+            <SummaryPanel
+              v-else-if="panel.type === 'summary'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              :metrics="panelsStore.getMetricsForPanel(panel.id)"
+              :loading="panelsStore.isMetricsLoading(panel.id)"
+              :disabled="isEditMode"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
+            />
+
+            <LatencyOverviewPanel
+              v-else-if="panel.type === 'latency_overview'"
+              :panel="panel"
+              :project="getProjectForPanel(panel)"
+              :metrics="panelsStore.getMetricsForPanel(panel.id)"
+              :loading="panelsStore.isMetricsLoading(panel.id)"
+              :disabled="isEditMode"
+              @delete="openDeleteDialog(panel)"
+              @time-options="openTimeOptionsDialog(panel)"
+              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
+            />
+
             <PanelCard
               v-else
               :panel="panel"

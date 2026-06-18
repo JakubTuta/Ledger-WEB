@@ -125,7 +125,7 @@ export const usePanelsStore = defineStore('panels', () => {
       if (panel.type === 'errors') {
         metricsType = 'exception'
       }
-      else if (panel.type === 'metrics') {
+      else if (panel.type === 'metrics' || panel.type === 'summary' || panel.type === 'latency_overview') {
         metricsType = 'endpoint'
       }
       else {
@@ -133,7 +133,7 @@ export const usePanelsStore = defineStore('panels', () => {
       }
       searchParams.set('type', metricsType)
 
-      if (metricsType === 'endpoint') {
+      if (metricsType === 'endpoint' && panel.type === 'metrics') {
         const rawEndpoint = params?.endpointPath || panel.endpoint
         if (rawEndpoint) {
           const spaceIdx = rawEndpoint.indexOf(' ')
@@ -372,9 +372,7 @@ export const usePanelsStore = defineStore('panels', () => {
     try {
       const searchParams = new URLSearchParams()
       searchParams.set('project_id', panel.project_id)
-      searchParams.set('statistic', (panel.statistic && panel.statistic !== 'count')
-        ? panel.statistic
-        : 'avg')
+      searchParams.set('statistic', panel.statistic ?? 'avg')
       searchParams.set('sort', panel.sort ?? 'desc')
       searchParams.set('limit', String(limit))
       searchParams.set('offset', String(offset))
@@ -427,7 +425,7 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const updateBottleneckListFilter = async (
     panelId: string,
-    patch: { statistic?: Exclude<BottleneckStatistic, 'count'>, sort?: BottleneckSort, search?: string },
+    patch: { statistic?: BottleneckStatistic, sort?: BottleneckSort, search?: string },
   ) => {
     const panel = panels.value.find(p => p.id === panelId)
     if (!panel)
@@ -437,7 +435,7 @@ export const usePanelsStore = defineStore('panels', () => {
       panel.statistic = patch.statistic
     if (patch.sort !== undefined)
       panel.sort = patch.sort
-    if (patch.search !== undefined)
+    if ('search' in patch)
       panel.search = patch.search || undefined
 
     await updatePanel(panelId, {
@@ -506,7 +504,7 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list']
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
     const payload: Record<string, any> = {}
