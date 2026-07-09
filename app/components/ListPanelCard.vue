@@ -158,7 +158,9 @@
                 v-for="col in bottleneckColumns"
                 :key="col.stat"
                 class="sort-col-header text-caption font-weight-medium flex-shrink-0"
-                :class="bottleneckStatisticFilter === col.stat ? 'active-sort-col' : 'text-medium-emphasis'"
+                :class="bottleneckStatisticFilter === col.stat
+                  ? 'active-sort-col'
+                  : 'text-medium-emphasis'"
                 @click.stop="setBottleneckSort(col.stat)"
               >
                 {{ col.label }}
@@ -167,7 +169,9 @@
                   size="10"
                   class="ml-1"
                 >
-                  {{ bottleneckSortFilter === 'desc' ? 'mdi-arrow-down' : 'mdi-arrow-up' }}
+                  {{ bottleneckSortFilter === 'desc'
+                    ? 'mdi-arrow-down'
+                    : 'mdi-arrow-up' }}
                 </v-icon>
               </button>
             </template>
@@ -440,7 +444,7 @@
                 <!-- Count -->
                 <span
                   class="sort-col-value text-caption flex-shrink-0"
-                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'count' }"
+                  :class="{'active-col-value': bottleneckStatisticFilter === 'count'}"
                 >
                   {{ formatCount(item.request_count ?? 0) }}
                 </span>
@@ -448,7 +452,7 @@
                 <!-- Avg -->
                 <span
                   class="sort-col-value text-caption flex-shrink-0"
-                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'avg' }"
+                  :class="{'active-col-value': bottleneckStatisticFilter === 'avg'}"
                 >
                   {{ formatValue(item.avg_value) }}
                 </span>
@@ -456,7 +460,7 @@
                 <!-- Min -->
                 <span
                   class="sort-col-value text-caption flex-shrink-0"
-                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'min' }"
+                  :class="{'active-col-value': bottleneckStatisticFilter === 'min'}"
                 >
                   {{ formatValue(item.min_value) }}
                 </span>
@@ -464,7 +468,7 @@
                 <!-- Max -->
                 <span
                   class="sort-col-value text-caption flex-shrink-0"
-                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'max' }"
+                  :class="{'active-col-value': bottleneckStatisticFilter === 'max'}"
                 >
                   {{ formatValue(item.max_value_route) }}
                 </span>
@@ -472,7 +476,7 @@
                 <!-- Median -->
                 <span
                   class="sort-col-value text-caption flex-shrink-0"
-                  :class="{ 'active-col-value': bottleneckStatisticFilter === 'median' }"
+                  :class="{'active-col-value': bottleneckStatisticFilter === 'median'}"
                 >
                   {{ formatValue(item.median_value) }}
                 </span>
@@ -773,7 +777,9 @@ const bottleneckColumns: { label: string, stat: BottleneckStatistic }[] = [
 
 function setBottleneckSort(stat: BottleneckStatistic) {
   if (bottleneckStatisticFilter.value === stat) {
-    bottleneckSortFilter.value = bottleneckSortFilter.value === 'desc' ? 'asc' : 'desc'
+    bottleneckSortFilter.value = bottleneckSortFilter.value === 'desc'
+      ? 'asc'
+      : 'desc'
   }
   else {
     bottleneckStatisticFilter.value = stat

@@ -17,7 +17,7 @@ export default defineNuxtConfig({
         { name: 'format-detection', content: 'telephone=no' },
         { name: 'theme-color', content: '#1976D2' },
         { name: 'author', content: 'Ledger Team' },
-        { name: 'description', content: 'Open source log analytics for Python backends. Monitor FastAPI, Django, and Flask with real-time dashboards.' },
+        { name: 'description', content: 'Open source, OpenTelemetry-native log analytics for Python. Monitor FastAPI, Django, and Flask with real-time dashboards. Any other language\'s OTel SDK works too.' },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -85,6 +85,9 @@ export default defineNuxtConfig({
     '/alerts': { ssr: false },
     '/account': { ssr: false },
     '/settings': { ssr: false },
+    '/explore': { ssr: false },
+    '/errors': { ssr: false },
+    '/monitors': { ssr: false },
   },
 
   site: {
@@ -93,7 +96,7 @@ export default defineNuxtConfig({
   },
 
   sitemap: {
-    exclude: ['/login', '/register', '/panel', '/alerts', '/account'],
+    exclude: ['/login', '/register', '/panel', '/alerts', '/account', '/explore', '/errors', '/monitors'],
   },
 
   nitro: {

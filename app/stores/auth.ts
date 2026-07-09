@@ -1,9 +1,38 @@
-import type { ChangePasswordRequest, ChangePasswordResponse, LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, UpdateNameRequest, UpdateNameResponse, User } from '~/types/auth'
+import type {
+  ChangePasswordRequest,
+  ChangePasswordResponse,
+  Disable2FARequest,
+  Disable2FAResponse,
+  ListSessionsResponse,
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenResponse,
+  RegisterRequest,
+  RegisterResponse,
+  ResendVerificationResponse,
+  RevokeAllSessionsResponse,
+  RevokeSessionResponse,
+  Setup2FAResponse,
+  TOTPLoginRequest,
+  UpdateNameRequest,
+  UpdateNameResponse,
+  User,
+  Verify2FAResponse,
+  VerifyEmailResponse,
+} from '~/types/auth'
 import { defineStore } from 'pinia'
 
-const TOKEN_KEY = 'ledger_auth_token'
-const REFRESH_TOKEN_KEY = 'ledger_refresh_token'
-const TOKEN_EXPIRY_KEY = 'ledger_token_expiry'
+// NOTE ON TOKEN STORAGE (Phase 4.3 auth hardening):
+// - The refresh token is NEVER stored client-side anymore. It lives only in
+//   an httpOnly cookie set by the gateway (login/register/refresh/2fa/login
+//   responses) — JavaScript cannot read or write it, so XSS can no longer
+//   exfiltrate it. The browser attaches it automatically (withCredentials)
+//   when calling /accounts/refresh.
+// - The access token lives ONLY in the `token` ref below — a plain
+//   in-memory Pinia value, never written to localStorage. On a full page
+//   reload the ref is gone, so autoLogin() silently calls /accounts/refresh
+//   (cookie-only, no body needed) to re-establish a session, same pattern
+//   apps like GitHub use.
 
 export const useAuthStore = defineStore('auth', () => {
   const { client } = useApiStore()
@@ -12,49 +41,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<User | null>(null)
   const token = ref<string | null>(null)
-  const refreshToken = ref<string | null>(null)
   const tokenExpiryTime = ref<number | null>(null)
   const isAuthenticated = computed(() => !!user.value && !!token.value)
   const authInitialized = ref(false)
   const refreshPromise = ref<Promise<boolean> | null>(null)
 
-  const saveToken = (newToken: string, newRefreshToken: string, expiresIn: number) => {
+  const saveToken = (newToken: string, expiresIn: number) => {
     token.value = newToken
-    refreshToken.value = newRefreshToken
     tokenExpiryTime.value = Date.now() + (expiresIn * 1000)
-
-    if (import.meta.client) {
-      localStorage.setItem(TOKEN_KEY, newToken)
-      localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
-      localStorage.setItem(TOKEN_EXPIRY_KEY, tokenExpiryTime.value.toString())
-    }
-  }
-
-  const loadToken = () => {
-    if (import.meta.client) {
-      const savedToken = localStorage.getItem(TOKEN_KEY)
-      const savedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
-      const savedExpiry = localStorage.getItem(TOKEN_EXPIRY_KEY)
-
-      if (savedToken && savedRefreshToken) {
-        token.value = savedToken
-        refreshToken.value = savedRefreshToken
-        tokenExpiryTime.value = savedExpiry
-          ? Number.parseInt(savedExpiry)
-          : null
-      }
-    }
   }
 
   const clearToken = () => {
     token.value = null
-    refreshToken.value = null
     tokenExpiryTime.value = null
-    if (import.meta.client) {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(REFRESH_TOKEN_KEY)
-      localStorage.removeItem(TOKEN_EXPIRY_KEY)
-    }
   }
 
   const fetchCurrentUser = async () => {
@@ -81,15 +80,27 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await client.post<LoginResponse>('/api/v1/accounts/login', credentials)
 
-      saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
+      if (response.data.requires_2fa) {
+        // Password was correct but the account has 2FA enabled — no tokens
+        // yet. The caller (login page) should show a code-entry step and
+        // call completeTwoFactorLogin() with the returned session token.
+        return {
+          success: false,
+          requiresTwoFactor: true,
+          totpSessionToken: response.data.totp_session_token,
+        }
+      }
+
+      saveToken(response.data.access_token!, response.data.expires_in!)
 
       user.value = {
-        account_id: response.data.account_id,
-        email: response.data.email,
+        account_id: response.data.account_id!,
+        email: response.data.email!,
         name: response.data.name,
       }
 
       authInitialized.value = true
+      await fetchCurrentUser()
       await router.push('/panel')
 
       return { success: true }
@@ -106,11 +117,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const completeTwoFactorLogin = async (data: TOTPLoginRequest) => {
+    try {
+      const response = await client.post<LoginResponse>('/api/v1/accounts/2fa/login', data)
+
+      saveToken(response.data.access_token!, response.data.expires_in!)
+
+      user.value = {
+        account_id: response.data.account_id!,
+        email: response.data.email!,
+      }
+
+      authInitialized.value = true
+      await fetchCurrentUser()
+      await router.push('/panel')
+
+      return { success: true }
+    }
+    catch (error: any) {
+      console.error('2FA login failed:', error)
+
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || 'Invalid or expired code'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
   const register = async (data: RegisterRequest) => {
     try {
       const response = await client.post<RegisterResponse>('/api/v1/accounts/register', data)
 
-      saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
+      saveToken(response.data.access_token, response.data.expires_in)
 
       user.value = {
         account_id: response.data.account_id,
@@ -138,6 +178,8 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     try {
       if (token.value) {
+        // Server revokes all refresh-token sessions and clears the
+        // httpOnly cookie.
         await client.post('/api/v1/accounts/logout')
       }
     }
@@ -163,20 +205,20 @@ export const useAuthStore = defineStore('auth', () => {
     return Date.now() + refreshThreshold >= tokenExpiryTime.value
   }
 
-  const refreshAccessToken = async (): Promise<boolean> => {
-    if (!refreshToken.value)
-      return false
+  const refreshAccessToken = (): Promise<boolean> => {
     if (refreshPromise.value)
       return refreshPromise.value
 
     refreshPromise.value = (async () => {
       try {
+        // No body needed — the browser attaches the httpOnly refresh_token
+        // cookie automatically (withCredentials on the axios client).
         const response = await client.post<RefreshTokenResponse>(
           '/api/v1/accounts/refresh',
-          { refresh_token: refreshToken.value } as RefreshTokenRequest,
+          {},
         )
 
-        saveToken(response.data.access_token, response.data.refresh_token, response.data.expires_in)
+        saveToken(response.data.access_token, response.data.expires_in)
 
         if (response.data.account_id && response.data.email) {
           user.value = {
@@ -190,7 +232,8 @@ export const useAuthStore = defineStore('auth', () => {
       }
       catch (error) {
         console.error('Token refresh failed:', error)
-        await logout()
+        clearToken()
+        user.value = null
 
         return false
       }
@@ -208,24 +251,19 @@ export const useAuthStore = defineStore('auth', () => {
       return
     }
 
-    loadToken()
-    if (token.value) {
-      // Check if token needs refresh before fetching user
-      if (shouldRefreshToken()) {
-        const refreshed = await refreshAccessToken()
-        if (!refreshed) {
-          authInitialized.value = true
+    // The access token is memory-only and never survives a page reload, so
+    // there's nothing to "load" — instead, always attempt a silent refresh
+    // via the httpOnly cookie. If there's no valid cookie (never logged in,
+    // or it expired), this just fails quietly and the user stays logged out.
+    const refreshed = await refreshAccessToken()
 
-          return
-        }
-      }
-
+    if (refreshed) {
       await fetchCurrentUser()
 
       // Set up automatic token refresh check (every 30 seconds)
       if (import.meta.client) {
         setInterval(async () => {
-          if (shouldRefreshToken() && refreshToken.value) {
+          if (shouldRefreshToken()) {
             await refreshAccessToken()
           }
         }, 30000)
@@ -275,17 +313,158 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // ==================== Email Verification ====================
+
+  const verifyEmail = async (verificationToken: string) => {
+    try {
+      const response = await client.post<VerifyEmailResponse>('/api/v1/accounts/verify-email', { token: verificationToken })
+
+      if (user.value) {
+        user.value.email_verified = true
+      }
+
+      return { success: true, message: response.data.message }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to verify email'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const resendVerification = async () => {
+    try {
+      const response = await client.post<ResendVerificationResponse>('/api/v1/accounts/resend-verification')
+
+      return { success: true, alreadyVerified: response.data.already_verified, message: response.data.message }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to send verification email'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  // ==================== TOTP 2FA ====================
+
+  const setup2FA = async () => {
+    try {
+      const response = await client.post<Setup2FAResponse>('/api/v1/accounts/2fa/setup')
+
+      return { success: true, secret: response.data.secret, provisioningUri: response.data.provisioning_uri }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to start 2FA setup'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const verify2FASetup = async (code: string) => {
+    try {
+      const response = await client.post<Verify2FAResponse>('/api/v1/accounts/2fa/verify', { code })
+
+      if (user.value) {
+        user.value.totp_enabled = true
+      }
+
+      return { success: true, backupCodes: response.data.backup_codes, message: response.data.message }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Invalid verification code'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const disable2FA = async (data: Disable2FARequest) => {
+    try {
+      const response = await client.post<Disable2FAResponse>('/api/v1/accounts/2fa/disable', data)
+
+      if (user.value) {
+        user.value.totp_enabled = false
+      }
+
+      return { success: true, message: response.data.message }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to disable 2FA'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  // ==================== Session Management ====================
+
+  const listSessions = async () => {
+    try {
+      const response = await client.get<ListSessionsResponse>('/api/v1/accounts/sessions')
+
+      return { success: true, sessions: response.data.sessions }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to load sessions'
+
+      return { success: false, error: errorMessage, sessions: [] }
+    }
+  }
+
+  const revokeSession = async (sessionId: number) => {
+    try {
+      const response = await client.post<RevokeSessionResponse>(`/api/v1/accounts/sessions/${sessionId}/revoke`)
+
+      return { success: true, message: response.data.message }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to revoke session'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
+  const revokeAllSessions = async (includeCurrent = false) => {
+    try {
+      const response = await client.post<RevokeAllSessionsResponse>(
+        '/api/v1/accounts/sessions/revoke-all',
+        {},
+        { params: { include_current: includeCurrent } },
+      )
+
+      if (includeCurrent) {
+        clearToken()
+        user.value = null
+        authInitialized.value = false
+        await router.push('/login')
+      }
+
+      return { success: true, revokedCount: response.data.revoked_count, message: response.data.message }
+    }
+    catch (error: any) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to revoke sessions'
+
+      return { success: false, error: errorMessage }
+    }
+  }
+
   return {
     user,
     token,
-    refreshToken,
     isAuthenticated,
     login,
+    completeTwoFactorLogin,
     register,
     logout,
     autoLogin,
     updateName,
     changePassword,
     refreshAccessToken,
+    verifyEmail,
+    resendVerification,
+    setup2FA,
+    verify2FASetup,
+    disable2FA,
+    listSessions,
+    revokeSession,
+    revokeAllSessions,
   }
 })

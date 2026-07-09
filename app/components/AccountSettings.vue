@@ -73,14 +73,36 @@
       label="Email"
       type="email"
       variant="outlined"
-      class="mb-6"
+      class="mb-2"
       readonly
     />
+
+    <EmailVerificationStatus class="mb-6" />
   </div>
 
   <v-divider class="my-6" />
 
   <ChangePasswordForm />
+
+  <v-divider class="my-6" />
+
+  <div style="max-width: 600px; width: 100%;">
+    <div class="text-h6 font-weight-bold mb-4">
+      Two-Factor Authentication
+    </div>
+
+    <TwoFactorSettings />
+  </div>
+
+  <v-divider class="my-6" />
+
+  <div style="max-width: 700px; width: 100%;">
+    <div class="text-h6 font-weight-bold mb-4">
+      Active Sessions
+    </div>
+
+    <SessionsList />
+  </div>
 </template>
 
 <script setup lang="ts">

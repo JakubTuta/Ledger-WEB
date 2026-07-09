@@ -19,11 +19,15 @@
         variant="outlined"
         readonly
         density="compact"
-        :type="showNewKey ? 'text' : 'password'"
+        :type="showNewKey
+          ? 'text'
+          : 'password'"
       >
         <template #append-inner>
           <v-btn
-            :icon="showNewKey ? 'mdi-eye-off' : 'mdi-eye'"
+            :icon="showNewKey
+              ? 'mdi-eye-off'
+              : 'mdi-eye'"
             variant="text"
             size="small"
             @click="showNewKey = !showNewKey"
@@ -47,7 +51,9 @@
       prepend-icon="mdi-key-alert"
       class="mb-4"
     >
-      {{ revokedApiKeys.length }} API key{{ revokedApiKeys.length > 1 ? 's were' : ' was' }} revoked due to a security update. Use Regenerate to issue replacement keys.
+      {{ revokedApiKeys.length }} API key{{ revokedApiKeys.length > 1
+        ? 's were'
+        : ' was' }} revoked due to a security update. Use Regenerate to issue replacement keys.
     </v-alert>
 
     <div class="mb-4">
@@ -89,7 +95,9 @@
               <span class="text-caption text-grey">Status:</span>
 
               <v-chip
-                :color="apiKey.status === 'active' ? 'success' : 'error'"
+                :color="apiKey.status === 'active'
+                  ? 'success'
+                  : 'error'"
                 size="x-small"
                 class="ml-1"
               >
@@ -110,7 +118,7 @@
 
         <template #append>
           <v-tooltip text="Regenerate key">
-            <template #activator="{ props: tooltipProps }">
+            <template #activator="{'props': tooltipProps}">
               <v-btn
                 v-bind="tooltipProps"
                 icon="mdi-key-refresh"
@@ -126,7 +134,7 @@
             v-if="apiKey.status === 'active'"
             text="Revoke key"
           >
-            <template #activator="{ props: tooltipProps }">
+            <template #activator="{'props': tooltipProps}">
               <v-btn
                 v-bind="tooltipProps"
                 icon="mdi-delete"
@@ -200,14 +208,18 @@ const selectedProjectId = computed(() => (projectsStore.projects.length > 0
 
 const allApiKeys = computed(() => {
   return [...apiKeysStore.apiKeys].sort((a, b) => {
-    if (a.status !== b.status)
-      return a.status === 'active' ? -1 : 1
+    if (a.status !== b.status) {
+      return a.status === 'active'
+        ? -1
+        : 1
+    }
     if (!a.last_used_at && !b.last_used_at)
       return 0
     if (!a.last_used_at)
       return 1
     if (!b.last_used_at)
       return -1
+
     return new Date(b.last_used_at).getTime() - new Date(a.last_used_at).getTime()
   })
 })
@@ -216,11 +228,13 @@ const revokedApiKeys = computed(() => apiKeysStore.apiKeys.filter(k => k.status 
 
 function getProjectName(projectId: number) {
   const project = projectsStore.projects.find(p => p.project_id === projectId)
+
   return project?.name || 'Unknown'
 }
 
 function formatDate(dateString: string) {
   const date = new Date(dateString)
+
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',

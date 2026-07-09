@@ -86,6 +86,14 @@
         />
 
         <v-btn
+          icon="mdi-send-outline"
+          variant="text"
+          size="x-small"
+          :loading="testing[c.id]"
+          @click="runTest(c)"
+        />
+
+        <v-btn
           v-if="kind !== 'in_app'"
           icon="mdi-pencil"
           variant="text"
@@ -103,6 +111,15 @@
         />
       </div>
     </div>
+
+    <v-snackbar
+      v-model="snackbarOpen"
+      timeout="3000"
+      :color="snackbarColor"
+      location="bottom right"
+    >
+      {{ snackbarMessage }}
+    </v-snackbar>
   </v-card>
 </template>
 
@@ -122,13 +139,34 @@ const emit = defineEmits<{
   delete: [Connector]
 }>()
 
+const alertsStore = useAlertsStore()
+
 const testResult = ref<Record<number, boolean>>({})
+const testing = ref<Record<number, boolean>>({})
+const snackbarOpen = ref(false)
+const snackbarMessage = ref('')
+const snackbarColor = ref('success')
 
 const meta = computed(() => connectorMeta(props.kind))
 
 const label = computed(() => meta.value.label)
 const icon = computed(() => meta.value.icon)
 const color = computed(() => meta.value.color)
+
+async function runTest(connector: Connector) {
+  testing.value = { ...testing.value, [connector.id]: true }
+  const result = await alertsStore.testConnector(connector.id)
+  testing.value = { ...testing.value, [connector.id]: false }
+  testResult.value = { ...testResult.value, [connector.id]: result.success }
+
+  snackbarColor.value = result.success
+    ? 'success'
+    : 'error'
+  snackbarMessage.value = result.success
+    ? `Test notification sent via ${connector.name}`
+    : (result.error || 'Test notification failed')
+  snackbarOpen.value = true
+}
 </script>
 
 <style scoped>

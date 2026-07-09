@@ -114,6 +114,42 @@
             </v-text-field>
           </v-alert>
 
+          <v-expansion-panels
+            v-if="createdKey"
+            variant="accordion"
+            class="mt-4"
+          >
+            <v-expansion-panel title="OpenTelemetry setup">
+              <template #text>
+                <div class="text-caption text-medium-emphasis mb-2">
+                  Use this key with the Ledger Python SDK, or point any language's stock
+                  OpenTelemetry SDK at these environment variables:
+                </div>
+
+                <v-sheet
+                  color="surface-variant"
+                  rounded
+                  class="pa-3"
+                  style="font-family: monospace; font-size: 12px; position: relative;"
+                >
+                  <v-btn
+                    icon="mdi-content-copy"
+                    variant="text"
+                    size="x-small"
+                    style="position: absolute; top: 4px; right: 4px;"
+                    @click="copyOtelSnippet"
+                  />
+
+                  <div>OTEL_EXPORTER_OTLP_ENDPOINT=https://ledger-server.jtuta.cloud</div>
+
+                  <div>OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf</div>
+
+                  <div>OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer {{ createdKey.full_key }}</div>
+                </v-sheet>
+              </template>
+            </v-expansion-panel>
+          </v-expansion-panels>
+
           <v-alert
             v-if="error"
             type="error"
@@ -250,6 +286,24 @@ async function copyToClipboard() {
 
   try {
     await navigator.clipboard.writeText(createdKey.value.full_key)
+  }
+  catch (err) {
+    console.error('Failed to copy to clipboard:', err)
+  }
+}
+
+async function copyOtelSnippet() {
+  if (!createdKey.value)
+    return
+
+  const snippet = [
+    'OTEL_EXPORTER_OTLP_ENDPOINT=https://ledger-server.jtuta.cloud',
+    'OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf',
+    `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer ${createdKey.value.full_key}`,
+  ].join('\n')
+
+  try {
+    await navigator.clipboard.writeText(snippet)
   }
   catch (err) {
     console.error('Failed to copy to clipboard:', err)

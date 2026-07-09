@@ -15,7 +15,7 @@
               prepend-icon="mdi-circle"
               size="small"
             >
-              Real-time observability for Python
+              OpenTelemetry-native observability for Python
             </v-chip>
 
             <h1 class="hero-title mb-6">
@@ -26,6 +26,7 @@
             <p class="hero-subtitle mb-8">
               Add 3 lines of code. Get instant visibility into every HTTP request, exception,
               and custom log — all in a real-time dashboard you'll actually enjoy using.
+              Built on OpenTelemetry, so any other language's OTel SDK works too.
             </p>
 
             <div class="d-flex flex-column flex-sm-row ga-3 mb-10">
@@ -617,7 +618,7 @@ def get_user(id: int):
             </div>
 
             <p class="footer-text mb-4">
-              Open source observability for Python backends. Built by developers, for developers.
+              Open source, OpenTelemetry-native observability for Python backends. Built by developers, for developers.
             </p>
 
             <div class="d-flex ga-2">
@@ -695,21 +696,21 @@ const siteUrl = runtimeConfig.public.siteUrl as string
 definePageMeta({})
 
 useSeoMeta({
-  title: 'Ledger — Log Analytics for Python Backends',
-  description: 'Open source log monitoring for FastAPI, Django, and Flask. Add 3 lines of code to see every request, error, and custom log in a real-time dashboard.',
-  keywords: 'log analytics, python logging, fastapi monitoring, django logging, flask monitoring, error tracking, application monitoring, open source logging',
+  title: 'Ledger — OpenTelemetry-Native Log Analytics for Python Backends',
+  description: 'Open source, OpenTelemetry-native observability for Python. Add 3 lines of code to see every request, error, and trace in a real-time dashboard. Any other language\'s OTel SDK also works.',
+  keywords: 'log analytics, python logging, fastapi monitoring, django logging, flask monitoring, opentelemetry, otlp, error tracking, application monitoring, open source logging, distributed tracing',
 
   ogType: 'website',
-  ogTitle: 'Ledger — Log Analytics for Python Backends',
-  ogDescription: 'Open source log monitoring for FastAPI, Django, and Flask. See every request, error, and custom log in real-time.',
+  ogTitle: 'Ledger — OpenTelemetry-Native Log Analytics for Python Backends',
+  ogDescription: 'Open source, OpenTelemetry-native observability for Python. See every request, error, and trace in real-time. Any other language\'s OTel SDK works too.',
   ogUrl: siteUrl,
   ogSiteName: 'Ledger',
   ogLocale: 'en_US',
   ogImage: `${siteUrl}/og-image.png`,
 
   twitterCard: 'summary_large_image',
-  twitterTitle: 'Ledger — Log Analytics for Python Backends',
-  twitterDescription: 'Open source log monitoring for FastAPI, Django, and Flask. Add 3 lines of code to get started.',
+  twitterTitle: 'Ledger — OpenTelemetry-Native Log Analytics for Python Backends',
+  twitterDescription: 'Open source, OpenTelemetry-native observability for Python. Add 3 lines of code to get started. Any other OTel SDK works too.',
   twitterImage: `${siteUrl}/og-image.png`,
 })
 
@@ -730,7 +731,7 @@ useHead({
         'name': 'Ledger',
         'applicationCategory': 'DeveloperApplication',
         'operatingSystem': 'Web',
-        'description': 'Open source log analytics platform for Python backends. Monitor FastAPI, Django, and Flask applications with automatic request logging, exception tracking, and real-time dashboards.',
+        'description': 'Open source, OpenTelemetry-native log analytics platform for Python. Monitor FastAPI, Django, and Flask applications with automatic request logging, exception tracking, and real-time dashboards. Any other language\'s OpenTelemetry SDK also works.',
         'url': siteUrl,
         'author': {
           '@type': 'Organization',
@@ -771,6 +772,7 @@ const frameworks = [
   { name: 'FastAPI', icon: 'mdi-flash' },
   { name: 'Django', icon: 'mdi-leaf' },
   { name: 'Flask', icon: 'mdi-bottle-tonic' },
+  { name: 'OpenTelemetry', icon: 'mdi-vector-polyline' },
 ]
 
 const features = [
@@ -832,6 +834,13 @@ app.add_middleware(LedgerMiddleware, ledger_client=ledger)`,
     description: 'Every request, response, and exception appears in your dashboard instantly.',
     code: null,
   },
+  {
+    title: 'Or use any OpenTelemetry SDK',
+    description: 'Not on Python? Point any language\'s stock OTel SDK at Ledger — no Ledger-specific package required.',
+    code: `OTEL_EXPORTER_OTLP_ENDPOINT=https://ledger-server.jtuta.cloud
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer ledger_<api-key>`,
+  },
 ]
 
 const ecosystem = [
@@ -842,6 +851,14 @@ const ecosystem = [
     description: 'pip install ledger-sdk — supports FastAPI, Django, Flask, Starlette, Litestar.',
     cta: 'View on GitHub',
     link: 'https://github.com/JakubTuta/Ledger-SDK',
+  },
+  {
+    icon: 'mdi-vector-polyline',
+    color: 'accent',
+    title: 'Any OpenTelemetry SDK',
+    description: 'Ledger accepts standard OTLP/HTTP traces and logs, so Go, Java, Node, and every other OTel SDK works out of the box.',
+    cta: 'OTLP setup guide',
+    link: 'https://github.com/JakubTuta/Ledger-APP#otlp',
   },
   {
     icon: 'mdi-server',

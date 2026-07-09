@@ -36,7 +36,8 @@
           </div>
 
           <div class="text-caption text-medium-emphasis mb-3">
-            Traces are collected when your app sends spans via the Ledger SDK.
+            Traces are collected via OpenTelemetry — from the Ledger Python SDK or any
+            OTel SDK pointed at this project.
           </div>
 
           <v-sheet
@@ -45,18 +46,14 @@
             class="mb-3 pa-3 text-left"
             style="font-family: monospace; font-size: 12px;"
           >
-            <div>from ledger import init, get_tracer</div>
+            <div>from ledger import LedgerClient</div>
 
             <div class="mt-1">
-              init(api_key="...", project_id={{ panel.project_id }})
+              client = LedgerClient(api_key="ledger_...")
             </div>
 
             <div class="mt-1">
-              tracer = get_tracer("my-service")
-            </div>
-
-            <div class="mt-1">
-              with tracer.start_span("operation"):
+              with client.tracer.start_as_current_span("operation"):
             </div>
 
             <div class="ml-4">
@@ -64,9 +61,17 @@
             </div>
           </v-sheet>
 
+          <div class="text-caption text-medium-emphasis mb-3">
+            Or from any other language's OpenTelemetry SDK:
+            <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>
+
+            + <code>Authorization: Bearer ledger_...</code>
+          </div>
+
           <v-btn
-            href="https://github.com/ledger-sdk/python#tracing"
+            href="https://github.com/JakubTuta/ledger-sdk#tracing"
             target="_blank"
+            rel="noopener noreferrer"
             variant="text"
             size="small"
             color="primary"

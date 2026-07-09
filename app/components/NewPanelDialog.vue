@@ -39,21 +39,27 @@
               <v-card
                 v-for="option in panelTypeOptions"
                 :key="option.value"
-                :variant="form.panelType === option.value ? 'tonal' : 'outlined'"
-                :color="form.panelType === option.value ? 'primary' : undefined"
-                class="panel-type-row cursor-pointer mb-1"
-                :class="{ 'row-selected': form.panelType === option.value }"
+                :variant="form.panelType === option.value
+                  ? 'tonal'
+                  : 'outlined'"
+                :color="form.panelType === option.value
+                  ? 'primary'
+                  : undefined"
+                class="panel-type-row mb-1 cursor-pointer"
+                :class="{'row-selected': form.panelType === option.value}"
                 @click="form.panelType = option.value as PanelType"
               >
-                <div class="d-flex align-center pa-2 gap-3">
+                <div class="d-flex align-center gap-3 pa-2">
                   <v-icon
                     :icon="option.icon"
                     size="20"
                     class="flex-shrink-0"
-                    :color="form.panelType === option.value ? 'primary' : undefined"
+                    :color="form.panelType === option.value
+                      ? 'primary'
+                      : undefined"
                   />
 
-                  <div class="flex-grow-1 min-w-0">
+                  <div class="min-w-0 flex-grow-1">
                     <div class="text-caption font-weight-medium">
                       {{ option.label }}
                     </div>
@@ -66,7 +72,7 @@
                   <PanelTypePreview
                     :type="option.value as PanelType"
                     class="flex-shrink-0 opacity-70"
-                    :class="{ 'opacity-100': form.panelType === option.value }"
+                    :class="{'opacity-100': form.panelType === option.value}"
                   />
                 </div>
               </v-card>
@@ -249,7 +255,6 @@
                     item-title="label"
                     item-value="value"
                   />
-
                 </template>
               </v-expansion-panel-text>
             </v-expansion-panel>

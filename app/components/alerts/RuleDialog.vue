@@ -165,6 +165,41 @@
             Select at least one connector
           </div>
 
+          <div class="text-overline mb-1 mt-4">
+            Escalation (optional)
+          </div>
+
+          <div class="d-flex gap-3">
+            <v-text-field
+              v-model.number="escalationAfterMinutes"
+              label="Escalate after (minutes)"
+              type="number"
+              variant="outlined"
+              density="compact"
+              min="1"
+              hide-details
+              placeholder="Never"
+            />
+
+            <v-select
+              v-model="escalateConnectorId"
+              label="Escalate to"
+              variant="outlined"
+              density="compact"
+              :items="connectorOptions"
+              item-title="name"
+              item-value="id"
+              clearable
+              hide-details
+              :disabled="!escalationAfterMinutes"
+            />
+          </div>
+
+          <div class="text-caption text-medium-emphasis mt-1">
+            If still firing after this many minutes, send one extra notification to the
+            chosen connector (e.g. PagerDuty/Opsgenie for on-call paging).
+          </div>
+
           <v-alert
             v-if="errorMessage"
             type="error"
@@ -205,7 +240,7 @@
 
 <script setup lang="ts">
 import type { AlertComparator, AlertRule, AlertUnit, ConnectorKind } from '~/types/alerts'
-import { METRIC_CATALOG } from '~/types/alerts'
+import { connectorMeta, METRIC_CATALOG } from '~/types/alerts'
 
 const props = defineProps<{
   modelValue: boolean
@@ -232,6 +267,8 @@ const comparator = ref<AlertComparator>('>')
 const threshold = ref<number | null>(null)
 const unit = ref<AlertUnit>('count')
 const connectorIds = ref<number[]>([])
+const escalationAfterMinutes = ref<number | null>(null)
+const escalateConnectorId = ref<number | null>(null)
 const saving = ref(false)
 const errorMessage = ref('')
 const connectorError = ref(false)
@@ -254,7 +291,7 @@ const comparatorOptions = [
 const connectorOptions = computed(() => connectors.value.filter(c => c.enabled))
 
 function kindIcon(kind: ConnectorKind): string {
-  return { webhook: 'mdi-webhook', email: 'mdi-email', in_app: 'mdi-bell' }[kind]
+  return connectorMeta(kind).icon
 }
 
 function toggleConnector(id: number) {
@@ -291,6 +328,8 @@ function resetForm() {
     threshold.value = props.rule.threshold
     unit.value = props.rule.unit
     connectorIds.value = [...props.rule.connector_ids]
+    escalationAfterMinutes.value = props.rule.escalation_after_minutes ?? null
+    escalateConnectorId.value = props.rule.escalate_connector_id ?? null
   }
   else {
     name.value = ''
@@ -301,6 +340,8 @@ function resetForm() {
     threshold.value = null
     unit.value = METRIC_CATALOG[0]!.units[0]!
     connectorIds.value = []
+    escalationAfterMinutes.value = null
+    escalateConnectorId.value = null
   }
 }
 
@@ -331,6 +372,9 @@ async function handleSubmit() {
         unit: unit.value,
         severity: severity.value,
         connector_ids: connectorIds.value,
+        escalation_after_minutes: escalationAfterMinutes.value,
+        escalate_connector_id: escalateConnectorId.value,
+        clear_escalate_connector_id: !escalateConnectorId.value,
       })
     : await alertsStore.createRule({
         project_id: projectId.value!,
@@ -341,6 +385,8 @@ async function handleSubmit() {
         unit: unit.value,
         severity: severity.value,
         connector_ids: connectorIds.value,
+        escalation_after_minutes: escalationAfterMinutes.value,
+        escalate_connector_id: escalateConnectorId.value,
       })
 
   saving.value = false

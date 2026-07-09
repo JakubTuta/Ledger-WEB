@@ -54,7 +54,7 @@
         class="trace-panel-body"
       >
         <!-- Header summary -->
-        <div class="trace-summary pa-3 flex-shrink-0">
+        <div class="trace-summary flex-shrink-0 pa-3">
           <div class="d-flex align-center mb-2 flex-wrap gap-2">
             <v-chip
               size="x-small"

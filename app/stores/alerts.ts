@@ -5,6 +5,8 @@ import type {
   Connector,
   CreateAlertRuleRequest,
   CreateConnectorRequest,
+  CreateMaintenanceWindowRequest,
+  MaintenanceWindow,
   UpdateAlertRuleRequest,
   UpdateConnectorRequest,
 } from '~/types/alerts'
@@ -190,6 +192,53 @@ export const useAlertsStore = defineStore('alerts', () => {
     }
   }
 
+  // --- Maintenance windows (per project) ---
+
+  const maintenanceWindowsByProject = ref<Map<number, MaintenanceWindow[]>>(new Map())
+  const maintenanceWindowsLoading = ref<Set<number>>(new Set())
+
+  const getMaintenanceWindowsForProject = (projectId: number) => computed(() => maintenanceWindowsByProject.value.get(projectId) ?? [])
+
+  const fetchMaintenanceWindows = async (projectId: number) => {
+    if (maintenanceWindowsLoading.value.has(projectId))
+      return
+
+    maintenanceWindowsLoading.value.add(projectId)
+    try {
+      const response = await client.get<MaintenanceWindow[]>('/api/v1/maintenance-windows', {
+        params: { project_id: projectId },
+      })
+      maintenanceWindowsByProject.value.set(projectId, response.data)
+    }
+    catch (error) {
+      console.error('Error fetching maintenance windows:', error)
+    }
+    finally {
+      maintenanceWindowsLoading.value.delete(projectId)
+    }
+  }
+
+  const createMaintenanceWindow = async (data: CreateMaintenanceWindowRequest) => {
+    try {
+      const response = await client.post<MaintenanceWindow>('/api/v1/maintenance-windows', data)
+      const windows = maintenanceWindowsByProject.value.get(data.project_id) ?? []
+      maintenanceWindowsByProject.value.set(data.project_id, [response.data, ...windows])
+
+      return { success: true, window: response.data }
+    }
+    catch (error: any) {
+      return { success: false, error: error.response?.data?.message ?? 'Failed to create maintenance window' }
+    }
+  }
+
+  const deleteMaintenanceWindow = async (id: number, projectId: number) => {
+    await client.delete(`/api/v1/maintenance-windows/${id}`, {
+      params: { project_id: projectId },
+    })
+    const windows = maintenanceWindowsByProject.value.get(projectId) ?? []
+    maintenanceWindowsByProject.value.set(projectId, windows.filter(w => w.id !== id))
+  }
+
   return {
     connectors,
     connectorsLoading,
@@ -213,5 +262,11 @@ export const useAlertsStore = defineStore('alerts', () => {
     historyHasMore,
     getHistoryForProject,
     fetchHistory,
+    maintenanceWindowsByProject,
+    maintenanceWindowsLoading,
+    getMaintenanceWindowsForProject,
+    fetchMaintenanceWindows,
+    createMaintenanceWindow,
+    deleteMaintenanceWindow,
   }
 })

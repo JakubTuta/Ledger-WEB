@@ -15,6 +15,11 @@ export function useApiStore() {
     headers: {
       'Content-Type': 'application/json',
     },
+    // The refresh token now lives in an httpOnly cookie set by the gateway
+    // (login/register/refresh). withCredentials makes the browser attach
+    // it on every request to the gateway origin — required for the
+    // cookie-based /accounts/refresh flow to work at all.
+    withCredentials: true,
   })
 
   client.interceptors.request.use((reqConfig) => {

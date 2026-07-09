@@ -18,6 +18,7 @@
           :fill="row.color"
           rx="1"
         />
+
         <rect
           :x="6"
           :y="i * 10 + 3"
@@ -27,6 +28,7 @@
           rx="1"
           opacity="0.7"
         />
+
         <rect
           :x="6 + row.method + 3"
           :y="i * 10 + 4"
@@ -36,6 +38,7 @@
           opacity="0.2"
           rx="1"
         />
+
         <rect
           :x="74"
           :y="i * 10 + 4"
@@ -67,6 +70,7 @@
           rx="1"
           opacity="0.7"
         />
+
         <rect
           :x="i * 11 + 2"
           :y="50 - bar.err"
@@ -76,6 +80,7 @@
           rx="1"
         />
       </g>
+
       <polyline
         :points="errorRateLine"
         fill="none"
@@ -137,6 +142,7 @@
           fill="#f87171"
           rx="1"
         />
+
         <rect
           :x="6"
           :y="i * 10 + 3"
@@ -146,6 +152,7 @@
           rx="1"
           opacity="0.6"
         />
+
         <rect
           :x="6 + row.badge + 3"
           :y="i * 10 + 4"
@@ -155,6 +162,7 @@
           opacity="0.2"
           rx="1"
         />
+
         <rect
           :x="74"
           :y="i * 10 + 4"
@@ -185,6 +193,7 @@
           :fill="bar.color"
           rx="1"
         />
+
         <rect
           :x="5"
           :y="i * 10 + 3"
@@ -234,6 +243,7 @@
           opacity="0.5"
           rx="1"
         />
+
         <rect
           :x="6"
           :y="i * 10 + 4"
@@ -243,6 +253,7 @@
           opacity="0.25"
           rx="1"
         />
+
         <rect
           :x="6 + row.label + 2"
           :y="i * 10 + 3"
@@ -274,6 +285,7 @@
           opacity="0.06"
           rx="3"
         />
+
         <rect
           :x="tile.x + 4"
           :y="tile.y + 4"
@@ -283,6 +295,7 @@
           rx="1"
           opacity="0.7"
         />
+
         <rect
           :x="tile.x + 4"
           :y="tile.y + 14"
@@ -339,6 +352,7 @@ const trafficBars = [
 
 const errorRateLine = trafficBars.map((b, i) => {
   const rate = (b.err / b.total) * 40
+
   return `${i * 11 + 4},${50 - rate}`
 }).join(' ')
 
@@ -379,8 +393,7 @@ const heatmapPattern = [
   [0, 0, 0, 1, 0, 1, 2, 0],
 ]
 const heatmapColors = ['#4ade80', '#facc15', '#f87171']
-const heatmapCells = heatmapPattern.flatMap((row, r) =>
-  row.map((v, c) => ({ r, c, color: heatmapColors[v]! })),
+const heatmapCells = heatmapPattern.flatMap((row, r) => row.map((v, c) => ({ r, c, color: heatmapColors[v]! })),
 )
 
 const traceRows = [

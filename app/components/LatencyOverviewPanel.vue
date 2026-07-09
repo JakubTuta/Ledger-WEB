@@ -26,7 +26,7 @@
         <!-- No Data -->
         <div
           v-else-if="!aggregated || aggregated.data.length === 0"
-          class="d-flex align-center justify-center text-grey"
+          class="d-flex align-center text-grey justify-center"
           style="height: 100%;"
         >
           <div class="text-center">
@@ -144,17 +144,30 @@ const aggregated = computed((): AggregatedMetricsResponse | undefined => {
       log_count: totalCount,
       error_count: rows.reduce((s, r) => s + r.error_count, 0),
       avg_duration_ms: wAvg,
-      min_duration_ms: isFinite(minMs) ? minMs : 0,
-      max_duration_ms: isFinite(maxMs) ? maxMs : 0,
+      min_duration_ms: isFinite(minMs)
+        ? minMs
+        : 0,
+      max_duration_ms: isFinite(maxMs)
+        ? maxMs
+        : 0,
       p95_duration_ms: wP95,
       p99_duration_ms: wP99,
     })
   }
 
   merged.sort((a, b) => {
-    const ka = a.hour !== undefined ? `${a.date}-${String(a.hour).padStart(2, '0')}` : a.date
-    const kb = b.hour !== undefined ? `${b.date}-${String(b.hour).padStart(2, '0')}` : b.date
-    return ka < kb ? -1 : ka > kb ? 1 : 0
+    const ka = a.hour !== undefined
+      ? `${a.date}-${String(a.hour).padStart(2, '0')}`
+      : a.date
+    const kb = b.hour !== undefined
+      ? `${b.date}-${String(b.hour).padStart(2, '0')}`
+      : b.date
+
+    return ka < kb
+      ? -1
+      : ka > kb
+        ? 1
+        : 0
   })
 
   return { ...props.metrics, data: merged }
@@ -165,6 +178,7 @@ const footerAvg = computed(() => {
   const total = data.reduce((s, d) => s + d.log_count, 0)
   if (total === 0)
     return 0
+
   return data.reduce((s, d) => s + d.avg_duration_ms * d.log_count, 0) / total
 })
 
@@ -173,6 +187,7 @@ const footerP95 = computed(() => {
   const total = data.reduce((s, d) => s + d.log_count, 0)
   if (total === 0)
     return 0
+
   return data.reduce((s, d) => s + d.p95_duration_ms * d.log_count, 0) / total
 })
 
@@ -181,6 +196,7 @@ const footerP99 = computed(() => {
   const total = data.reduce((s, d) => s + d.log_count, 0)
   if (total === 0)
     return 0
+
   return data.reduce((s, d) => s + d.p99_duration_ms * d.log_count, 0) / total
 })
 
@@ -189,6 +205,7 @@ function formatMs(ms: number): string {
     return '—'
   if (ms >= 1000)
     return `${(ms / 1000).toFixed(1)}s`
+
   return `${Math.round(ms)}ms`
 }
 </script>

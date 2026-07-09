@@ -10,11 +10,14 @@
           class="mb-4"
         />
 
-        <span class="text-h5">Login</span>
+        <span class="text-h5">{{ requiresTwoFactor
+          ? 'Two-Factor Authentication'
+          : 'Login' }}</span>
       </v-card-title>
 
       <v-card-text>
         <v-form
+          v-if="!requiresTwoFactor"
           ref="formRef"
           v-model="isFormValid"
           @submit.prevent="handleLogin"
@@ -160,6 +163,55 @@
             Login
           </v-btn>
         </v-form>
+
+        <v-form
+          v-else
+          @submit.prevent="handleTwoFactorSubmit"
+        >
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            Enter the 6-digit code from your authenticator app, or one of your backup codes.
+          </p>
+
+          <v-text-field
+            v-model="totpCode"
+            label="Authentication code"
+            variant="outlined"
+            class="mb-2"
+            autofocus
+            :disabled="loading"
+            maxlength="17"
+          />
+
+          <v-alert
+            v-if="error"
+            type="error"
+            class="mb-4"
+            density="compact"
+          >
+            {{ error }}
+          </v-alert>
+
+          <v-btn
+            type="submit"
+            block
+            color="primary"
+            size="large"
+            :loading="loading"
+            :disabled="!totpCode"
+          >
+            Verify
+          </v-btn>
+
+          <v-btn
+            block
+            variant="text"
+            class="mt-2"
+            :disabled="loading"
+            @click="cancelTwoFactor"
+          >
+            Back to login
+          </v-btn>
+        </v-form>
       </v-card-text>
     </v-card>
   </v-container>
@@ -188,6 +240,11 @@ const isFormValid = ref(false)
 const showPassword = ref(false)
 const passwordFocused = ref(false)
 
+// 2FA intermediate step
+const requiresTwoFactor = ref(false)
+const totpSessionToken = ref('')
+const totpCode = ref('')
+
 async function handleLogin() {
   if (!isFormValid.value)
     return
@@ -201,6 +258,13 @@ async function handleLogin() {
       password: password.value,
     })
 
+    if (result.requiresTwoFactor) {
+      requiresTwoFactor.value = true
+      totpSessionToken.value = result.totpSessionToken || ''
+
+      return
+    }
+
     if (!result.success) {
       error.value = result.error || 'Login failed. Please try again.'
     }
@@ -208,5 +272,34 @@ async function handleLogin() {
   finally {
     loading.value = false
   }
+}
+
+async function handleTwoFactorSubmit() {
+  if (!totpCode.value)
+    return
+
+  error.value = ''
+  loading.value = true
+
+  try {
+    const result = await authStore.completeTwoFactorLogin({
+      totp_session_token: totpSessionToken.value,
+      code: totpCode.value,
+    })
+
+    if (!result.success) {
+      error.value = result.error || 'Invalid or expired code'
+    }
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+function cancelTwoFactor() {
+  requiresTwoFactor.value = false
+  totpSessionToken.value = ''
+  totpCode.value = ''
+  error.value = ''
 }
 </script>

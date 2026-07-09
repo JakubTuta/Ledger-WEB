@@ -89,6 +89,80 @@
             />
           </template>
 
+          <template v-else-if="kind === 'slack'">
+            <v-text-field
+              v-model="webhookUrl"
+              label="Slack Incoming Webhook URL"
+              variant="outlined"
+              density="compact"
+              placeholder="https://hooks.slack.com/services/..."
+              :rules="[
+                v => !!v || 'URL required',
+                v => /^https:\/\//.test(v) || 'Must be a valid https URL',
+              ]"
+            />
+          </template>
+
+          <template v-else-if="kind === 'discord'">
+            <v-text-field
+              v-model="webhookUrl"
+              label="Discord Webhook URL"
+              variant="outlined"
+              density="compact"
+              placeholder="https://discord.com/api/webhooks/..."
+              :rules="[
+                v => !!v || 'URL required',
+                v => /^https:\/\//.test(v) || 'Must be a valid https URL',
+              ]"
+            />
+          </template>
+
+          <template v-else-if="kind === 'pagerduty'">
+            <v-text-field
+              v-model="integrationKey"
+              label="PagerDuty integration key"
+              variant="outlined"
+              density="compact"
+              :type="showSecret
+                ? 'text'
+                : 'password'"
+              :append-inner-icon="showSecret
+                ? 'mdi-eye-off'
+                : 'mdi-eye'"
+              :hint="isEdit
+                ? 'Leave blank to keep existing key'
+                : 'Events API v2 routing key from the PagerDuty service integration'"
+              persistent-hint
+              :rules="isEdit
+                ? []
+                : [v => !!v || 'Integration key required']"
+              @click:append-inner="showSecret = !showSecret"
+            />
+          </template>
+
+          <template v-else-if="kind === 'opsgenie'">
+            <v-text-field
+              v-model="apiKey"
+              label="Opsgenie API key"
+              variant="outlined"
+              density="compact"
+              :type="showSecret
+                ? 'text'
+                : 'password'"
+              :append-inner-icon="showSecret
+                ? 'mdi-eye-off'
+                : 'mdi-eye'"
+              :hint="isEdit
+                ? 'Leave blank to keep existing key'
+                : 'API key from an Opsgenie API integration'"
+              persistent-hint
+              :rules="isEdit
+                ? []
+                : [v => !!v || 'API key required']"
+              @click:append-inner="showSecret = !showSecret"
+            />
+          </template>
+
           <template v-else>
             <v-alert
               type="info"
@@ -138,6 +212,7 @@
 
 <script setup lang="ts">
 import type { Connector, ConnectorKind } from '~/types/alerts'
+import { connectorMeta } from '~/types/alerts'
 
 const props = defineProps<{
   modelValue: boolean
@@ -157,13 +232,15 @@ const name = ref('')
 const webhookUrl = ref('')
 const webhookSecret = ref('')
 const emailAddress = ref('')
+const integrationKey = ref('')
+const apiKey = ref('')
 const showSecret = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 
 const isEdit = computed(() => !!props.connector)
 
-const kindLabel = computed(() => ({ webhook: 'Webhook', email: 'Email', in_app: 'In-app' }[props.kind]))
+const kindLabel = computed(() => connectorMeta(props.kind).label)
 const title = computed(() => (isEdit.value
   ? `Edit ${kindLabel.value}`
   : `Connect ${kindLabel.value}`))
@@ -186,12 +263,16 @@ function resetForm() {
     webhookUrl.value = cfg.url ?? ''
     webhookSecret.value = ''
     emailAddress.value = cfg.address ?? ''
+    integrationKey.value = cfg.integration_key ?? ''
+    apiKey.value = cfg.api_key ?? ''
   }
   else {
     name.value = kindLabel.value
     webhookUrl.value = ''
     webhookSecret.value = ''
     emailAddress.value = ''
+    integrationKey.value = ''
+    apiKey.value = ''
   }
 }
 
@@ -211,6 +292,22 @@ function buildConfig(): string {
   }
   if (props.kind === 'email')
     return JSON.stringify({ address: emailAddress.value })
+  if (props.kind === 'slack' || props.kind === 'discord')
+    return JSON.stringify({ url: webhookUrl.value })
+  if (props.kind === 'pagerduty') {
+    const cfg: Record<string, string> = {}
+    if (integrationKey.value)
+      cfg.integration_key = integrationKey.value
+
+    return JSON.stringify(cfg)
+  }
+  if (props.kind === 'opsgenie') {
+    const cfg: Record<string, string> = {}
+    if (apiKey.value)
+      cfg.api_key = apiKey.value
+
+    return JSON.stringify(cfg)
+  }
 
   return '{}'
 }

@@ -32,6 +32,30 @@
         </v-btn>
 
         <v-btn
+          to="/explore"
+          variant="text"
+          prepend-icon="mdi-magnify"
+        >
+          Explore
+        </v-btn>
+
+        <v-btn
+          to="/errors"
+          variant="text"
+          prepend-icon="mdi-bug"
+        >
+          Errors
+        </v-btn>
+
+        <v-btn
+          to="/monitors"
+          variant="text"
+          prepend-icon="mdi-heart-pulse"
+        >
+          Monitors
+        </v-btn>
+
+        <v-btn
           to="/alerts"
           variant="text"
           prepend-icon="mdi-bell-alert"
@@ -144,6 +168,27 @@
             to="/panel"
             prepend-icon="mdi-view-dashboard"
             title="Panel"
+            @click="drawer = false"
+          />
+
+          <v-list-item
+            to="/explore"
+            prepend-icon="mdi-magnify"
+            title="Explore"
+            @click="drawer = false"
+          />
+
+          <v-list-item
+            to="/errors"
+            prepend-icon="mdi-bug"
+            title="Errors"
+            @click="drawer = false"
+          />
+
+          <v-list-item
+            to="/monitors"
+            prepend-icon="mdi-heart-pulse"
+            title="Monitors"
             @click="drawer = false"
           />
 

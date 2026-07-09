@@ -73,6 +73,63 @@
         />
       </v-card>
 
+      <!-- Maintenance windows -->
+      <div class="d-flex align-center mb-2">
+        <span class="text-overline">Maintenance windows</span>
+
+        <v-spacer />
+
+        <v-btn
+          color="primary"
+          size="small"
+          prepend-icon="mdi-plus"
+          :disabled="!selectedProjectId"
+          @click="maintenanceDialogOpen = true"
+        >
+          New window
+        </v-btn>
+      </div>
+
+      <v-card
+        variant="outlined"
+        class="mb-6"
+      >
+        <div
+          v-if="maintenanceWindows.length === 0"
+          class="text-caption text-medium-emphasis pa-4"
+        >
+          No maintenance windows. Notifications fire normally.
+        </div>
+
+        <v-list
+          v-else
+          density="compact"
+        >
+          <v-list-item
+            v-for="w in maintenanceWindows"
+            :key="w.id"
+          >
+            <v-list-item-title>{{ w.name }}</v-list-item-title>
+
+            <v-list-item-subtitle>
+              {{ formatWindowRange(w) }} · {{ w.recurrence && w.recurrence !== 'none'
+                ? w.recurrence
+                : 'one-off' }}
+            </v-list-item-subtitle>
+
+            <template #append>
+              <v-btn
+                icon="mdi-delete"
+                variant="text"
+                size="x-small"
+                color="error"
+                @click="deleteMaintenanceWindow(w.id)"
+              />
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-card>
+
       <!-- History -->
       <div class="text-overline mb-2">
         History
@@ -89,6 +146,13 @@
         />
       </v-card>
     </v-card>
+
+    <!-- Maintenance window dialog -->
+    <MaintenanceWindowDialog
+      v-model="maintenanceDialogOpen"
+      :project-id="selectedProjectId"
+      @saved="onMaintenanceWindowSaved"
+    />
 
     <!-- Connect dialog -->
     <ConnectDialog
@@ -145,10 +209,11 @@
 </template>
 
 <script setup lang="ts">
-import type { AlertRule, Connector, ConnectorKind } from '~/types/alerts'
+import type { AlertRule, Connector, ConnectorKind, MaintenanceWindow } from '~/types/alerts'
 import ConnectDialog from '~/components/alerts/ConnectDialog.vue'
 import ConnectorCard from '~/components/alerts/ConnectorCard.vue'
 import HistoryList from '~/components/alerts/HistoryList.vue'
+import MaintenanceWindowDialog from '~/components/alerts/MaintenanceWindowDialog.vue'
 import RuleDialog from '~/components/alerts/RuleDialog.vue'
 import RuleList from '~/components/alerts/RuleList.vue'
 
@@ -164,7 +229,7 @@ const projectsStore = useProjectsStore()
 const { projects } = storeToRefs(projectsStore)
 const { connectors } = storeToRefs(alertsStore)
 
-const connectorKinds: ConnectorKind[] = ['webhook', 'email', 'in_app']
+const connectorKinds: ConnectorKind[] = ['webhook', 'email', 'in_app', 'slack', 'discord', 'pagerduty', 'opsgenie']
 const selectedProjectId = ref<number | null>(null)
 
 const connectDialogOpen = ref(false)
@@ -201,6 +266,31 @@ const historyLoading = computed(() => (selectedProjectId.value
 const historyHasMore = computed(() => (selectedProjectId.value
   ? alertsStore.historyHasMore.get(selectedProjectId.value) ?? false
   : false))
+
+const maintenanceDialogOpen = ref(false)
+
+const maintenanceWindows = computed(() => (selectedProjectId.value
+  ? alertsStore.getMaintenanceWindowsForProject(selectedProjectId.value).value
+  : []))
+
+function formatWindowRange(w: MaintenanceWindow): string {
+  const fmt = (iso: string) => {
+    const d = new Date(iso)
+
+    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  return `${fmt(w.starts_at)} → ${fmt(w.ends_at)}`
+}
+
+async function deleteMaintenanceWindow(id: number) {
+  if (selectedProjectId.value)
+    await alertsStore.deleteMaintenanceWindow(id, selectedProjectId.value)
+}
+
+function onMaintenanceWindowSaved() {
+  // store already appends the created window optimistically
+}
 
 function connectorsByKind(kind: ConnectorKind): Connector[] {
   return connectors.value.filter(c => c.kind === kind)
@@ -274,6 +364,7 @@ watch(selectedProjectId, (id) => {
   if (id) {
     alertsStore.fetchRules(id)
     alertsStore.fetchHistory(id)
+    alertsStore.fetchMaintenanceWindows(id)
   }
 })
 

@@ -1,6 +1,7 @@
 export type AlertComparator = '>' | '<' | '>=' | '<='
-export type ConnectorKind = 'in_app' | 'email' | 'webhook'
+export type ConnectorKind = 'in_app' | 'email' | 'webhook' | 'slack' | 'discord' | 'pagerduty' | 'opsgenie'
 export type AlertSeverity = 'info' | 'warning' | 'critical'
+export type MaintenanceRecurrence = 'none' | 'daily' | 'weekly'
 export type AlertUnit = 'ms' | 's' | '%' | 'count'
 
 export const SEVERITY_LABELS: Record<number, AlertSeverity> = { 0: 'info', 1: 'warning', 2: 'critical' }
@@ -19,6 +20,7 @@ export const METRIC_CATALOG: MetricDef[] = [
   { key: 'error_rate_4xx', label: '4xx error rate', units: ['%'] },
   { key: 'error_rate_all', label: 'Error rate (all)', units: ['%'] },
   { key: 'request_volume', label: 'Request volume', units: ['count'] },
+  { key: 'new_error_type', label: 'New error type detected', units: ['count'] },
 ]
 
 export const COMPARATOR_OPTIONS: AlertComparator[] = ['>', '<', '>=', '<=']
@@ -33,6 +35,10 @@ export const CONNECTOR_META: Record<ConnectorKind, ConnectorMeta> = {
   webhook: { label: 'Webhook', icon: 'mdi-webhook', color: 'deep-purple' },
   email: { label: 'Email', icon: 'mdi-email', color: 'blue' },
   in_app: { label: 'In-app', icon: 'mdi-bell', color: 'amber-darken-2' },
+  slack: { label: 'Slack', icon: 'mdi-slack', color: 'purple' },
+  discord: { label: 'Discord', icon: 'mdi-discord', color: 'indigo' },
+  pagerduty: { label: 'PagerDuty', icon: 'mdi-alarm-light', color: 'green-darken-1' },
+  opsgenie: { label: 'Opsgenie', icon: 'mdi-alert-decagram', color: 'teal-darken-1' },
 }
 
 export function connectorMeta(kind: ConnectorKind): ConnectorMeta {
@@ -79,6 +85,8 @@ export interface AlertRule {
   last_fired_at: string | null
   created_at: string
   updated_at: string
+  escalation_after_minutes?: number | null
+  escalate_connector_id?: number | null
 }
 
 export interface CreateAlertRuleRequest {
@@ -90,6 +98,8 @@ export interface CreateAlertRuleRequest {
   unit: AlertUnit
   severity: number
   connector_ids: number[]
+  escalation_after_minutes?: number | null
+  escalate_connector_id?: number | null
 }
 
 export interface UpdateAlertRuleRequest {
@@ -101,6 +111,28 @@ export interface UpdateAlertRuleRequest {
   comparator?: AlertComparator | null
   metric?: string | null
   connector_ids?: number[] | null
+  escalation_after_minutes?: number | null
+  escalate_connector_id?: number | null
+  clear_escalate_connector_id?: boolean
+}
+
+export interface MaintenanceWindow {
+  id: number
+  project_id: number
+  name: string
+  starts_at: string
+  ends_at: string
+  recurrence: MaintenanceRecurrence | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateMaintenanceWindowRequest {
+  project_id: number
+  name: string
+  starts_at: string
+  ends_at: string
+  recurrence?: MaintenanceRecurrence | null
 }
 
 export interface AlertEventConnector {

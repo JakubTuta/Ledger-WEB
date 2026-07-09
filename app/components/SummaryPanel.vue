@@ -26,7 +26,7 @@
         <!-- No Data -->
         <div
           v-else-if="!metrics || metrics.data.length === 0"
-          class="d-flex align-center justify-center text-grey"
+          class="d-flex align-center text-grey justify-center"
           style="height: 100%;"
         >
           <div class="text-center">
@@ -136,19 +136,31 @@ const kpis = computed(() => {
       label: 'Error Rate',
       value: `${errorRate.toFixed(1)}%`,
       icon: 'mdi-alert-circle-outline',
-      color: errorRate > 5 ? 'error' : errorRate > 1 ? 'warning' : 'success',
+      color: errorRate > 5
+        ? 'error'
+        : errorRate > 1
+          ? 'warning'
+          : 'success',
     },
     {
       label: 'Avg Latency',
       value: formatMs(avgLatency),
       icon: 'mdi-timer-outline',
-      color: avgLatency > 1000 ? 'error' : avgLatency > 500 ? 'warning' : 'success',
+      color: avgLatency > 1000
+        ? 'error'
+        : avgLatency > 500
+          ? 'warning'
+          : 'success',
     },
     {
       label: 'p95 Latency',
       value: formatMs(p95Latency),
       icon: 'mdi-speedometer',
-      color: p95Latency > 2000 ? 'error' : p95Latency > 1000 ? 'warning' : 'success',
+      color: p95Latency > 2000
+        ? 'error'
+        : p95Latency > 1000
+          ? 'warning'
+          : 'success',
     },
     {
       label: 'Req / Day',
@@ -164,12 +176,14 @@ function formatCount(n: number): string {
     return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1000)
     return `${(n / 1000).toFixed(1)}k`
+
   return String(n)
 }
 
 function formatMs(ms: number): string {
   if (ms >= 1000)
     return `${(ms / 1000).toFixed(1)}s`
+
   return `${Math.round(ms)}ms`
 }
 </script>
