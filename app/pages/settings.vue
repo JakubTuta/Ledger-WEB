@@ -207,6 +207,22 @@
                         @refresh="handleQuotaRefresh"
                       />
                     </v-card>
+
+                    <v-card
+                      variant="elevated"
+                      class="mt-2"
+                    >
+                      <v-card-text>
+                        <div class="text-subtitle-2 mb-2">
+                          30-Day Usage History
+                        </div>
+
+                        <UsageHistoryChart
+                          :usage="quotaStore.getUsageStatsForProject(project.project_id).value"
+                          height="280"
+                        />
+                      </v-card-text>
+                    </v-card>
                   </div>
 
                   <v-alert
@@ -400,11 +416,13 @@ function handleScroll() {
 
 function handleQuotaRefresh(projectId: number) {
   quotaStore.refreshQuotaForProject(projectId)
+  quotaStore.refreshUsageStatsForProject(projectId)
 }
 
 function fetchQuotasForAllProjects() {
   projects.value.forEach((project) => {
     quotaStore.fetchQuotaForProject(project.project_id)
+    quotaStore.fetchUsageStatsForProject(project.project_id)
   })
 }
 

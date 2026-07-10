@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <!-- Progress Bar Section -->
+    <!-- Signal Meters Section -->
     <div class="d-flex flex-column flex-1-1 justify-center">
       <h3 class="text-h5 mb-2">
         {{ projectName }}
@@ -33,56 +33,46 @@
         {{ environment }}
       </div>
 
-      <v-progress-linear
-        :model-value="usagePercentage"
-        :color="progressColor"
-        height="32"
-        rounded
-        class="mb-6"
+      <div
+        v-for="signal in signalMeters"
+        :key="signal.label"
+        class="mb-4"
       >
-        <template #default>
-          <strong class="text-white">{{ usagePercentage }}%</strong>
-        </template>
-      </v-progress-linear>
+        <div class="d-flex justify-space-between align-center mb-1">
+          <span class="text-subtitle-2">{{ signal.label }}</span>
 
-      <!-- Stats Below Progress Bar -->
-      <v-row class="mt-4">
-        <!-- Left: Logs Count -->
-        <v-col
-          cols="12"
-          md="6"
-          class="text-center"
+          <span class="text-caption text-grey">
+            {{ signal.usage.toLocaleString() }} / {{ signal.quota.toLocaleString() }}
+          </span>
+        </div>
+
+        <v-progress-linear
+          :model-value="signal.percentage"
+          :color="signal.color"
+          height="20"
+          rounded
         >
-          <div class="text-h5 font-weight-bold">
-            {{ currentUsage.toLocaleString() }} / {{ maxQuota.toLocaleString() }}
-          </div>
+          <template #default>
+            <strong class="text-caption text-white">{{ signal.percentage }}%</strong>
+          </template>
+        </v-progress-linear>
+      </div>
 
-          <div class="text-caption text-grey mt-1">
-            logs
-          </div>
-        </v-col>
+      <div class="mt-2 text-center">
+        <div class="text-h6 font-weight-bold">
+          {{ timeUntilReset }}
+        </div>
 
-        <!-- Right: Quota Reset -->
-        <v-col
-          cols="12"
-          md="6"
-          class="text-center"
-        >
-          <div class="text-h5 font-weight-bold">
-            {{ timeUntilReset }}
-          </div>
-
-          <div class="text-caption text-grey mt-1">
-            until quota reset
-          </div>
-        </v-col>
-      </v-row>
+        <div class="text-caption text-grey mt-1">
+          until quota reset
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ProjectQuotaResponse } from '~/types/quota'
+import type { ProjectQuotaResponse, SignalQuota } from '~/types/quota'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps<{
@@ -127,28 +117,45 @@ function saveNextRefreshTimeToStorage(date: Date) {
   localStorage.setItem(localStorageKey.value, date.toISOString())
 }
 
-const currentUsage = computed(() => props.quotaData?.daily_usage ?? 0)
-const maxQuota = computed(() => props.quotaData?.daily_quota ?? 0)
-
-const usagePercentage = computed(() => {
-  if (maxQuota.value === 0)
+function percentageFor(signal: SignalQuota): number {
+  if (signal.quota === 0)
     return 0
 
-  const percentage = Math.round((currentUsage.value / maxQuota.value) * 100)
+  const percentage = Math.round((signal.usage / signal.quota) * 100)
 
   return Number.isNaN(percentage)
     ? 0
     : percentage
-})
+}
 
-const progressColor = computed(() => {
-  const percentage = usagePercentage.value
+function colorFor(percentage: number): string {
   if (percentage >= 90)
     return 'error'
   if (percentage >= 75)
     return 'warning'
 
   return 'success'
+}
+
+const signalMeters = computed(() => {
+  const empty: SignalQuota = { quota: 0, usage: 0, remaining: 0 }
+  const signals = [
+    { label: 'Logs', data: props.quotaData?.logs ?? empty },
+    { label: 'Spans', data: props.quotaData?.spans ?? empty },
+    { label: 'Metrics', data: props.quotaData?.metrics ?? empty },
+  ]
+
+  return signals.map(({ label, data }) => {
+    const percentage = percentageFor(data)
+
+    return {
+      label,
+      quota: data.quota,
+      usage: data.usage,
+      percentage,
+      color: colorFor(percentage),
+    }
+  })
 })
 
 const isRefreshDisabled = computed(() => {

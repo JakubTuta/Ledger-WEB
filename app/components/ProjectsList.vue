@@ -54,7 +54,7 @@
             </span>
 
             <span class="text-caption">
-              Quota: {{ formatQuota(project.daily_quota) }}/day
+              Quota: {{ formatQuota(project.logs_daily_quota) }}/day
             </span>
           </div>
         </v-list-item-subtitle>

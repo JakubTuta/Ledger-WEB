@@ -4,7 +4,9 @@ export interface Project {
   slug: string
   environment: string
   retention_days: number
-  daily_quota: number
+  logs_daily_quota: number
+  spans_daily_quota: number
+  metrics_daily_quota: number
   available_routes: string[]
 }
 
