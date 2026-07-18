@@ -75,6 +75,33 @@
           @click="emit('refresh')"
         />
 
+        <v-menu>
+          <template #activator="{'props': exportMenuProps}">
+            <v-btn
+              v-bind="exportMenuProps"
+              icon="mdi-download"
+              variant="text"
+              size="x-small"
+              :loading="exporting"
+              :disabled="disabled || exporting"
+            />
+          </template>
+
+          <v-list density="compact">
+            <v-list-item
+              prepend-icon="mdi-code-json"
+              title="Export JSON"
+              @click="emit('exportData', 'json')"
+            />
+
+            <v-list-item
+              prepend-icon="mdi-file-delimited-outline"
+              title="Export CSV"
+              @click="emit('exportData', 'csv')"
+            />
+          </v-list>
+        </v-menu>
+
         <v-btn
           icon="mdi-delete"
           variant="text"
@@ -108,6 +135,20 @@
             prepend-icon="mdi-refresh"
             title="Refresh"
             @click="emit('refresh')"
+          />
+
+          <v-list-item
+            prepend-icon="mdi-code-json"
+            title="Export JSON"
+            :disabled="exporting"
+            @click="emit('exportData', 'json')"
+          />
+
+          <v-list-item
+            prepend-icon="mdi-file-delimited-outline"
+            title="Export CSV"
+            :disabled="exporting"
+            @click="emit('exportData', 'csv')"
           />
 
           <v-list-item
@@ -148,12 +189,14 @@
 <script setup lang="ts">
 import type { Panel, TimeRangePreset } from '~/types/panel'
 import type { Project } from '~/types/project'
+import type { ExportFormat } from '~/utils/export'
 import { useDisplay } from 'vuetify'
 
 const props = defineProps<{
   panel: Panel
   project?: Project
   disabled?: boolean
+  exporting?: boolean
   icon: string
   iconColor: string
 }>()
@@ -162,6 +205,7 @@ const emit = defineEmits<{
   delete: []
   timeOptions: []
   refresh: []
+  exportData: [format: ExportFormat]
 }>()
 
 const { mobile } = useDisplay()

@@ -3,11 +3,13 @@
     :panel="panel"
     :project="project"
     :disabled="disabled"
+    :exporting="isExporting"
     icon="mdi-view-dashboard-outline"
     icon-color="primary"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
       <v-card-text class="pa-3">
@@ -74,9 +76,19 @@
       </v-card-text>
     </template>
   </BasePanelCard>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { AggregatedMetricsResponse, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
@@ -94,10 +106,28 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
-const kpis = computed(() => {
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
+
+const rawKpis = computed(() => {
   const data = props.metrics?.data ?? []
-  if (data.length === 0)
-    return []
+  if (data.length === 0) {
+    return {
+      totalRequests: 0,
+      totalErrors: 0,
+      errorRate: 0,
+      avgLatency: 0,
+      p95Latency: 0,
+      throughput: 0,
+    }
+  }
 
   const totalRequests = data.reduce((s, d) => s + d.log_count, 0)
   const totalErrors = data.reduce((s, d) => s + d.error_count, 0)
@@ -124,6 +154,36 @@ const kpis = computed(() => {
     days = Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1)
   }
   const throughput = Math.round(totalRequests / days)
+
+  return { totalRequests, totalErrors, errorRate, avgLatency, p95Latency, throughput }
+})
+
+function buildExport(): PanelExportBuildResult {
+  const rows = (props.metrics?.data ?? []).map(d => ({ ...d }))
+
+  return {
+    rows,
+    summary: {
+      total_requests: rawKpis.value.totalRequests,
+      total_errors: rawKpis.value.totalErrors,
+      error_rate_pct: rawKpis.value.errorRate,
+      avg_latency_ms: rawKpis.value.avgLatency,
+      p95_latency_ms: rawKpis.value.p95Latency,
+      requests_per_day: rawKpis.value.throughput,
+    },
+    extraMeta: {
+      granularity: props.metrics?.granularity,
+      start_date: props.metrics?.start_date,
+      end_date: props.metrics?.end_date,
+    },
+  }
+}
+
+const kpis = computed(() => {
+  if ((props.metrics?.data ?? []).length === 0)
+    return []
+
+  const { totalRequests, errorRate, avgLatency, p95Latency, throughput } = rawKpis.value
 
   return [
     {

@@ -3,11 +3,13 @@
     :panel="panel"
     :project="project"
     :disabled="disabled"
+    :exporting="isExporting"
     icon="mdi-chart-timeline-variant"
     icon-color="success"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
       <v-card-text class="panel-content-container pa-2">
@@ -87,9 +89,19 @@
       </v-card-actions>
     </template>
   </BasePanelCard>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { AggregatedMetricData, AggregatedMetricsResponse, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
@@ -106,6 +118,16 @@ const emit = defineEmits<{
   timeOptions: []
   refresh: []
 }>()
+
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
 
 const aggregated = computed((): AggregatedMetricsResponse | undefined => {
   if (!props.metrics)
@@ -207,6 +229,24 @@ function formatMs(ms: number): string {
     return `${(ms / 1000).toFixed(1)}s`
 
   return `${Math.round(ms)}ms`
+}
+
+function buildExport(): PanelExportBuildResult {
+  const rows = (props.metrics?.data ?? []).map(d => ({ ...d }))
+
+  return {
+    rows,
+    summary: {
+      avg_ms: footerAvg.value,
+      p95_ms: footerP95.value,
+      p99_ms: footerP99.value,
+    },
+    extraMeta: {
+      granularity: props.metrics?.granularity,
+      start_date: props.metrics?.start_date,
+      end_date: props.metrics?.end_date,
+    },
+  }
 }
 </script>
 

@@ -261,6 +261,29 @@ export const usePanelsStore = defineStore('panels', () => {
     return errorsOffset.value.get(panelId) || 0
   }
 
+  const MAX_EXPORT_ROWS = 5000
+
+  const fetchAllErrorsForPanel = async (panel: Panel): Promise<{ truncated: boolean }> => {
+    if ((panelErrors.value.get(panel.id) ?? []).length === 0) {
+      await fetchErrorsForPanel(panel, 0)
+    }
+
+    while (getErrorsHasMore(panel.id)) {
+      const before = (panelErrors.value.get(panel.id) ?? []).length
+      if (before >= MAX_EXPORT_ROWS)
+        return { truncated: true }
+
+      // eslint-disable-next-line no-await-in-loop
+      await fetchErrorsForPanel(panel, before)
+
+      const after = (panelErrors.value.get(panel.id) ?? []).length
+      if (after === before)
+        break
+    }
+
+    return { truncated: false }
+  }
+
   const _errorRefetchTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   const addNewErrorToPanel = (projectId: string, _error: any) => {
@@ -356,6 +379,27 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const getLogsOffset = (panelId: string) => {
     return logsOffset.value.get(panelId) || 0
+  }
+
+  const fetchAllLogsForPanel = async (panel: Panel): Promise<{ truncated: boolean }> => {
+    if ((panelLogs.value.get(panel.id) ?? []).length === 0) {
+      await fetchLogsForPanel(panel, 0)
+    }
+
+    while (getLogsHasMore(panel.id)) {
+      const before = (panelLogs.value.get(panel.id) ?? []).length
+      if (before >= MAX_EXPORT_ROWS)
+        return { truncated: true }
+
+      // eslint-disable-next-line no-await-in-loop
+      await fetchLogsForPanel(panel, before)
+
+      const after = (panelLogs.value.get(panel.id) ?? []).length
+      if (after === before)
+        break
+    }
+
+    return { truncated: false }
   }
 
   const fetchBottleneckListForPanel = async (panel: Panel, opts?: { append?: boolean }) => {
@@ -466,6 +510,27 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const getBottleneckListHasMore = (panelId: string) => {
     return panelBottleneckMeta.value.get(panelId)?.has_more ?? false
+  }
+
+  const fetchAllBottleneckEntriesForPanel = async (panel: Panel): Promise<{ truncated: boolean }> => {
+    if ((panelBottleneckEntries.value.get(panel.id) ?? []).length === 0) {
+      await fetchBottleneckListForPanel(panel)
+    }
+
+    while (getBottleneckListHasMore(panel.id)) {
+      const before = (panelBottleneckEntries.value.get(panel.id) ?? []).length
+      if (before >= MAX_EXPORT_ROWS)
+        return { truncated: true }
+
+      // eslint-disable-next-line no-await-in-loop
+      await fetchBottleneckListForPanel(panel, { append: true })
+
+      const after = (panelBottleneckEntries.value.get(panel.id) ?? []).length
+      if (after === before)
+        break
+    }
+
+    return { truncated: false }
   }
 
   const fetchHeatmapForPanel = async (panel: Panel) => {
@@ -1061,12 +1126,14 @@ export const usePanelsStore = defineStore('panels', () => {
     getMetricsForPanel,
     isMetricsLoading,
     fetchErrorsForPanel,
+    fetchAllErrorsForPanel,
     getErrorsForPanel,
     isErrorsLoading,
     getErrorsHasMore,
     getErrorsOffset,
     addNewErrorToPanel,
     fetchLogsForPanel,
+    fetchAllLogsForPanel,
     getLogsForPanel,
     isLogsLoading,
     getLogsHasMore,
@@ -1074,6 +1141,7 @@ export const usePanelsStore = defineStore('panels', () => {
     updateLogsFilter,
     updateErrorListFilter,
     fetchBottleneckListForPanel,
+    fetchAllBottleneckEntriesForPanel,
     updateBottleneckListFilter,
     getBottleneckListForPanel,
     getBottleneckListMeta,

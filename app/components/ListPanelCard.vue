@@ -3,11 +3,13 @@
     :panel="panel"
     :project="project"
     :disabled="disabled"
+    :exporting="isExporting"
     :icon="icon"
     :icon-color="iconColor"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <!-- Filter row -->
     <template
@@ -686,12 +688,23 @@
       </v-card-text>
     </template>
   </BasePanelCard>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { NotificationLevel } from '~/types/notifications'
 import type { BottleneckStatistic, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
+import { omitUiFields } from '~/utils/export'
 
 const props = defineProps<{
   panel: Panel
@@ -714,6 +727,16 @@ const emit = defineEmits<{
 }>()
 
 const panelsStore = usePanelsStore()
+
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
 
 type LogLevel = 'debug' | 'info' | 'warning' | 'error' | 'critical'
 type LogType = 'console' | 'logger' | 'exception' | 'network' | 'database' | 'endpoint' | 'custom'
@@ -818,6 +841,64 @@ function applyFilters() {
       ? undefined
       : statusClassFilter.value
     panelsStore.updateLogsFilter(props.panel.id, sc, searchFilter.value || undefined)
+  }
+}
+
+async function buildExport(): Promise<PanelExportBuildResult> {
+  const uiFields = ['expanded', 'isNew']
+
+  if (props.type === 'bottleneck') {
+    const { truncated } = await panelsStore.fetchAllBottleneckEntriesForPanel(props.panel)
+    const entries = panelsStore.getBottleneckListForPanel(props.panel.id)
+    const meta = panelsStore.getBottleneckListMeta(props.panel.id)
+
+    const rows = entries.map((entry) => {
+      const { method, path } = parseRoute(entry.route)
+
+      return {
+        method,
+        path,
+        route: entry.route,
+        value: entry.value,
+        request_count: entry.request_count,
+        min_value_ms: entry.min_value,
+        max_value_ms: entry.max_value,
+        avg_value_ms: entry.avg_value,
+        median_value_ms: entry.median_value,
+      }
+    })
+
+    return {
+      rows,
+      summary: {
+        statistic: bottleneckStatisticFilter.value,
+        sort: bottleneckSortFilter.value,
+        max_value: meta?.max_value,
+        total_rows: rows.length,
+      },
+      extraMeta: { search: props.panel.search },
+      truncated,
+    }
+  }
+
+  const fetchAll = props.type === 'logs'
+    ? panelsStore.fetchAllLogsForPanel
+    : panelsStore.fetchAllErrorsForPanel
+  const getItems = props.type === 'logs'
+    ? panelsStore.getLogsForPanel
+    : panelsStore.getErrorsForPanel
+
+  const { truncated } = await fetchAll(props.panel)
+  const items = getItems(props.panel.id)
+  const rows = items.map(item => omitUiFields(item, uiFields))
+
+  return {
+    rows,
+    summary: { total_rows: rows.length },
+    extraMeta: props.type === 'logs'
+      ? { statusClass: props.panel.statusClass, search: props.panel.search }
+      : { search: props.panel.search },
+    truncated,
   }
 }
 

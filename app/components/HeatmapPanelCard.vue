@@ -3,11 +3,13 @@
     :panel="panel"
     :project="project"
     :disabled="disabled"
+    :exporting="isExporting"
     icon="mdi-grid"
     icon-color="error"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
       <v-card-text class="panel-content-container pa-2">
@@ -93,9 +95,19 @@
       </v-card-actions>
     </template>
   </BasePanelCard>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { AggregatedMetricsResponse, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
@@ -113,6 +125,16 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
+
 const data = computed(() => props.metrics?.data ?? [])
 const totalLogs = computed(() => data.value.reduce((s, d) => s + d.log_count, 0))
 const totalErrors = computed(() => data.value.reduce((s, d) => s + d.error_count, 0))
@@ -122,4 +144,29 @@ const errorRateDisplay = computed(() => {
 
   return `${((totalErrors.value / totalLogs.value) * 100).toFixed(1)}%`
 })
+
+function buildExport(): PanelExportBuildResult {
+  const rows = data.value.map(d => ({
+    ...d,
+    error_rate_pct: d.log_count > 0
+      ? (d.error_count / d.log_count) * 100
+      : 0,
+  }))
+
+  return {
+    rows,
+    summary: {
+      total_logs: totalLogs.value,
+      total_errors: totalErrors.value,
+      error_rate_pct: totalLogs.value > 0
+        ? (totalErrors.value / totalLogs.value) * 100
+        : 0,
+    },
+    extraMeta: {
+      granularity: props.metrics?.granularity,
+      start_date: props.metrics?.start_date,
+      end_date: props.metrics?.end_date,
+    },
+  }
+}
 </script>

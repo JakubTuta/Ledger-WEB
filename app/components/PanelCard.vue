@@ -3,11 +3,13 @@
     :panel="panel"
     :project="project"
     :disabled="disabled"
+    :exporting="isExporting"
     :icon="panelTypeIcon"
     :icon-color="panelTypeColor"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
       <v-card-text class="panel-content-container pa-2">
@@ -87,9 +89,19 @@
       </v-card-actions>
     </template>
   </BasePanelCard>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { AggregatedMetricsResponse, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
@@ -106,6 +118,16 @@ const emit = defineEmits<{
   timeOptions: []
   refresh: []
 }>()
+
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
 
 const panelTypeIcon = computed(() => {
   switch (props.panel.type) {
@@ -143,4 +165,25 @@ const avgDuration = computed(() => {
 
   return `${avg.toFixed(0)}ms`
 })
+
+function buildExport(): PanelExportBuildResult {
+  const rows = chartData.value.map(d => ({ ...d }))
+
+  return {
+    rows,
+    summary: {
+      total_logs: totalLogs.value,
+      total_errors: totalErrors.value,
+      avg_duration_ms: chartData.value.length > 0
+        ? chartData.value.reduce((s, d) => s + d.avg_duration_ms, 0) / chartData.value.length
+        : 0,
+    },
+    extraMeta: {
+      metric_type: props.metrics?.metric_type,
+      granularity: props.metrics?.granularity,
+      start_date: props.metrics?.start_date,
+      end_date: props.metrics?.end_date,
+    },
+  }
+}
 </script>

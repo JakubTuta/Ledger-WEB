@@ -89,10 +89,34 @@ export const useTracesStore = defineStore('traces', () => {
 
   const getListOffset = (panelId: string | number) => computed(() => listOffset.value.get(panelId) ?? 0)
 
+  const MAX_EXPORT_TRACES = 5000
+
+  const fetchAllListForPanel = async (panelId: string | number, filters: TraceListFilters): Promise<{ truncated: boolean }> => {
+    if ((listsByPanel.value.get(panelId) ?? []).length === 0) {
+      await fetchList(panelId, filters, false, 0)
+    }
+
+    while (listHasMore.value.get(panelId) ?? false) {
+      const before = (listsByPanel.value.get(panelId) ?? []).length
+      if (before >= MAX_EXPORT_TRACES)
+        return { truncated: true }
+
+      // eslint-disable-next-line no-await-in-loop
+      await fetchList(panelId, filters, false, before)
+
+      const after = (listsByPanel.value.get(panelId) ?? []).length
+      if (after === before)
+        break
+    }
+
+    return { truncated: false }
+  }
+
   return {
     listsByPanel,
     detailsById,
     fetchList,
+    fetchAllListForPanel,
     fetchDetail,
     getListForPanel,
     getSpansForTrace,

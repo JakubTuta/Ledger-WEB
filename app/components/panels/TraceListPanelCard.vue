@@ -2,11 +2,13 @@
   <BasePanelCard
     :panel="panel"
     :project="project"
+    :exporting="isExporting"
     icon="mdi-format-list-text"
     icon-color="info"
     @refresh="handleRefresh"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
       <div
@@ -147,9 +149,19 @@
   >
     {{ pinSnackbarMessage }}
   </v-snackbar>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { CreatePanelRequest, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
@@ -174,6 +186,28 @@ const traces = computed(() => tracesStore.getListForPanel(props.panel.id).value)
 const isLoading = computed(() => tracesStore.isListLoading(props.panel.id).value)
 const hasMore = computed(() => tracesStore.getListHasMore(props.panel.id).value)
 const offset = computed(() => tracesStore.getListOffset(props.panel.id).value)
+
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
+
+async function buildExport(): Promise<PanelExportBuildResult> {
+  const { truncated } = await tracesStore.fetchAllListForPanel(props.panel.id, buildFilters())
+  const rows = tracesStore.getListForPanel(props.panel.id).value.map(t => ({ ...t }))
+
+  return {
+    rows,
+    summary: { total_rows: rows.length },
+    extraMeta: buildFilters(),
+    truncated,
+  }
+}
 
 function buildFilters() {
   const now = new Date()

@@ -2,11 +2,13 @@
   <BasePanelCard
     :panel="panel"
     :project="project"
+    :exporting="isExporting"
     icon="mdi-chart-timeline-variant"
     icon-color="info"
     @refresh="handleRefresh"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
+    @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
       <div
@@ -264,9 +266,19 @@
       </div>
     </div>
   </v-navigation-drawer>
+
+  <v-snackbar
+    v-model="showExportError"
+    timeout="3000"
+    color="error"
+    location="bottom right"
+  >
+    {{ exportError }}
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
+import type { PanelExportBuildResult } from '~/composables/usePanelExport'
 import type { Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 import type { Span } from '~/types/traces'
@@ -282,6 +294,16 @@ const emit = defineEmits<{
 }>()
 
 const tracesStore = useTracesStore()
+
+const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
+
+const showExportError = computed({
+  get: () => !!exportError.value,
+  set: (v: boolean) => {
+    if (!v)
+      exportError.value = ''
+  },
+})
 
 const drawerOpen = ref(false)
 const selectedSpan = ref<Span | null>(null)
@@ -367,6 +389,21 @@ const formatStartTime = computed(() => {
     return ''
   }
 })
+
+function buildExport(): PanelExportBuildResult {
+  const rows = spans.value.map(s => ({ ...s }))
+
+  return {
+    rows,
+    summary: {
+      trace_id: props.panel.trace_id,
+      total_duration_ms: totalDuration.value,
+      span_count: spans.value.length,
+      error_span_count: errorCount.value,
+      services: services.value,
+    },
+  }
+}
 
 function formatDur(ms: number): string {
   if (ms >= 1000)
