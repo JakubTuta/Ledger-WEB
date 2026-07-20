@@ -74,6 +74,21 @@
 
       <v-spacer />
 
+      <v-tooltip
+        text="Setup guide"
+        location="bottom"
+      >
+        <template #activator="{'props': tooltipProps}">
+          <v-btn
+            v-bind="tooltipProps"
+            to="/how-to-setup"
+            icon="mdi-help"
+            variant="text"
+            aria-label="Setup guide"
+          />
+        </template>
+      </v-tooltip>
+
       <NotificationBell v-if="authStore.isAuthenticated" />
 
       <v-menu
@@ -161,6 +176,13 @@
             title="Register"
             @click="drawer = false"
           />
+
+          <v-list-item
+            to="/how-to-setup"
+            prepend-icon="mdi-help-circle-outline"
+            title="Setup guide"
+            @click="drawer = false"
+          />
         </template>
 
         <template v-else>
@@ -217,6 +239,13 @@
             to="/account"
             prepend-icon="mdi-account-cog"
             title="Account settings"
+            @click="drawer = false"
+          />
+
+          <v-list-item
+            to="/how-to-setup"
+            prepend-icon="mdi-help-circle-outline"
+            title="Setup guide"
             @click="drawer = false"
           />
 

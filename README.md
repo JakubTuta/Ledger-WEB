@@ -8,7 +8,7 @@
 [![Nuxt 3](https://img.shields.io/badge/Nuxt-3-00DC82.svg)](https://nuxt.com/)
 [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D.svg)](https://vuejs.org/)
 
-[Live Dashboard](https://ledger.jtuta.cloud) • [Python SDK](https://github.com/JakubTuta/Ledger-SDK) • [Backend](https://github.com/JakubTuta/Ledger-APP) • [API Docs](https://bump.sh/tuta-corp/doc/ledger-api/)
+[Live Dashboard](https://ledger.jtuta.cloud) • [Setup Guide](https://ledger.jtuta.cloud/how-to-setup) • [Python SDK](https://github.com/JakubTuta/Ledger-SDK) • [Backend](https://github.com/JakubTuta/Ledger-APP) • [API Docs](https://bump.sh/tuta-corp/doc/ledger-api/)
 
 </div>
 
@@ -17,6 +17,10 @@
 **Try it now: [ledger.jtuta.cloud](https://ledger.jtuta.cloud)**
 
 No installation required. Create an account and start exploring your logs in seconds.
+
+**Connecting your app?** The in-app [Setup Guide](https://ledger.jtuta.cloud/how-to-setup) has
+copyable, step-by-step instructions for basic SDK setup, custom metrics, distributed tracing, and
+any OpenTelemetry SDK.
 
 ---
 
@@ -72,6 +76,7 @@ NUXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 ## Ecosystem
 
+- **[Setup Guide](https://ledger.jtuta.cloud/how-to-setup)** — Step-by-step SDK, metrics, tracing, and OTLP instructions
 - **[Python SDK](https://github.com/JakubTuta/Ledger-SDK)** — Official client library ([PyPI](https://pypi.org/project/ledger-sdk/))
 - **[Backend Server](https://github.com/JakubTuta/Ledger-APP)** — API server and infrastructure
 - **[Live Demo](https://ledger.jtuta.cloud)** — Try it without installing

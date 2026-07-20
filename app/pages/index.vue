@@ -260,7 +260,7 @@
       </v-container>
     </section>
 
-    <!-- How it Works -->
+    <!-- Setup guide pointer -->
     <section class="how-it-works-section">
       <v-container class="py-16">
         <div class="section-header mb-12 text-center">
@@ -278,50 +278,61 @@
           </h2>
 
           <p class="section-subtitle">
-            No complex setup. No infrastructure to manage. Install, configure, and go.
+            No complex setup. No infrastructure to manage. Full step-by-step instructions live in
+            the setup guide — pick your stack and copy the snippets.
           </p>
         </div>
 
         <v-row>
           <v-col
-            v-for="(step, index) in howItWorks"
-            :key="step.title"
+            v-for="guide in setupLinks"
+            :key="guide.title"
             cols="12"
-            md="4"
+            sm="6"
+            md="3"
           >
             <v-card
               class="step-card h-100"
               color="surface"
               elevation="0"
+
+              :to="guide.to"
+              hover
               border
             >
               <v-card-text class="pa-6">
-                <div class="step-number mb-4">
-                  {{ index + 1 }}
-                </div>
+                <v-icon
+                  :icon="guide.icon"
+                  color="primary"
+                  size="32"
+                  class="mb-4"
+                />
 
                 <h3 class="step-title mb-2">
-                  {{ step.title }}
+                  {{ guide.title }}
                 </h3>
 
-                <p class="step-description mb-4">
-                  {{ step.description }}
+                <p class="step-description ma-0">
+                  {{ guide.description }}
                 </p>
-
-                <v-card
-                  v-if="step.code"
-                  class="code-card"
-                  color="surface-variant-dark"
-                  flat
-                >
-                  <v-card-text class="pa-3">
-                    <pre class="code-block"><code>{{ step.code }}</code></pre>
-                  </v-card-text>
-                </v-card>
               </v-card-text>
             </v-card>
           </v-col>
         </v-row>
+
+        <div class="mt-10 text-center">
+          <v-btn
+            size="x-large"
+            color="primary"
+            variant="flat"
+            to="/how-to-setup"
+          >
+            Open the setup guide
+            <v-icon end>
+              mdi-arrow-right
+            </v-icon>
+          </v-btn>
+        </div>
       </v-container>
     </section>
 
@@ -509,9 +520,18 @@ def get_user(id: int):
               color="surface"
               elevation="0"
 
-              :href="item.link"
-              target="_blank"
-              rel="noopener noreferrer"
+              :href="item.external
+                ? item.link
+                : undefined"
+              :to="item.external
+                ? undefined
+                : item.link"
+              :target="item.external
+                ? '_blank'
+                : undefined"
+              :rel="item.external
+                ? 'noopener noreferrer'
+                : undefined"
               hover
               border
             >
@@ -582,11 +602,9 @@ def get_user(id: int):
               <v-btn
                 size="x-large"
                 variant="outlined"
-                href="https://ledger-server.jtuta.cloud/docs"
-                target="_blank"
-                rel="noopener noreferrer"
+                to="/how-to-setup"
               >
-                Read the docs
+                Read the setup guide
                 <v-icon end>
                   mdi-book-open-variant
                 </v-icon>
@@ -814,32 +832,30 @@ const features = [
   },
 ]
 
-const howItWorks = [
+const setupLinks = [
   {
-    title: 'Install the SDK',
-    description: 'One command. Supports Python 3.10+.',
-    code: 'pip install ledger-sdk',
+    icon: 'mdi-rocket-launch-outline',
+    title: 'Basic setup',
+    description: 'Install the SDK and add the middleware for FastAPI, Django, or Flask.',
+    to: '/how-to-setup#basic',
   },
   {
-    title: 'Add the middleware',
-    description: 'Drop in our middleware for FastAPI, Django, or Flask.',
-    code: `from ledger import LedgerClient
-from ledger.integrations.fastapi import LedgerMiddleware
-
-ledger = LedgerClient(api_key="your_key")
-app.add_middleware(LedgerMiddleware, ledger_client=ledger)`,
+    icon: 'mdi-chart-line',
+    title: 'Metrics',
+    description: 'Emit counters, gauges, and histograms, then chart them on your dashboard.',
+    to: '/how-to-setup#metrics',
   },
   {
-    title: 'See your logs',
-    description: 'Every request, response, and exception appears in your dashboard instantly.',
-    code: null,
+    icon: 'mdi-vector-polyline',
+    title: 'Tracing',
+    description: 'Follow a request end to end across services with distributed traces.',
+    to: '/how-to-setup#tracing',
   },
   {
-    title: 'Or use any OpenTelemetry SDK',
-    description: 'Not on Python? Point any language\'s stock OTel SDK at Ledger — no Ledger-specific package required.',
-    code: `OTEL_EXPORTER_OTLP_ENDPOINT=https://ledger-server.jtuta.cloud
-OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer ledger_<api-key>`,
+    icon: 'mdi-earth',
+    title: 'OpenTelemetry',
+    description: 'Not on Python? Point any language\'s stock OTel SDK at Ledger.',
+    to: '/how-to-setup#opentelemetry',
   },
 ]
 
@@ -851,6 +867,7 @@ const ecosystem = [
     description: 'pip install ledger-sdk — supports FastAPI, Django, Flask, Starlette, Litestar.',
     cta: 'View on GitHub',
     link: 'https://github.com/JakubTuta/Ledger-SDK',
+    external: true,
   },
   {
     icon: 'mdi-vector-polyline',
@@ -858,7 +875,8 @@ const ecosystem = [
     title: 'Any OpenTelemetry SDK',
     description: 'Ledger accepts standard OTLP/HTTP traces and logs, so Go, Java, Node, and every other OTel SDK works out of the box.',
     cta: 'OTLP setup guide',
-    link: 'https://github.com/JakubTuta/Ledger-APP#otlp',
+    link: '/how-to-setup#opentelemetry',
+    external: false,
   },
   {
     icon: 'mdi-server',
@@ -867,6 +885,7 @@ const ecosystem = [
     description: 'Run your own Ledger instance. Full control over your data, easy Docker deploy.',
     cta: 'Deploy guide',
     link: 'https://github.com/JakubTuta/Ledger-APP',
+    external: true,
   },
   {
     icon: 'mdi-file-document',
@@ -874,7 +893,8 @@ const ecosystem = [
     title: 'REST API',
     description: 'Build custom integrations with our fully documented REST API.',
     cta: 'API reference',
-    link: 'https://ledger-server.jtuta.cloud/docs',
+    link: 'https://bump.sh/tuta-corp/doc/ledger-api/',
+    external: true,
   },
 ]
 
@@ -883,6 +903,7 @@ const footerCols = [
     title: 'Product',
     links: [
       { label: 'Features', href: '#features' },
+      { label: 'Setup guide', href: '/how-to-setup' },
       { label: 'Sign in', href: '/login' },
       { label: 'Register', href: '/register' },
     ],
@@ -890,7 +911,7 @@ const footerCols = [
   {
     title: 'Docs',
     links: [
-      { label: 'Quickstart', href: 'https://github.com/JakubTuta/Ledger-SDK', external: true },
+      { label: 'Quickstart', href: '/how-to-setup' },
       { label: 'Python SDK', href: 'https://github.com/JakubTuta/Ledger-SDK', external: true },
       { label: 'REST API', href: 'https://ledger-server.jtuta.cloud/docs', external: true },
       { label: 'Self-hosting', href: 'https://github.com/JakubTuta/Ledger-APP', external: true },
@@ -1125,19 +1146,12 @@ const footerCols = [
 
 .step-card {
   transition: all 0.25s ease;
+  text-decoration: none;
 }
 
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: rgba(var(--v-theme-primary), 0.15);
-  color: rgb(var(--v-theme-primary));
-  border-radius: 12px;
-  font-size: 1.125rem;
-  font-weight: 700;
+.step-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(var(--v-theme-primary), 0.5) !important;
 }
 
 .step-title {
@@ -1149,10 +1163,6 @@ const footerCols = [
   color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.6;
   font-size: 0.9375rem;
-}
-
-.code-card {
-  border-radius: 8px !important;
 }
 
 .code-block {
