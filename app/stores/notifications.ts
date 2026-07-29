@@ -25,7 +25,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       preferences.value = response.data
       lastFetchTime.value = new Date()
     }
-    catch (error) {
+    catch {
       preferences.value = {
         enabled: false,
         projects: {},

@@ -297,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import type { InboxNotification, NotificationKind, NotificationLevel } from '~/types/notifications'
+import type { InboxNotification, NotificationKind } from '~/types/notifications'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -392,28 +392,6 @@ async function bulkMarkRead() {
       n.read_at = new Date().toISOString()
   })
   selectedIds.value = new Set()
-}
-
-function getLevelColor(level: NotificationLevel): string {
-  const map: Record<string, string> = {
-    critical: 'error',
-    error: 'error',
-    warning: 'warning',
-    info: 'info',
-  }
-
-  return map[level] ?? 'error'
-}
-
-function getLevelIcon(level: NotificationLevel): string {
-  const map: Record<string, string> = {
-    critical: 'mdi-alert-circle',
-    error: 'mdi-alert',
-    warning: 'mdi-alert-outline',
-    info: 'mdi-information-outline',
-  }
-
-  return map[level] ?? 'mdi-alert'
 }
 
 function formatTimestamp(timestamp: string): string {

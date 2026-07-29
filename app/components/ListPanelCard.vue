@@ -780,7 +780,7 @@ interface ListItem {
   median_value?: number
 }
 
-const currentTime = ref(Date.now())
+const { formatTimestamp, formatFullTimestamp } = useRelativeTime()
 
 // Filter state (logs / error_list)
 const statusClassFilter = ref<string>('all')
@@ -1062,77 +1062,6 @@ function getValueBarColor(value?: number, max?: number): string {
   return 'success'
 }
 
-// Error card helpers (for errors type)
-function getItemColor(item: ListItem): string {
-  const colors: Record<NotificationLevel, string> = {
-    critical: 'error',
-    error: 'error',
-  }
-
-  return colors[item.level as NotificationLevel] || 'error'
-}
-
-function getIconColorForItem(_item: ListItem): string {
-  return 'white'
-}
-
-function getItemIcon(item: ListItem): string {
-  const icons: Record<NotificationLevel, string> = {
-    critical: 'mdi-alert-circle',
-    error: 'mdi-alert',
-  }
-
-  return icons[item.level as NotificationLevel] || 'mdi-alert'
-}
-
-function formatTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp)
-    const diff = currentTime.value - date.getTime()
-
-    if (diff < 24 * 60 * 60 * 1000) {
-      const seconds = Math.floor(diff / 1000)
-      const minutes = Math.floor(seconds / 60)
-      const hours = Math.floor(minutes / 60)
-      if (hours > 0)
-        return `${hours}h ago`
-      if (minutes > 0)
-        return `${minutes}m ago`
-      if (seconds > 0)
-        return `${seconds}s ago`
-
-      return 'Just now'
-    }
-
-    const dd = String(date.getDate()).padStart(2, '0')
-    const mm = String(date.getMonth() + 1).padStart(2, '0')
-    const hh = String(date.getHours()).padStart(2, '0')
-    const min = String(date.getMinutes()).padStart(2, '0')
-
-    return `${dd}-${mm} ${hh}:${min}`
-  }
-  catch {
-    return timestamp
-  }
-}
-
-function formatFullTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp)
-    const dd = String(date.getDate()).padStart(2, '0')
-    const mm = String(date.getMonth() + 1).padStart(2, '0')
-    const yyyy = date.getFullYear()
-    const hh = String(date.getHours()).padStart(2, '0')
-    const min = String(date.getMinutes()).padStart(2, '0')
-    const ss = String(date.getSeconds()).padStart(2, '0')
-
-    return `${dd}-${mm}-${yyyy} ${hh}:${min}:${ss}`
-  }
-  catch {
-    return timestamp
-  }
-}
-
 function toggleExpanded(item: ListItem) {
   item.expanded = !item.expanded
 }
@@ -1144,18 +1073,7 @@ function onIntersect(isIntersecting: boolean) {
   }
 }
 
-let timeUpdateInterval: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-  timeUpdateInterval = setInterval(() => {
-    currentTime.value = Date.now()
-  }, 30000)
-})
-
 onUnmounted(() => {
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval)
-  }
   if (searchDebounceTimer) {
     clearTimeout(searchDebounceTimer)
   }

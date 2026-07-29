@@ -247,7 +247,7 @@ async function handleGlobalToggle() {
   await savePreferences()
 }
 
-async function handleProjectToggle(projectId: number) {
+async function handleProjectToggle(_projectId: number) {
   await savePreferences()
 }
 

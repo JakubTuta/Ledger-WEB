@@ -723,7 +723,6 @@ export const usePanelsStore = defineStore('panels', () => {
       logsOffset.value.delete(panelId)
       logsHasMore.value.delete(panelId)
 
-      // Remove from all tabs
       tabs.value.forEach((tab) => {
         tab.panelIds = tab.panelIds.filter(id => id !== panelId)
       })

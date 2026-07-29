@@ -246,7 +246,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const autoLogin = async () => {
-    // Prevent multiple initialization attempts
     if (authInitialized.value) {
       return
     }
@@ -260,7 +259,6 @@ export const useAuthStore = defineStore('auth', () => {
     if (refreshed) {
       await fetchCurrentUser()
 
-      // Set up automatic token refresh check (every 30 seconds)
       if (import.meta.client) {
         setInterval(async () => {
           if (shouldRefreshToken()) {

@@ -659,9 +659,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.filters-toolbar {
-}
-
 .ghost-panel {
   opacity: 0.4;
 }

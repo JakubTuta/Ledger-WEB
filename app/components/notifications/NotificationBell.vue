@@ -176,8 +176,6 @@
 </template>
 
 <script setup lang="ts">
-import type { NotificationLevel } from '~/types/notifications'
-
 const streamStore = useNotificationStreamStore()
 const { inbox, unreadCount, soundEnabled } = storeToRefs(streamStore)
 
@@ -204,28 +202,6 @@ watch(menuOpen, (open) => {
 })
 
 const displayedNotifications = computed(() => inbox.value.slice(0, 10))
-
-function getLevelColor(level: NotificationLevel): string {
-  const map: Record<string, string> = {
-    critical: 'error',
-    error: 'error',
-    warning: 'warning',
-    info: 'info',
-  }
-
-  return map[level] ?? 'error'
-}
-
-function getLevelIcon(level: NotificationLevel): string {
-  const map: Record<string, string> = {
-    critical: 'mdi-alert-circle',
-    error: 'mdi-alert',
-    warning: 'mdi-alert-outline',
-    info: 'mdi-information-outline',
-  }
-
-  return map[level] ?? 'mdi-alert'
-}
 
 function formatRelativeTime(timestamp: string): string {
   try {

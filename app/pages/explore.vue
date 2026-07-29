@@ -688,56 +688,7 @@ function formatDuration(ms?: number | null): string {
   return `${ms}ms`
 }
 
-const currentTime = ref(Date.now())
-let timeUpdateInterval: ReturnType<typeof setInterval> | null = null
-
-function formatTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp)
-    const diff = currentTime.value - date.getTime()
-
-    if (diff < 24 * 60 * 60 * 1000) {
-      const seconds = Math.floor(diff / 1000)
-      const minutes = Math.floor(seconds / 60)
-      const hours = Math.floor(minutes / 60)
-      if (hours > 0)
-        return `${hours}h ago`
-      if (minutes > 0)
-        return `${minutes}m ago`
-      if (seconds > 0)
-        return `${seconds}s ago`
-
-      return 'Just now'
-    }
-
-    const dd = String(date.getDate()).padStart(2, '0')
-    const mm = String(date.getMonth() + 1).padStart(2, '0')
-    const hh = String(date.getHours()).padStart(2, '0')
-    const min = String(date.getMinutes()).padStart(2, '0')
-
-    return `${dd}-${mm} ${hh}:${min}`
-  }
-  catch {
-    return timestamp
-  }
-}
-
-function formatFullTimestamp(timestamp: string): string {
-  try {
-    const date = new Date(timestamp)
-    const dd = String(date.getDate()).padStart(2, '0')
-    const mm = String(date.getMonth() + 1).padStart(2, '0')
-    const yyyy = date.getFullYear()
-    const hh = String(date.getHours()).padStart(2, '0')
-    const min = String(date.getMinutes()).padStart(2, '0')
-    const ss = String(date.getSeconds()).padStart(2, '0')
-
-    return `${dd}-${mm}-${yyyy} ${hh}:${min}:${ss}`
-  }
-  catch {
-    return timestamp
-  }
-}
+const { formatTimestamp, formatFullTimestamp } = useRelativeTime()
 
 function loadFiltersFromUrl() {
   const query = route.query
@@ -755,16 +706,10 @@ onMounted(async () => {
 
   if (exploreStore.filters.projectId)
     await exploreStore.refresh()
-
-  timeUpdateInterval = setInterval(() => {
-    currentTime.value = Date.now()
-  }, 30000)
 })
 
 onUnmounted(() => {
   exploreStore.stopTail()
-  if (timeUpdateInterval)
-    clearInterval(timeUpdateInterval)
   if (searchDebounce)
     clearTimeout(searchDebounce)
 })

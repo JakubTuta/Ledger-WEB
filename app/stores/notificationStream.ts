@@ -347,7 +347,6 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
 
         notifications.value.unshift(notification)
 
-        // Add to inbox
         const isAlert = (parsedData as any).log_type === 'alert'
 
         const inboxItem: InboxNotification = {
