@@ -119,6 +119,15 @@ logging.getLogger(__name__).warning("this reaches Ledger too")`,
 )`,
       },
       {
+        title: 'Capture the real visitor IP behind a proxy',
+        description: 'Optional. Behind a reverse proxy or load balancer, only the direct peer address is trusted by default — that\'s your proxy, not the visitor — so endpoint logs show the proxy\'s address and country stays empty until this is set. Two things both have to be true: your proxy must forward X-Forwarded-For (most don\'t by default), and trusted_proxies must be set to the address range your app actually receives connections from. If you get the range wrong, the SDK logs a one-time warning naming the address it actually observed, so you can copy it straight in.',
+        code: `app.add_middleware(
+    LedgerMiddleware,
+    ledger_client=ledger,
+    trusted_proxies=["10.0.0.0/8"],  # replace with your proxy's actual address range
+)`,
+      },
+      {
         title: 'Open the dashboard',
         description: 'Start your app, hit an endpoint, then open Explore. Logs appear within seconds.',
       },

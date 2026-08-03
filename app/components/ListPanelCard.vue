@@ -403,6 +403,30 @@
                       />
                       {{ item.platform }}
                     </v-chip>
+
+                    <v-chip
+                      v-if="item.client_channel"
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      <v-icon
+                        :icon="channelIcon(item.client_channel)"
+                        start
+                      />
+                      {{ item.client_channel }}
+                    </v-chip>
+
+                    <v-chip
+                      v-if="item.client_country"
+                      size="x-small"
+                      variant="outlined"
+                    >
+                      <v-icon
+                        icon="mdi-flag-outline"
+                        start
+                      />
+                      {{ item.client_country }}
+                    </v-chip>
                   </div>
                 </div>
               </v-expand-transition>
@@ -757,6 +781,8 @@ interface ListItem {
   release?: string
   sdk_version?: string
   platform?: string
+  client_channel?: string
+  client_country?: string
   trace_id?: string
   expanded?: boolean
   isNew?: boolean

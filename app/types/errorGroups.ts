@@ -37,6 +37,7 @@ export interface ErrorGroupSampleLog {
   error_type: string | null
   error_message: string | null
   stack_trace: string | null
+  attributes: Record<string, any> | null
   sdk_version: string | null
   platform: string | null
   platform_version: string | null
@@ -45,6 +46,8 @@ export interface ErrorGroupSampleLog {
   path: string | null
   status_code: number | null
   duration_ms: number | null
+  client_channel: string | null
+  client_country: string | null
 }
 
 export interface ErrorOccurrenceBucket {

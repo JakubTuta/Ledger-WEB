@@ -231,6 +231,41 @@
             </div>
 
             <div
+              v-if="detail?.sample_log?.client_channel || detail?.sample_log?.client_country"
+              class="mt-3"
+            >
+              <div class="text-caption text-medium-emphasis mb-1">
+                Caller (sample occurrence)
+              </div>
+
+              <div class="d-flex flex-wrap gap-2">
+                <v-chip
+                  v-if="detail.sample_log.client_channel"
+                  size="x-small"
+                  variant="outlined"
+                >
+                  <v-icon
+                    :icon="channelIcon(detail.sample_log.client_channel)"
+                    start
+                  />
+                  {{ detail.sample_log.client_channel }}
+                </v-chip>
+
+                <v-chip
+                  v-if="detail.sample_log.client_country"
+                  size="x-small"
+                  variant="outlined"
+                >
+                  <v-icon
+                    icon="mdi-flag-outline"
+                    start
+                  />
+                  {{ detail.sample_log.client_country }}
+                </v-chip>
+              </div>
+            </div>
+
+            <div
               v-if="detailLoading"
               class="pa-4 text-center"
             >

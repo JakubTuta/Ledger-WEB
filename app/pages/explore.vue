@@ -142,6 +142,13 @@
                 :is-active="v => exploreStore.isFacetActive('environment', v)"
                 @toggle="v => exploreStore.toggleFacet('environment', v)"
               />
+
+              <FacetGroup
+                title="Channel"
+                :values="exploreStore.facets.client_channel"
+                :is-active="v => exploreStore.isFacetActive('client_channel', v)"
+                @toggle="v => exploreStore.toggleFacet('client_channel', v)"
+              />
             </template>
 
             <div
@@ -232,6 +239,8 @@
 
               <span class="text-caption font-weight-medium text-medium-emphasis type-col mr-2 flex-shrink-0">Type</span>
 
+              <span class="text-caption font-weight-medium text-medium-emphasis channel-col mr-2 flex-shrink-0 text-center">Channel</span>
+
               <span class="text-caption font-weight-medium text-medium-emphasis mr-2 flex-grow-1">Message / Path</span>
 
               <span class="text-caption font-weight-medium text-medium-emphasis status-col mr-3 flex-shrink-0">Status</span>
@@ -266,6 +275,24 @@
               <span class="type-col text-caption text-medium-emphasis mr-2 flex-shrink-0 text-truncate">
                 {{ log.log_type }}
               </span>
+
+              <v-tooltip
+                :text="channelLabel(log.client_channel)"
+                location="top"
+              >
+                <template #activator="{'props': tooltipProps}">
+                  <span
+                    v-bind="tooltipProps"
+                    class="channel-col d-flex align-center mr-2 flex-shrink-0 justify-center"
+                  >
+                    <v-icon
+                      :icon="channelIcon(log.client_channel)"
+                      size="16"
+                      class="text-medium-emphasis"
+                    />
+                  </span>
+                </template>
+              </v-tooltip>
 
               <span class="text-caption text-mono mr-2 flex-grow-1 text-truncate">
                 {{ log.path || log.message || log.error_message || '—' }}
@@ -435,6 +462,55 @@
           </div>
 
           <div
+            v-if="exploreStore.selectedLog.client_channel || callerEntries.length > 0"
+            class="mb-3"
+          >
+            <div class="text-caption font-weight-bold mb-1">
+              Caller
+            </div>
+
+            <v-table density="compact">
+              <tbody>
+                <tr v-if="exploreStore.selectedLog.client_channel">
+                  <td class="text-caption font-weight-medium py-1 pr-3">
+                    channel
+                  </td>
+
+                  <td class="text-caption py-1">
+                    {{ exploreStore.selectedLog.client_channel }}
+                  </td>
+                </tr>
+
+                <tr v-if="exploreStore.selectedLog.client_country">
+                  <td class="text-caption font-weight-medium py-1 pr-3">
+                    country
+                  </td>
+
+                  <td class="text-caption py-1">
+                    {{ exploreStore.selectedLog.client_country }}
+                  </td>
+                </tr>
+
+                <tr
+                  v-for="[
+                    key,
+                    value,
+                  ] in callerEntries"
+                  :key="key"
+                >
+                  <td class="text-caption font-weight-medium py-1 pr-3">
+                    {{ key }}
+                  </td>
+
+                  <td class="text-caption py-1">
+                    {{ String(value) }}
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </div>
+
+          <div
             v-if="exploreStore.selectedLog.attributes && Object.keys(exploreStore.selectedLog.attributes).length > 0"
             class="mb-3"
           >
@@ -446,6 +522,30 @@
           </div>
 
           <div class="d-flex mt-2 flex-wrap gap-2">
+            <v-chip
+              v-if="exploreStore.selectedLog.client_channel"
+              size="x-small"
+              variant="outlined"
+            >
+              <v-icon
+                :icon="channelIcon(exploreStore.selectedLog.client_channel)"
+                start
+              />
+              {{ exploreStore.selectedLog.client_channel }}
+            </v-chip>
+
+            <v-chip
+              v-if="exploreStore.selectedLog.client_country"
+              size="x-small"
+              variant="outlined"
+            >
+              <v-icon
+                icon="mdi-flag-outline"
+                start
+              />
+              {{ exploreStore.selectedLog.client_country }}
+            </v-chip>
+
             <v-chip
               v-if="exploreStore.selectedLog.environment"
               size="x-small"
@@ -591,6 +691,17 @@ const traceIdForSelectedLog = computed<string | null>(() => {
   return typeof traceId === 'string' && traceId
     ? traceId
     : null
+})
+
+// The gateway nests every ledger.client.* attribute except channel/country
+// (which are promoted to their own typed columns) under attributes.client -
+// see otlp_translator.py's _extract_client_data().
+const callerEntries = computed<[string, unknown][]>(() => {
+  const client = exploreStore.selectedLog?.attributes?.client
+
+  return client && typeof client === 'object'
+    ? Object.entries(client)
+    : []
 })
 
 // Mirrors TraceListPanelCard's "pin trace" flow: traces don't have their own
@@ -794,6 +905,11 @@ onUnmounted(() => {
 .type-col {
   min-width: 80px;
   max-width: 80px;
+}
+
+.channel-col {
+  min-width: 24px;
+  max-width: 24px;
 }
 
 .status-col {

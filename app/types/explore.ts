@@ -24,6 +24,8 @@ export interface ExploreLogEntry {
   path?: string | null
   status_code?: number | null
   duration_ms?: number | null
+  client_channel?: string | null
+  client_country?: string | null
 }
 
 export interface ExploreLogsResponse {
@@ -44,9 +46,10 @@ export interface ExploreFacets {
   log_type: ExploreFacetValue[]
   status_class: ExploreFacetValue[]
   environment: ExploreFacetValue[]
+  client_channel: ExploreFacetValue[]
 }
 
-export type ExploreFacetField = 'level' | 'log_type' | 'status_class' | 'environment'
+export type ExploreFacetField = 'level' | 'log_type' | 'status_class' | 'environment' | 'client_channel'
 
 export interface ExploreFilters {
   projectId: string | null
@@ -58,4 +61,5 @@ export interface ExploreFilters {
   statusClass: string[]
   environment: string | null
   search: string
+  clientChannel: string | null
 }

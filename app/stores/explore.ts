@@ -24,6 +24,7 @@ function defaultFilters(): ExploreFilters {
     statusClass: [],
     environment: null,
     search: '',
+    clientChannel: null,
   }
 }
 
@@ -73,6 +74,8 @@ export const useExploreStore = defineStore('explore', () => {
       params.append('status_class', sc)
     if (filters.value.search)
       params.set('search', filters.value.search)
+    if (filters.value.clientChannel)
+      params.set('client_channel', filters.value.clientChannel)
 
     return params
   }
@@ -152,6 +155,7 @@ export const useExploreStore = defineStore('explore', () => {
         log_type: response.data.log_type,
         status_class: response.data.status_class,
         environment: response.data.environment,
+        client_channel: response.data.client_channel,
       }
     }
     catch (error) {
@@ -222,6 +226,11 @@ export const useExploreStore = defineStore('explore', () => {
         ? null
         : value
     }
+    else if (field === 'client_channel') {
+      filters.value.clientChannel = filters.value.clientChannel === value
+        ? null
+        : value
+    }
 
     nextCursor.value = null
     await refresh()
@@ -234,6 +243,8 @@ export const useExploreStore = defineStore('explore', () => {
       return filters.value.level === value
     if (field === 'log_type')
       return filters.value.logType === value
+    if (field === 'client_channel')
+      return filters.value.clientChannel === value
 
     return filters.value.environment === value
   }
