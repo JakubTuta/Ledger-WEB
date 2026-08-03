@@ -143,6 +143,30 @@
                 @toggle="v => exploreStore.toggleFacet('environment', v)"
               />
 
+              <div class="mb-3">
+                <div class="text-caption text-medium-emphasis mb-1">
+                  Traffic
+                </div>
+
+                <div class="d-flex ga-1 flex-wrap">
+                  <v-chip
+                    v-for="category in TRAFFIC_CATEGORIES"
+                    :key="category"
+                    size="x-small"
+                    :variant="isCategoryActive(category)
+                      ? 'flat'
+                      : 'outlined'"
+                    :color="isCategoryActive(category)
+                      ? 'primary'
+                      : undefined"
+                    :prepend-icon="categoryIcon(category)"
+                    @click="toggleCategory(category)"
+                  >
+                    {{ categoryLabel(category) }}
+                  </v-chip>
+                </div>
+              </div>
+
               <FacetGroup
                 title="Channel"
                 :values="exploreStore.facets.client_channel"
@@ -602,6 +626,7 @@
 
 <script setup lang="ts">
 import type { Panel, TimeRangePreset } from '~/types/panel'
+import type { TrafficCategory } from '~/utils/clientChannel'
 
 definePageMeta({
   middleware: 'auth',
@@ -646,8 +671,29 @@ const hasActiveFacetFilters = computed(() => !!exploreStore.filters.level
   || !!exploreStore.filters.logType
   || !!exploreStore.filters.environment
   || exploreStore.filters.statusClass.length > 0
+  || exploreStore.filters.clientChannel.length > 0
   || !!exploreStore.filters.search,
 )
+
+// Quick "hide bots/SSR" shortcut above the raw Channel facet - a category is
+// shown active only when every one of its channels is currently selected,
+// so partial/mixed selections (made via the facet checkboxes below) don't
+// falsely read as a clean category toggle.
+function isCategoryActive(category: TrafficCategory): boolean {
+  const channels = channelsForCategories([category]) ?? []
+
+  return channels.every(c => exploreStore.filters.clientChannel.includes(c))
+}
+
+function toggleCategory(category: TrafficCategory) {
+  const channels = channelsForCategories([category]) ?? []
+  const isActive = isCategoryActive(category)
+  const current = exploreStore.filters.clientChannel
+  const next = isActive
+    ? current.filter(c => !channels.includes(c))
+    : [...new Set([...current, ...channels])]
+  exploreStore.setClientChannelFilter(next)
+}
 
 const PRESET_LABELS: Record<TimeRangePreset, string> = {
   today: 'Today',

@@ -24,7 +24,7 @@ function defaultFilters(): ExploreFilters {
     statusClass: [],
     environment: null,
     search: '',
-    clientChannel: null,
+    clientChannel: [],
   }
 }
 
@@ -74,8 +74,8 @@ export const useExploreStore = defineStore('explore', () => {
       params.append('status_class', sc)
     if (filters.value.search)
       params.set('search', filters.value.search)
-    if (filters.value.clientChannel)
-      params.set('client_channel', filters.value.clientChannel)
+    for (const channel of filters.value.clientChannel)
+      params.append('client_channel', channel)
 
     return params
   }
@@ -227,9 +227,11 @@ export const useExploreStore = defineStore('explore', () => {
         : value
     }
     else if (field === 'client_channel') {
-      filters.value.clientChannel = filters.value.clientChannel === value
-        ? null
-        : value
+      const idx = filters.value.clientChannel.indexOf(value)
+      if (idx === -1)
+        filters.value.clientChannel = [...filters.value.clientChannel, value]
+      else
+        filters.value.clientChannel = filters.value.clientChannel.filter(v => v !== value)
     }
 
     nextCursor.value = null
@@ -244,9 +246,19 @@ export const useExploreStore = defineStore('explore', () => {
     if (field === 'log_type')
       return filters.value.logType === value
     if (field === 'client_channel')
-      return filters.value.clientChannel === value
+      return filters.value.clientChannel.includes(value)
 
     return filters.value.environment === value
+  }
+
+  // Sets the client_channel filter directly to the given raw channel values
+  // (used by the traffic-category toggle in the Explore page, which maps a
+  // People/Bots/Servers selection down to the underlying channel set rather
+  // than toggling one facet value at a time).
+  const setClientChannelFilter = async (channels: string[]) => {
+    filters.value.clientChannel = channels
+    nextCursor.value = null
+    await refresh()
   }
 
   const clearFilters = async () => {
@@ -464,6 +476,7 @@ export const useExploreStore = defineStore('explore', () => {
     setSearch,
     toggleFacet,
     isFacetActive,
+    setClientChannelFilter,
     clearFilters,
     openLogDetail,
     closeLogDetail,

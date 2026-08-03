@@ -26,6 +26,8 @@
 
           <!-- Desktop actions -->
           <template v-if="!mobile">
+            <TrafficFilterButton />
+
             <v-btn
               icon="mdi-keyboard"
               variant="text"
@@ -96,37 +98,41 @@
               </v-btn>
             </template>
 
-            <v-menu v-else>
-              <template #activator="{'props': menuProps}">
-                <v-btn
-                  v-bind="menuProps"
-                  icon="mdi-dots-vertical"
-                  variant="text"
-                  size="small"
-                />
-              </template>
+            <template v-else>
+              <TrafficFilterButton />
 
-              <v-list density="compact">
-                <v-list-item
-                  prepend-icon="mdi-plus"
-                  title="Add Panel"
-                  :disabled="!filters.projectId"
-                  @click="newPanelDialog = true"
-                />
+              <v-menu>
+                <template #activator="{'props': menuProps}">
+                  <v-btn
+                    v-bind="menuProps"
+                    icon="mdi-dots-vertical"
+                    variant="text"
+                    size="small"
+                  />
+                </template>
 
-                <v-list-item
-                  prepend-icon="mdi-pencil"
-                  title="Edit Layout"
-                  @click="enterEditMode"
-                />
+                <v-list density="compact">
+                  <v-list-item
+                    prepend-icon="mdi-plus"
+                    title="Add Panel"
+                    :disabled="!filters.projectId"
+                    @click="newPanelDialog = true"
+                  />
 
-                <v-list-item
-                  prepend-icon="mdi-keyboard"
-                  title="Keyboard shortcuts"
-                  @click="shortcutsDialog = true"
-                />
-              </v-list>
-            </v-menu>
+                  <v-list-item
+                    prepend-icon="mdi-pencil"
+                    title="Edit Layout"
+                    @click="enterEditMode"
+                  />
+
+                  <v-list-item
+                    prepend-icon="mdi-keyboard"
+                    title="Keyboard shortcuts"
+                    @click="shortcutsDialog = true"
+                  />
+                </v-list>
+              </v-menu>
+            </template>
           </template>
         </div>
 
@@ -220,121 +226,56 @@
               : 6"
             :md="gridCols"
           >
-            <ListPanelCard
-              v-if="panel.type === 'error_list'"
+            <PanelRenderer
               :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :items="panelsStore.getErrorsForPanel(panel.id)"
-              :loading="panelsStore.isErrorsLoading(panel.id)"
-              :has-more="panelsStore.getErrorsHasMore(panel.id)"
-              :offset="panelsStore.getErrorsOffset(panel.id)"
-              :disabled="isEditMode"
-              type="error_list"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchErrorsForPanel(panel)"
-              @load-page="(offset) => panelsStore.fetchErrorsForPanel(panel, offset)"
-            />
-
-            <ListPanelCard
-              v-else-if="panel.type === 'logs'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :items="panelsStore.getLogsForPanel(panel.id)"
-              :loading="panelsStore.isLogsLoading(panel.id)"
-              :has-more="panelsStore.getLogsHasMore(panel.id)"
-              :offset="panelsStore.getLogsOffset(panel.id)"
-              :disabled="isEditMode"
-              type="logs"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchLogsForPanel(panel)"
-              @load-page="(offset) => panelsStore.fetchLogsForPanel(panel, offset)"
-            />
-
-            <ListPanelCard
-              v-else-if="panel.type === 'bottleneck'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :items="panelsStore.getBottleneckListForPanel(panel.id)"
-              :loading="panelsStore.isBottleneckListLoading(panel.id)"
-              :has-more="panelsStore.getBottleneckListHasMore(panel.id)"
-              :max-value="panelsStore.getBottleneckListMeta(panel.id)?.max_value ?? 0"
-              :disabled="isEditMode"
-              type="bottleneck"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchBottleneckListForPanel(panel)"
-              @load-page="() => panelsStore.fetchBottleneckListForPanel(panel, {'append': true})"
-            />
-
-            <HeatmapPanelCard
-              v-else-if="panel.type === 'error_heatmap'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :metrics="panelsStore.getMetricsForPanel(panel.id)"
-              :loading="panelsStore.isMetricsLoading(panel.id)"
               :disabled="isEditMode"
               @delete="openDeleteDialog(panel)"
               @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
-            />
-
-            <TracePanelCard
-              v-else-if="panel.type === 'trace'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-            />
-
-            <TraceListPanelCard
-              v-else-if="panel.type === 'trace_list'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-            />
-
-            <SummaryPanel
-              v-else-if="panel.type === 'summary'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :metrics="panelsStore.getMetricsForPanel(panel.id)"
-              :loading="panelsStore.isMetricsLoading(panel.id)"
-              :disabled="isEditMode"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
-            />
-
-            <LatencyOverviewPanel
-              v-else-if="panel.type === 'latency_overview'"
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :metrics="panelsStore.getMetricsForPanel(panel.id)"
-              :loading="panelsStore.isMetricsLoading(panel.id)"
-              :disabled="isEditMode"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
-            />
-
-            <PanelCard
-              v-else
-              :panel="panel"
-              :project="getProjectForPanel(panel)"
-              :metrics="panelsStore.getMetricsForPanel(panel.id)"
-              :loading="panelsStore.isMetricsLoading(panel.id)"
-              :disabled="isEditMode"
-              @delete="openDeleteDialog(panel)"
-              @time-options="openTimeOptionsDialog(panel)"
-              @refresh="() => panelsStore.fetchMetricsForPanel(panel)"
+              @expand="expandedPanelId = panel.id"
             />
           </v-col>
         </template>
       </Draggable>
     </v-row>
+
+    <!-- Full-page panel overlay -->
+    <v-dialog
+      :model-value="!!expandedPanel"
+      fullscreen
+      :scrim="false"
+      transition="dialog-bottom-transition"
+      @update:model-value="(v) => {
+        if (!v) closeExpandedPanel()
+      }"
+    >
+      <v-card
+        v-if="expandedPanel"
+        class="expanded-panel-card"
+      >
+        <v-toolbar
+          density="compact"
+          color="surface"
+        >
+          <v-toolbar-title>{{ expandedPanel.name }}</v-toolbar-title>
+
+          <v-btn
+            icon="mdi-close"
+            @click="closeExpandedPanel"
+          />
+        </v-toolbar>
+
+        <div
+          class="expanded-panel-content pa-4"
+          :style="{'--panel-card-height': 'calc(100vh - 80px)'}"
+        >
+          <PanelRenderer
+            :panel="expandedPanel"
+            @delete="openDeleteDialog(expandedPanel); closeExpandedPanel()"
+            @time-options="openTimeOptionsDialog(expandedPanel)"
+          />
+        </div>
+      </v-card>
+    </v-dialog>
 
     <!-- Dialogs -->
     <NewPanelDialog
@@ -364,7 +305,6 @@
 
 <script setup lang="ts">
 import type { Panel, TimeRangePreset } from '~/types/panel'
-import type { Project } from '~/types/project'
 import { useDisplay } from 'vuetify'
 
 definePageMeta({
@@ -471,11 +411,29 @@ const draggablePanels = computed({
   },
 })
 
-// Methods
-function getProjectForPanel(panel: Panel): Project | undefined {
-  return projectsStore.projects.find(p => String(p.project_id) === panel.project_id)
+// Full-page panel overlay, linkable via ?expand=<panelId> so it's
+// bookmarkable and the browser back button closes it.
+const expandedPanelId = computed<string | null>({
+  get: () => (typeof route.query.expand === 'string'
+    ? route.query.expand
+    : null),
+  set: (panelId) => {
+    const query = { ...route.query }
+    if (panelId)
+      query.expand = panelId
+    else
+      delete query.expand
+    router.push({ query })
+  },
+})
+
+const expandedPanel = computed(() => panelsStore.panels.find(p => p.id === expandedPanelId.value) ?? null)
+
+function closeExpandedPanel() {
+  expandedPanelId.value = null
 }
 
+// Methods
 function enterEditMode() {
   editingPanels.value = [...filteredPanels.value]
   isEditMode.value = true
@@ -555,6 +513,9 @@ async function handlePanelCreated(panel: Panel) {
   else if (panel.type === 'error_heatmap') {
     await panelsStore.fetchHeatmapForPanel(panel)
   }
+  else if (panel.type === 'country_map') {
+    await panelsStore.fetchCountryBreakdownForPanel(panel)
+  }
   else if (panel.type === 'trace_list' || panel.type === 'trace') {
     // These panels fetch their own data on mount
   }
@@ -576,6 +537,9 @@ function fetchAllMetrics() {
     }
     else if (panel.type === 'error_heatmap') {
       panelsStore.fetchHeatmapForPanel(panel)
+    }
+    else if (panel.type === 'country_map') {
+      panelsStore.fetchCountryBreakdownForPanel(panel)
     }
     else if (panel.type === 'trace_list' || panel.type === 'trace') {
       // These panels self-manage data fetching
@@ -627,6 +591,15 @@ function loadFiltersFromUrl() {
   }
 }
 
+// Close the overlay if its panel is deleted out from under it - only once
+// panels have actually loaded, so a valid deep link isn't closed before
+// fetchPanels() resolves.
+watch(() => panelsStore.panels, () => {
+  if (expandedPanelId.value && panelsStore.hasData && !expandedPanel.value) {
+    closeExpandedPanel()
+  }
+}, { deep: false })
+
 // Lifecycle
 onMounted(async () => {
   loadFiltersFromUrl()
@@ -670,5 +643,16 @@ onUnmounted(() => {
 .drag-panel {
   opacity: 0.8;
   transform: rotate(2deg);
+}
+
+.expanded-panel-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.expanded-panel-content {
+  flex: 1;
+  min-height: 0;
 }
 </style>

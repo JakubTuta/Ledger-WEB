@@ -1,4 +1,4 @@
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview' | 'country_map'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 export type BottleneckSort = 'asc' | 'desc'
@@ -135,4 +135,14 @@ export interface BottleneckListResponse {
   entries: BottleneckListEntry[]
   total: number
   has_more: boolean
+}
+
+export interface CountryBreakdownEntry {
+  country: string
+  count: number
+}
+
+export interface CountryBreakdownResponse {
+  project_id: number
+  countries: CountryBreakdownEntry[]
 }

@@ -8,6 +8,7 @@
     @refresh="handleRefresh"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
+    @expand="emit('expand')"
     @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
@@ -173,6 +174,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   delete: []
   timeOptions: []
+  expand: []
 }>()
 
 const configOpen = ref(false)

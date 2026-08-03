@@ -1,4 +1,4 @@
-import { BarChart, HeatmapChart, LineChart } from 'echarts/charts'
+import { BarChart, HeatmapChart, LineChart, MapChart } from 'echarts/charts'
 import {
   GridComponent,
   LegendComponent,
@@ -15,6 +15,7 @@ use([
   LineChart,
   BarChart,
   HeatmapChart,
+  MapChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,

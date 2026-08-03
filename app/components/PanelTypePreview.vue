@@ -308,6 +308,23 @@
       </g>
     </svg>
 
+    <!-- country_map: continent-shaped blobs colored by a request-volume scale -->
+    <svg
+      v-else-if="type === 'country_map'"
+      viewBox="0 0 80 52"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <ellipse
+        v-for="(blob, i) in mapBlobs"
+        :key="i"
+        :cx="blob.cx"
+        :cy="blob.cy"
+        :rx="blob.rx"
+        :ry="blob.ry"
+        :fill="blob.color"
+      />
+    </svg>
+
     <!-- fallback -->
     <svg
       v-else
@@ -402,6 +419,14 @@ const traceRows = [
   { label: 24, span: 22 },
   { label: 14, span: 32 },
   { label: 18, span: 18 },
+]
+
+const mapBlobs = [
+  { cx: 16, cy: 14, rx: 10, ry: 7, color: '#5b9cf6' },
+  { cx: 40, cy: 12, rx: 7, ry: 6, color: '#93c5fd' },
+  { cx: 34, cy: 28, rx: 8, ry: 9, color: '#f87171' },
+  { cx: 58, cy: 22, rx: 9, ry: 8, color: '#facc15' },
+  { cx: 66, cy: 40, rx: 7, ry: 6, color: '#bfdbfe' },
 ]
 
 const summaryTiles = [

@@ -6,9 +6,11 @@
     :exporting="isExporting"
     icon="mdi-chart-timeline-variant"
     icon-color="success"
+    traffic-filter-hint
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @expand="emit('expand')"
     @export-data="format => exportPanel(format, buildExport)"
   >
     <template #content>
@@ -117,6 +119,7 @@ const emit = defineEmits<{
   delete: []
   timeOptions: []
   refresh: []
+  expand: []
 }>()
 
 const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)

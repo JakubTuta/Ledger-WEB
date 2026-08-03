@@ -6,40 +6,61 @@
     :exporting="isExporting"
     :icon="icon"
     :icon-color="iconColor"
+    :traffic-filter-hint="type === 'bottleneck'"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @expand="emit('expand')"
     @export-data="format => exportPanel(format, buildExport)"
   >
-    <!-- Filter row -->
+    <!-- Filter row: text search only, everything else lives in the options menu -->
     <template
       v-if="type === 'logs' || type === 'error_list' || type === 'bottleneck'"
       #filters
     >
-      <!-- Logs / error_list filters -->
+      <div class="d-flex align-center">
+        <v-text-field
+          v-model="searchFilter"
+          density="compact"
+          variant="outlined"
+          hide-details
+          :placeholder="searchPlaceholder"
+          prepend-inner-icon="mdi-magnify"
+          clearable
+          class="search-input"
+        />
+      </div>
+    </template>
+
+    <template
+      v-if="type === 'logs' || type === 'error_list'"
+      #options
+    >
       <div
-        v-if="type !== 'bottleneck'"
-        class="d-flex align-center flex-wrap gap-2"
+        v-if="type === 'logs'"
+        class="mb-3"
       >
+        <div class="text-caption text-medium-emphasis mb-2">
+          Status code
+        </div>
+
         <v-btn-toggle
-          v-if="type === 'logs'"
           v-model="statusClassFilter"
           density="compact"
           variant="outlined"
           divided
           mandatory
-          class="status-toggle mx-2 gap-2"
         >
           <v-btn
             value="all"
-            size="x-small"
+            size="small"
           >
             All
           </v-btn>
 
           <v-btn
             value="2xx"
-            size="x-small"
+            size="small"
             color="success"
           >
             2xx
@@ -47,7 +68,7 @@
 
           <v-btn
             value="4xx"
-            size="x-small"
+            size="small"
             color="warning"
           >
             4xx
@@ -55,43 +76,15 @@
 
           <v-btn
             value="5xx"
-            size="x-small"
+            size="small"
             color="error"
           >
             5xx
           </v-btn>
         </v-btn-toggle>
-
-        <v-text-field
-          v-model="searchFilter"
-          density="compact"
-          variant="outlined"
-          hide-details
-          :placeholder="type === 'error_list'
-            ? 'Filter by path or message...'
-            : 'Filter path, method, status...'"
-          prepend-inner-icon="mdi-magnify"
-          clearable
-          class="search-input"
-        />
       </div>
 
-      <!-- Bottleneck filters: search only (sorting via clickable column headers) -->
-      <div
-        v-else
-        class="d-flex align-center"
-      >
-        <v-text-field
-          v-model="searchFilter"
-          density="compact"
-          variant="outlined"
-          hide-details
-          placeholder="Filter by route..."
-          prepend-inner-icon="mdi-magnify"
-          clearable
-          class="search-input"
-        />
-      </div>
+      <TrafficCategoryOptions />
     </template>
 
     <template #content>
@@ -746,6 +739,7 @@ const emit = defineEmits<{
   delete: []
   timeOptions: []
   refresh: []
+  expand: []
   loadPage: [offset: number]
   filterChange: []
 }>()
@@ -811,6 +805,15 @@ const { formatTimestamp, formatFullTimestamp } = useRelativeTime()
 // Filter state (logs / error_list)
 const statusClassFilter = ref<string>('all')
 const searchFilter = ref<string>('')
+
+const searchPlaceholder = computed(() => {
+  if (props.type === 'error_list')
+    return 'Filter by path or message...'
+  if (props.type === 'bottleneck')
+    return 'Filter by route...'
+
+  return 'Filter path, method, status...'
+})
 
 // Filter state (bottleneck)
 const bottleneckStatisticFilter = ref<BottleneckStatistic>(props.panel.statistic ?? 'avg')
@@ -1193,10 +1196,6 @@ onUnmounted(() => {
 }
 
 /* Filter row */
-.status-toggle {
-  height: 28px !important;
-}
-
 .search-input {
   max-width: 280px;
   flex: 1;

@@ -4,6 +4,8 @@ import type {
   BottleneckListResponse,
   BottleneckSort,
   BottleneckStatistic,
+  CountryBreakdownEntry,
+  CountryBreakdownResponse,
   CreatePanelRequest,
   MetricsQueryParams,
   Panel,
@@ -11,6 +13,7 @@ import type {
   TimeRangePreset,
   UpdatePanelRequest,
 } from '~/types/panel'
+import type { TrafficCategory } from '~/utils/clientChannel'
 import { defineStore } from 'pinia'
 
 // --- Tabs types ---
@@ -26,6 +29,33 @@ const TABS_STORAGE_KEY = 'ledger_dashboard_tabs'
 const ACTIVE_TAB_STORAGE_KEY = 'ledger_active_tab'
 const TABS_VERSION_KEY = 'ledger_tabs_migrated_v1'
 const TABS_VERSION_KEY_V2 = 'ledger_tabs_migrated_v2'
+const TRAFFIC_CATEGORIES_STORAGE_KEY = 'ledger_traffic_categories'
+
+function loadTrafficCategoriesFromStorage(): TrafficCategory[] {
+  try {
+    if (typeof localStorage === 'undefined')
+      return [...TRAFFIC_CATEGORIES]
+    const raw = localStorage.getItem(TRAFFIC_CATEGORIES_STORAGE_KEY)
+    if (!raw)
+      return [...TRAFFIC_CATEGORIES]
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) || parsed.length === 0)
+      return [...TRAFFIC_CATEGORIES]
+
+    return parsed.filter((c): c is TrafficCategory => TRAFFIC_CATEGORIES.includes(c))
+  }
+  catch {
+    return [...TRAFFIC_CATEGORIES]
+  }
+}
+
+function saveTrafficCategoriesToStorage(categories: TrafficCategory[]) {
+  try {
+    if (typeof localStorage !== 'undefined')
+      localStorage.setItem(TRAFFIC_CATEGORIES_STORAGE_KEY, JSON.stringify(categories))
+  }
+  catch { /* noop */ }
+}
 
 function loadTabsFromStorage(): DashboardTab[] {
   try {
@@ -77,6 +107,28 @@ export const usePanelsStore = defineStore('panels', () => {
   const panelBottleneckMeta = ref<Map<string, { max_value: number, total: number, has_more: boolean }>>(new Map())
   const bottleneckListLoading = ref<Set<string>>(new Set())
   const bottleneckOffset = ref<Map<string, number>>(new Map())
+
+  const panelCountryBreakdown = ref<Map<string, CountryBreakdownEntry[]>>(new Map())
+  const countryBreakdownLoading = ref<Set<string>>(new Set())
+  const countryBreakdownError = ref<Map<string, string>>(new Map())
+
+  // Dashboard-wide traffic filter: which caller categories to include in
+  // raw-log-backed panels (HTTP Request Log, Error List, country map).
+  // Chart/KPI panels read pre-aggregated rollups with no channel dimension,
+  // so they always show all traffic regardless of this selection - see
+  // isTrafficFilterActive, used by those panels to surface a "counts all
+  // traffic" hint rather than silently disagreeing with the filtered ones.
+  const trafficCategories = ref<TrafficCategory[]>(loadTrafficCategoriesFromStorage())
+
+  const isTrafficFilterActive = computed(() => trafficCategories.value.length < TRAFFIC_CATEGORIES.length)
+
+  function _appendTrafficChannelParams(searchParams: URLSearchParams) {
+    const channels = channelsForCategories(trafficCategories.value)
+    if (channels) {
+      for (const channel of channels)
+        searchParams.append('client_channel', channel)
+    }
+  }
 
   const sortedPanels = computed(() => [...panels.value].sort((a, b) => a.index - b.index),
   )
@@ -211,6 +263,7 @@ export const usePanelsStore = defineStore('panels', () => {
       if (panel.search) {
         searchParams.set('search', panel.search)
       }
+      _appendTrafficChannelParams(searchParams)
 
       const response = await client.get<any>(
         `/api/v1/errors/list?${searchParams.toString()}`,
@@ -331,6 +384,7 @@ export const usePanelsStore = defineStore('panels', () => {
       if (panel.search) {
         searchParams.set('search', panel.search)
       }
+      _appendTrafficChannelParams(searchParams)
 
       const response = await client.get<any>(
         `/api/v1/logs?${searchParams.toString()}`,
@@ -569,7 +623,81 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview']
+  const fetchCountryBreakdownForPanel = async (panel: Panel) => {
+    if (countryBreakdownLoading.value.has(panel.id))
+      return
+
+    countryBreakdownLoading.value.add(panel.id)
+    countryBreakdownError.value.delete(panel.id)
+
+    try {
+      const searchParams = new URLSearchParams()
+      searchParams.set('project_id', panel.project_id)
+      searchParams.set('limit', '250')
+
+      if (panel.period) {
+        searchParams.set('period', panel.period)
+      }
+      else if (panel.periodFrom && panel.periodTo) {
+        searchParams.set('periodFrom', panel.periodFrom)
+        searchParams.set('periodTo', panel.periodTo)
+      }
+      else {
+        searchParams.set('period', 'last7days')
+      }
+      _appendTrafficChannelParams(searchParams)
+
+      const response = await client.get<CountryBreakdownResponse>(
+        `/api/v1/logs/country-breakdown?${searchParams.toString()}`,
+      )
+
+      panelCountryBreakdown.value.set(panel.id, response.data.countries)
+    }
+    catch (error: any) {
+      console.error(`Error fetching country breakdown for panel ${panel.id}:`, error)
+      // Unlike the other fetchers, the map needs to tell "failed" apart from
+      // "genuinely no countries resolved yet" - both look like an empty
+      // array otherwise, but they need different empty states.
+      countryBreakdownError.value.set(
+        panel.id,
+        error.response?.data?.detail || error.message || 'Failed to load country breakdown',
+      )
+      panelCountryBreakdown.value.set(panel.id, [])
+    }
+    finally {
+      countryBreakdownLoading.value.delete(panel.id)
+    }
+  }
+
+  const getCountryBreakdownForPanel = (panelId: string) => {
+    return panelCountryBreakdown.value.get(panelId) ?? []
+  }
+
+  const isCountryBreakdownLoading = (panelId: string) => {
+    return countryBreakdownLoading.value.has(panelId)
+  }
+
+  const getCountryBreakdownError = (panelId: string) => {
+    return countryBreakdownError.value.get(panelId) ?? null
+  }
+
+  function setTrafficCategories(categories: TrafficCategory[]) {
+    trafficCategories.value = categories.length > 0
+      ? categories
+      : [...TRAFFIC_CATEGORIES]
+    saveTrafficCategoriesToStorage(trafficCategories.value)
+
+    for (const panel of panels.value) {
+      if (panel.type === 'logs')
+        fetchLogsForPanel(panel)
+      else if (panel.type === 'error_list')
+        fetchErrorsForPanel(panel)
+      else if (panel.type === 'country_map')
+        fetchCountryBreakdownForPanel(panel)
+    }
+  }
+
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
     const payload: Record<string, any> = {}
@@ -722,6 +850,8 @@ export const usePanelsStore = defineStore('panels', () => {
       panelLogs.value.delete(panelId)
       logsOffset.value.delete(panelId)
       logsHasMore.value.delete(panelId)
+      panelCountryBreakdown.value.delete(panelId)
+      countryBreakdownError.value.delete(panelId)
 
       tabs.value.forEach((tab) => {
         tab.panelIds = tab.panelIds.filter(id => id !== panelId)
@@ -875,6 +1005,9 @@ export const usePanelsStore = defineStore('panels', () => {
       }
       else if (response.data.type === 'error_heatmap') {
         await fetchHeatmapForPanel(response.data)
+      }
+      else if (response.data.type === 'country_map') {
+        await fetchCountryBreakdownForPanel(response.data)
       }
       else if (response.data.type !== 'trace' && response.data.type !== 'trace_list') {
         await fetchMetricsForPanel(response.data)
@@ -1147,6 +1280,13 @@ export const usePanelsStore = defineStore('panels', () => {
     isBottleneckListLoading,
     getBottleneckListHasMore,
     fetchHeatmapForPanel,
+    fetchCountryBreakdownForPanel,
+    getCountryBreakdownForPanel,
+    isCountryBreakdownLoading,
+    getCountryBreakdownError,
+    trafficCategories,
+    isTrafficFilterActive,
+    setTrafficCategories,
     createPanel,
     updatePanel,
     deletePanel,

@@ -11,36 +11,6 @@
         : undefined"
       autoresize
     />
-
-    <!-- Toggle only for bar modes -->
-    <div
-      v-if="mode !== 'latency'"
-      class="chart-toggle"
-    >
-      <v-btn-toggle
-        v-model="isCumulative"
-        density="compact"
-        variant="outlined"
-        mandatory
-        rounded="lg"
-      >
-        <v-btn
-          :value="false"
-          size="x-small"
-          title="Separate values per time bucket"
-        >
-          Separate
-        </v-btn>
-
-        <v-btn
-          :value="true"
-          size="x-small"
-          title="Running cumulative total"
-        >
-          Cumulative
-        </v-btn>
-      </v-btn-toggle>
-    </div>
   </div>
 </template>
 
@@ -52,6 +22,10 @@ const props = withDefaults(defineProps<{
   metrics?: AggregatedMetricsResponse
   mode?: 'volume' | 'latency' | 'errors'
   height?: number | string
+  // Running total vs. per-bucket values, for bar modes only (ignored in
+  // 'latency' mode). Controlled by the panel's options menu, not this
+  // component - a chart doesn't own its own display preference.
+  cumulative?: boolean
 }>(), {
   mode: 'volume',
   height: '100%',
@@ -78,7 +52,7 @@ function axisInterval(len: number): number {
 
 const vuetifyTheme = useTheme()
 const isDark = computed(() => vuetifyTheme.current.value.dark)
-const isCumulative = ref(false)
+const isCumulative = computed(() => props.cumulative)
 
 const data = computed<AggregatedMetricData[]>(() => props.metrics?.data ?? [])
 const isHourly = computed(() => props.metrics?.granularity === 'hourly')

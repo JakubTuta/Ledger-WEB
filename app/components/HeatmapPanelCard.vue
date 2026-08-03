@@ -6,11 +6,44 @@
     :exporting="isExporting"
     icon="mdi-grid"
     icon-color="error"
+    traffic-filter-hint
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
+    @expand="emit('expand')"
     @export-data="format => exportPanel(format, buildExport)"
   >
+    <template
+      v-if="metrics && metrics.granularity !== 'hourly'"
+      #options
+    >
+      <div class="text-caption text-medium-emphasis mb-2">
+        Chart values
+      </div>
+
+      <v-btn-toggle
+        v-model="chartValueMode"
+        density="compact"
+        variant="outlined"
+        mandatory
+        divided
+      >
+        <v-btn
+          value="separate"
+          size="small"
+        >
+          Separate
+        </v-btn>
+
+        <v-btn
+          value="cumulative"
+          size="small"
+        >
+          Cumulative
+        </v-btn>
+      </v-btn-toggle>
+    </template>
+
     <template #content>
       <v-card-text class="panel-content-container pa-2">
         <!-- Loading State -->
@@ -55,6 +88,7 @@
           v-else
           :metrics="metrics"
           mode="volume"
+          :cumulative="chartValueMode === 'cumulative'"
         />
       </v-card-text>
     </template>
@@ -123,6 +157,7 @@ const emit = defineEmits<{
   delete: []
   timeOptions: []
   refresh: []
+  expand: []
 }>()
 
 const { isExporting, exportError, exportPanel } = usePanelExport(() => props.panel, () => props.project)
@@ -134,6 +169,8 @@ const showExportError = computed({
       exportError.value = ''
   },
 })
+
+const chartValueMode = ref<'separate' | 'cumulative'>('separate')
 
 const data = computed(() => props.metrics?.data ?? [])
 const totalLogs = computed(() => data.value.reduce((s, d) => s + d.log_count, 0))

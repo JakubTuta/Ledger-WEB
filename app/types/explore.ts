@@ -61,5 +61,5 @@ export interface ExploreFilters {
   statusClass: string[]
   environment: string | null
   search: string
-  clientChannel: string | null
+  clientChannel: string[]
 }

@@ -49,6 +49,24 @@
         >
           <span class="text-truncate">{{ panel.endpoint }}</span>
         </v-chip>
+
+        <v-tooltip
+          v-if="trafficFilterHint && panelsStore.isTrafficFilterActive"
+          location="top"
+          max-width="240"
+        >
+          <template #activator="{'props': tooltipProps}">
+            <v-icon
+              v-bind="tooltipProps"
+              icon="mdi-information-outline"
+              size="x-small"
+              class="text-medium-emphasis flex-shrink-0"
+            />
+          </template>
+
+          Counts all traffic — the traffic filter only applies to the HTTP Request Log, Error
+          List, and country map panels.
+        </v-tooltip>
       </div>
 
       <!-- Desktop: inline actions -->
@@ -57,22 +75,54 @@
         class="d-flex align-center flex-shrink-0 gap-1"
       >
         <v-btn
-          variant="text"
-          size="x-small"
-          :disabled="disabled"
-          prepend-icon="mdi-clock-outline"
-          class="text-caption"
-          @click="emit('timeOptions')"
-        >
-          {{ timeRangeText }}
-        </v-btn>
-
-        <v-btn
           icon="mdi-refresh"
           variant="text"
           size="x-small"
           :disabled="disabled"
           @click="emit('refresh')"
+        />
+
+        <v-menu :close-on-content-click="false">
+          <template #activator="{'props': optionsMenuProps}">
+            <v-btn
+              v-bind="optionsMenuProps"
+              icon="mdi-cog-outline"
+              variant="text"
+              size="x-small"
+              title="Panel options"
+              :disabled="disabled"
+            />
+          </template>
+
+          <v-card
+            min-width="260"
+            max-width="320"
+          >
+            <v-list density="compact">
+              <v-list-item
+                prepend-icon="mdi-clock-outline"
+                :title="timeRangeText"
+                subtitle="Time range"
+                @click="emit('timeOptions')"
+              />
+            </v-list>
+
+            <template v-if="$slots.options">
+              <v-divider />
+
+              <v-card-text class="pt-2">
+                <slot name="options" />
+              </v-card-text>
+            </template>
+          </v-card>
+        </v-menu>
+
+        <v-btn
+          icon="mdi-fullscreen"
+          variant="text"
+          size="x-small"
+          title="Expand"
+          @click="emit('expand')"
         />
 
         <v-menu>
@@ -112,53 +162,93 @@
         />
       </div>
 
-      <!-- Mobile: overflow menu -->
-      <v-menu v-else>
-        <template #activator="{'props': menuProps}">
-          <v-btn
-            v-bind="menuProps"
-            icon="mdi-dots-vertical"
-            variant="text"
-            size="x-small"
-            :disabled="disabled"
-          />
-        </template>
+      <!-- Mobile: cog options menu + overflow menu -->
+      <div
+        v-else
+        class="d-flex align-center flex-shrink-0 gap-1"
+      >
+        <v-menu :close-on-content-click="false">
+          <template #activator="{'props': optionsMenuProps}">
+            <v-btn
+              v-bind="optionsMenuProps"
+              icon="mdi-cog-outline"
+              variant="text"
+              size="x-small"
+              title="Panel options"
+              :disabled="disabled"
+            />
+          </template>
 
-        <v-list density="compact">
-          <v-list-item
-            prepend-icon="mdi-clock-outline"
-            :title="timeRangeText"
-            @click="emit('timeOptions')"
-          />
+          <v-card
+            min-width="240"
+            max-width="320"
+          >
+            <v-list density="compact">
+              <v-list-item
+                prepend-icon="mdi-clock-outline"
+                :title="timeRangeText"
+                subtitle="Time range"
+                @click="emit('timeOptions')"
+              />
+            </v-list>
 
-          <v-list-item
-            prepend-icon="mdi-refresh"
-            title="Refresh"
-            @click="emit('refresh')"
-          />
+            <template v-if="$slots.options">
+              <v-divider />
 
-          <v-list-item
-            prepend-icon="mdi-code-json"
-            title="Export JSON"
-            :disabled="exporting"
-            @click="emit('exportData', 'json')"
-          />
+              <v-card-text class="pt-2">
+                <slot name="options" />
+              </v-card-text>
+            </template>
+          </v-card>
+        </v-menu>
 
-          <v-list-item
-            prepend-icon="mdi-file-delimited-outline"
-            title="Export CSV"
-            :disabled="exporting"
-            @click="emit('exportData', 'csv')"
-          />
+        <v-menu>
+          <template #activator="{'props': menuProps}">
+            <v-btn
+              v-bind="menuProps"
+              icon="mdi-dots-vertical"
+              variant="text"
+              size="x-small"
+              :disabled="disabled"
+            />
+          </template>
 
-          <v-list-item
-            prepend-icon="mdi-delete"
-            title="Delete"
-            base-color="error"
-            @click="emit('delete')"
-          />
-        </v-list>
-      </v-menu>
+          <v-list density="compact">
+            <v-list-item
+              prepend-icon="mdi-refresh"
+              title="Refresh"
+              @click="emit('refresh')"
+            />
+
+            <v-list-item
+              prepend-icon="mdi-fullscreen"
+              title="Expand"
+              @click="emit('expand')"
+            />
+
+            <v-list-item
+              prepend-icon="mdi-code-json"
+              title="Export JSON"
+              :disabled="exporting"
+              @click="emit('exportData', 'json')"
+            />
+
+            <v-list-item
+              prepend-icon="mdi-file-delimited-outline"
+              title="Export CSV"
+              :disabled="exporting"
+              @click="emit('exportData', 'csv')"
+            />
+
+            <v-list-item
+              prepend-icon="mdi-delete"
+              title="Delete"
+              base-color="error"
+              @click="emit('delete')"
+            />
+          </v-list>
+        </v-menu>
+      </div>
     </v-card-title>
 
     <!-- Row 2: Filters (hidden when slot empty) -->
@@ -199,12 +289,18 @@ const props = defineProps<{
   exporting?: boolean
   icon: string
   iconColor: string
+  // True for panels backed by pre-aggregated rollup tables (no client_channel
+  // dimension) - shows a hint that the dashboard-wide traffic filter doesn't
+  // narrow this panel, so its count isn't silently out of step with the
+  // filtered ones.
+  trafficFilterHint?: boolean
 }>()
 
 const emit = defineEmits<{
   delete: []
   timeOptions: []
   refresh: []
+  expand: []
   exportData: [format: ExportFormat]
 }>()
 
