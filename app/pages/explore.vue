@@ -143,35 +143,12 @@
                 @toggle="v => exploreStore.toggleFacet('environment', v)"
               />
 
-              <div class="mb-3">
-                <div class="text-caption text-medium-emphasis mb-1">
-                  Traffic
-                </div>
-
-                <div class="d-flex ga-1 flex-wrap">
-                  <v-chip
-                    v-for="category in TRAFFIC_CATEGORIES"
-                    :key="category"
-                    size="x-small"
-                    :variant="isCategoryActive(category)
-                      ? 'flat'
-                      : 'outlined'"
-                    :color="isCategoryActive(category)
-                      ? 'primary'
-                      : undefined"
-                    :prepend-icon="categoryIcon(category)"
-                    @click="toggleCategory(category)"
-                  >
-                    {{ categoryLabel(category) }}
-                  </v-chip>
-                </div>
-              </div>
-
               <FacetGroup
                 title="Channel"
-                :values="exploreStore.facets.client_channel"
-                :is-active="v => exploreStore.isFacetActive('client_channel', v)"
-                @toggle="v => exploreStore.toggleFacet('client_channel', v)"
+                :values="channelFacetItems"
+                :is-active="isChannelGroupActive"
+                :label-for="channelGroupLabel"
+                @toggle="toggleChannelGroup"
               />
             </template>
 
@@ -534,16 +511,10 @@
             </v-table>
           </div>
 
-          <div
-            v-if="exploreStore.selectedLog.attributes && Object.keys(exploreStore.selectedLog.attributes).length > 0"
+          <AttributeList
+            :attributes="exploreStore.selectedLog.attributes"
             class="mb-3"
-          >
-            <div class="text-caption font-weight-bold mb-1">
-              Attributes
-            </div>
-
-            <pre class="detail-pre text-caption">{{ JSON.stringify(exploreStore.selectedLog.attributes, null, 2) }}</pre>
-          </div>
+          />
 
           <div class="d-flex mt-2 flex-wrap gap-2">
             <v-chip
@@ -626,7 +597,6 @@
 
 <script setup lang="ts">
 import type { Panel, TimeRangePreset } from '~/types/panel'
-import type { TrafficCategory } from '~/utils/clientChannel'
 
 definePageMeta({
   middleware: 'auth',
@@ -675,24 +645,51 @@ const hasActiveFacetFilters = computed(() => !!exploreStore.filters.level
   || !!exploreStore.filters.search,
 )
 
-// Quick "hide bots/SSR" shortcut above the raw Channel facet - a category is
-// shown active only when every one of its channels is currently selected,
-// so partial/mixed selections (made via the facet checkboxes below) don't
-// falsely read as a clean category toggle.
-function isCategoryActive(category: TrafficCategory): boolean {
-  const channels = channelsForCategories([category]) ?? []
+// The Channel facet groups raw client_channel values by traffic category
+// (browser_navigation + browser_xhr both read as "People") so the sidebar
+// doesn't show two chips with the same label. A group's `value` is its raw
+// channels joined by comma - isActive/toggle below split it back apart to
+// operate on filters.clientChannel, which still stores raw channel values.
+const channelFacetItems = computed(() => {
+  const raw = exploreStore.facets?.client_channel ?? []
+  const grouped = new Map<string, { channels: string[], count: number }>()
 
-  return channels.every(c => exploreStore.filters.clientChannel.includes(c))
+  for (const item of raw) {
+    const key = categoryOfChannel(item.value) ?? item.value
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.count += item.count
+      existing.channels.push(item.value)
+    }
+    else {
+      grouped.set(key, { channels: [item.value], count: item.count })
+    }
+  }
+
+  return [...grouped.values()].map(group => ({
+    value: group.channels.join(','),
+    count: group.count,
+  }))
+})
+
+function channelGroupLabel(value: string): string {
+  return channelCategoryLabel(value.split(',')[0])
 }
 
-function toggleCategory(category: TrafficCategory) {
-  const channels = channelsForCategories([category]) ?? []
-  const isActive = isCategoryActive(category)
+function isChannelGroupActive(value: string): boolean {
+  return value.split(',').every(c => exploreStore.filters.clientChannel.includes(c))
+}
+
+async function toggleChannelGroup(value: string) {
+  const channels = value.split(',')
+  const active = isChannelGroupActive(value)
   const current = exploreStore.filters.clientChannel
-  const next = isActive
+
+  exploreStore.filters.clientChannel = active
     ? current.filter(c => !channels.includes(c))
     : [...new Set([...current, ...channels])]
-  exploreStore.setClientChannelFilter(next)
+
+  await exploreStore.refresh()
 }
 
 const PRESET_LABELS: Record<TimeRangePreset, string> = {
@@ -861,8 +858,10 @@ onMounted(async () => {
   if (!exploreStore.filters.projectId && projectsStore.projects.length > 0)
     exploreStore.filters.projectId = String(projectsStore.projects[0]!.project_id)
 
-  if (exploreStore.filters.projectId)
+  if (exploreStore.filters.projectId) {
+    exploreStore.restoreTimeRange()
     await exploreStore.refresh()
+  }
 })
 
 onUnmounted(() => {

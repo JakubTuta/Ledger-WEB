@@ -337,16 +337,10 @@
                     <pre class="detail-pre text-caption">{{ item.stack_trace }}</pre>
                   </div>
 
-                  <div
-                    v-if="item.attributes && Object.keys(item.attributes).length > 0"
+                  <AttributeList
+                    :attributes="item.attributes"
                     class="mb-2"
-                  >
-                    <div class="text-caption font-weight-bold mb-1">
-                      Attributes:
-                    </div>
-
-                    <pre class="detail-pre text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
-                  </div>
+                  />
 
                   <div class="d-flex mt-2 flex-wrap gap-2">
                     <v-chip
@@ -658,15 +652,7 @@
                     <pre class="detail-pre text-caption">{{ item.attributes.stack_trace }}</pre>
                   </div>
 
-                  <div
-                    v-if="item.attributes && Object.keys(item.attributes).length > 0"
-                  >
-                    <div class="text-caption font-weight-bold mb-1">
-                      Attributes:
-                    </div>
-
-                    <pre class="detail-pre text-caption">{{ JSON.stringify(item.attributes, null, 2) }}</pre>
-                  </div>
+                  <AttributeList :attributes="item.attributes" />
                 </div>
               </v-expand-transition>
             </div>

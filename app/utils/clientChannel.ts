@@ -69,6 +69,29 @@ export function categoryTooltip(category: TrafficCategory): string {
   return CATEGORY_META[category].tooltip
 }
 
+const CHANNEL_TO_CATEGORY: Record<string, TrafficCategory> = Object.fromEntries(
+  Object.entries(CATEGORY_CHANNELS).flatMap(
+    ([category, channels]) => channels.map(channel => [channel, category as TrafficCategory]),
+  ),
+)
+
+export function categoryOfChannel(channel: string): TrafficCategory | null {
+  return CHANNEL_TO_CATEGORY[channel] ?? null
+}
+
+// Same People/Bots/Server-to-server/Unclassified wording as the traffic
+// category chips.
+export function channelCategoryLabel(channel?: string | null): string {
+  if (!channel)
+    return channelLabel(channel)
+
+  const category = categoryOfChannel(channel)
+
+  return category
+    ? categoryLabel(category)
+    : channelLabel(channel)
+}
+
 // Raw `client_channel` values to send as filter params for the given set of
 // selected categories. Returns null when every category is selected (or none
 // is excluded), meaning "no filter" - callers should omit the param entirely

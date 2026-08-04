@@ -13,6 +13,23 @@ const LIMIT = 50
 // stream can't be established - see connectTailStream() below).
 const TAIL_POLL_MS = 4000
 
+const TIME_RANGE_STORAGE_KEY = 'ledger_explore_time_range'
+
+const TIME_RANGE_PRESETS: TimeRangePreset[] = [
+  'today',
+  'last7days',
+  'last30days',
+  'currentWeek',
+  'currentMonth',
+  'currentYear',
+]
+
+interface StoredTimeRange {
+  period: TimeRangePreset | null
+  periodFrom: string | null
+  periodTo: string | null
+}
+
 function defaultFilters(): ExploreFilters {
   return {
     projectId: null,
@@ -26,6 +43,54 @@ function defaultFilters(): ExploreFilters {
     search: '',
     clientChannel: [],
   }
+}
+
+// The chosen time range is remembered per project rather than globally: a
+// low-traffic project is usually read over a week, a busy one over the last
+// hours, and switching projects shouldn't drag the previous window along.
+function loadStoredTimeRanges(): Record<string, StoredTimeRange> {
+  try {
+    if (typeof localStorage === 'undefined')
+      return {}
+    const raw = localStorage.getItem(TIME_RANGE_STORAGE_KEY)
+    if (!raw)
+      return {}
+    const parsed = JSON.parse(raw)
+
+    return parsed && typeof parsed === 'object'
+      ? parsed as Record<string, StoredTimeRange>
+      : {}
+  }
+  catch {
+    return {}
+  }
+}
+
+function saveStoredTimeRange(projectId: string, range: StoredTimeRange) {
+  try {
+    if (typeof localStorage === 'undefined')
+      return
+    const all = loadStoredTimeRanges()
+    all[projectId] = range
+    localStorage.setItem(TIME_RANGE_STORAGE_KEY, JSON.stringify(all))
+  }
+  catch { /* noop */ }
+}
+
+function readStoredTimeRange(projectId: string): StoredTimeRange | null {
+  const stored = loadStoredTimeRanges()[projectId]
+  if (!stored)
+    return null
+
+  const period = stored.period && TIME_RANGE_PRESETS.includes(stored.period)
+    ? stored.period
+    : null
+  if (period)
+    return { period, periodFrom: null, periodTo: null }
+
+  return stored.periodFrom && stored.periodTo
+    ? { period: null, periodFrom: stored.periodFrom, periodTo: stored.periodTo }
+    : null
 }
 
 export const useExploreStore = defineStore('explore', () => {
@@ -60,7 +125,7 @@ export const useExploreStore = defineStore('explore', () => {
     }
   }
 
-  function buildBaseParams(): URLSearchParams {
+  function buildBaseParams(options: { includeSearch: boolean } = { includeSearch: true }): URLSearchParams {
     const params = new URLSearchParams()
     if (filters.value.projectId)
       params.set('project_id', filters.value.projectId)
@@ -72,7 +137,7 @@ export const useExploreStore = defineStore('explore', () => {
       params.set('environment', filters.value.environment)
     for (const sc of filters.value.statusClass)
       params.append('status_class', sc)
-    if (filters.value.search)
+    if (options.includeSearch && filters.value.search)
       params.set('search', filters.value.search)
     for (const channel of filters.value.clientChannel)
       params.append('client_channel', channel)
@@ -142,11 +207,13 @@ export const useExploreStore = defineStore('explore', () => {
       return
     facetsLoading.value = true
     try {
-      const params = buildBaseParams()
+      // Deliberately excludes `search`: a free-text term can't be answered
+      // from the log_facets_1h rollup the facets endpoint reads, so sending it
+      // forces a full scan of every log row in the window. The sidebar counts
+      // describe the structural filters plus the time range; the search box
+      // narrows the log list only.
+      const params = buildBaseParams({ includeSearch: false })
       buildTimeParams(params)
-      // Facet counts are computed under the *other* filters; search stays in
-      // (mirrors query_logs' own filter set) since the endpoint intentionally
-      // returns counts "for the current filter set" per its contract.
       const response = await client.get<ExploreFacets & { project_id: number }>(
         `/api/v1/logs/facets?${params.toString()}`,
       )
@@ -171,10 +238,27 @@ export const useExploreStore = defineStore('explore', () => {
     await Promise.all([fetchLogs(), fetchFacets()])
   }
 
+  // Restores the time range remembered for the currently selected project,
+  // falling back to the default window when that project has none.
+  const restoreTimeRange = () => {
+    const projectId = filters.value.projectId
+    const stored = projectId
+      ? readStoredTimeRange(projectId)
+      : null
+    const fallback = defaultFilters()
+
+    filters.value.period = stored
+      ? stored.period
+      : fallback.period
+    filters.value.periodFrom = stored?.periodFrom ?? null
+    filters.value.periodTo = stored?.periodTo ?? null
+  }
+
   const setProject = async (projectId: string | null) => {
     if (filters.value.projectId === projectId)
       return
     filters.value.projectId = projectId
+    restoreTimeRange()
     nextCursor.value = null
     await refresh()
   }
@@ -190,14 +274,25 @@ export const useExploreStore = defineStore('explore', () => {
       filters.value.periodFrom = range.periodFrom
       filters.value.periodTo = range.periodTo
     }
+
+    if (filters.value.projectId) {
+      saveStoredTimeRange(filters.value.projectId, {
+        period: filters.value.period,
+        periodFrom: filters.value.periodFrom,
+        periodTo: filters.value.periodTo,
+      })
+    }
+
     nextCursor.value = null
     await refresh()
   }
 
+  // Facet counts don't reflect `search` (see fetchFacets), so a search term
+  // only re-runs the log query.
   const setSearch = async (term: string) => {
     filters.value.search = term
     nextCursor.value = null
-    await refresh()
+    await fetchLogs()
   }
 
   // Clicking a facet value toggles it: level/log_type/environment are
@@ -249,16 +344,6 @@ export const useExploreStore = defineStore('explore', () => {
       return filters.value.clientChannel.includes(value)
 
     return filters.value.environment === value
-  }
-
-  // Sets the client_channel filter directly to the given raw channel values
-  // (used by the traffic-category toggle in the Explore page, which maps a
-  // People/Bots/Servers selection down to the underlying channel set rather
-  // than toggling one facet value at a time).
-  const setClientChannelFilter = async (channels: string[]) => {
-    filters.value.clientChannel = channels
-    nextCursor.value = null
-    await refresh()
   }
 
   const clearFilters = async () => {
@@ -471,12 +556,12 @@ export const useExploreStore = defineStore('explore', () => {
     loadMore,
     fetchFacets,
     refresh,
+    restoreTimeRange,
     setProject,
     setTimeRange,
     setSearch,
     toggleFacet,
     isFacetActive,
-    setClientChannelFilter,
     clearFilters,
     openLogDetail,
     closeLogDetail,

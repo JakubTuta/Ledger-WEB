@@ -5,6 +5,7 @@ const props = defineProps<{
   title: string
   values: ExploreFacetValue[]
   isActive: (value: string) => boolean
+  labelFor?: (value: string) => string
 }>()
 
 const emit = defineEmits<{
@@ -38,7 +39,9 @@ const sortedValues = computed(() => [...props.values].sort((a, b) => b.count - a
         class="justify-space-between facet-chip"
         @click="emit('toggle', item.value)"
       >
-        <span class="text-truncate">{{ item.value }}</span>
+        <span class="text-truncate">{{ labelFor
+          ? labelFor(item.value)
+          : item.value }}</span>
 
         <span class="text-medium-emphasis ml-2">{{ item.count }}</span>
       </v-chip>
