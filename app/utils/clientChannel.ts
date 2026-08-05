@@ -92,6 +92,15 @@ export function channelCategoryLabel(channel?: string | null): string {
     : channelLabel(channel)
 }
 
+// Human-readable "People, Bots" list for a narrowed selection, or null when
+// every category is selected - callers use null to mean "no filter to show".
+export function trafficCategoriesSummary(categories: TrafficCategory[]): string | null {
+  if (categories.length >= TRAFFIC_CATEGORIES.length)
+    return null
+
+  return categories.map(categoryLabel).join(', ')
+}
+
 // Raw `client_channel` values to send as filter params for the given set of
 // selected categories. Returns null when every category is selected (or none
 // is excluded), meaning "no filter" - callers should omit the param entirely

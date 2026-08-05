@@ -6,6 +6,7 @@
     :exporting="isExporting"
     icon="mdi-map"
     icon-color="info"
+    :traffic-filter-summary="trafficFilterSummary"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
@@ -13,7 +14,7 @@
     @export-data="format => exportPanel(format, buildExport)"
   >
     <template #options>
-      <TrafficCategoryOptions />
+      <TrafficCategoryOptions :panel="panel" />
     </template>
 
     <template #content>
@@ -124,9 +125,15 @@ const emit = defineEmits<{
   expand: []
 }>()
 
+const panelsStore = usePanelsStore()
+
 const { isExporting, exportPanel } = usePanelExport(() => props.panel, () => props.project)
 
 const focusedContinent = ref<ContinentCode | null>(null)
+
+const trafficFilterSummary = computed(() => trafficCategoriesSummary(
+  panelsStore.getTrafficCategoriesForPanel(props.panel.id),
+))
 
 watch(() => props.panel.id, () => {
   focusedContinent.value = null
@@ -151,6 +158,7 @@ function handleCountryClick(alpha2: string) {
 function buildExport(): PanelExportBuildResult {
   return {
     rows: props.countries.map(c => ({ country: c.country, count: c.count })),
+    extraMeta: { trafficCategories: panelsStore.getTrafficCategoriesForPanel(props.panel.id) },
   }
 }
 </script>

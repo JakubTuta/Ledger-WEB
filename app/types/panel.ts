@@ -1,3 +1,5 @@
+import type { TrafficCategory } from '~/utils/clientChannel'
+
 export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview' | 'country_map'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
@@ -29,6 +31,10 @@ export interface Panel {
   statusClass?: '2xx' | '4xx' | '5xx'
   search?: string
   sort?: BottleneckSort
+  // Caller categories this panel reads. Empty means all traffic - the full set
+  // is never persisted, so a panel left on "all" keeps showing everything even
+  // when a new category is introduced.
+  trafficCategories?: TrafficCategory[]
 }
 
 export interface PanelListResponse {
@@ -55,6 +61,7 @@ export interface CreatePanelRequest {
   statusClass?: '2xx' | '4xx' | '5xx'
   search?: string
   sort?: BottleneckSort
+  trafficCategories?: TrafficCategory[]
 }
 
 export interface UpdatePanelRequest {
@@ -76,6 +83,7 @@ export interface UpdatePanelRequest {
   statusClass?: '2xx' | '4xx' | '5xx' | null
   search?: string | null
   sort?: BottleneckSort | null
+  trafficCategories?: TrafficCategory[] | null
 }
 
 export interface AggregatedMetricData {

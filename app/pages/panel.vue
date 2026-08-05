@@ -26,8 +26,6 @@
 
           <!-- Desktop actions -->
           <template v-if="!mobile">
-            <TrafficFilterButton />
-
             <v-btn
               icon="mdi-keyboard"
               variant="text"
@@ -99,8 +97,6 @@
             </template>
 
             <template v-else>
-              <TrafficFilterButton />
-
               <v-menu>
                 <template #activator="{'props': menuProps}">
                   <v-btn

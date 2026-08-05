@@ -7,6 +7,7 @@
     :icon="icon"
     :icon-color="iconColor"
     :traffic-filter-hint="type === 'bottleneck'"
+    :traffic-filter-summary="trafficFilterSummary"
     @delete="emit('delete')"
     @time-options="emit('timeOptions')"
     @refresh="emit('refresh')"
@@ -84,7 +85,7 @@
         </v-btn-toggle>
       </div>
 
-      <TrafficCategoryOptions />
+      <TrafficCategoryOptions :panel="panel" />
     </template>
 
     <template #content>
@@ -788,6 +789,10 @@ interface ListItem {
 
 const { formatTimestamp, formatFullTimestamp } = useRelativeTime()
 
+const trafficFilterSummary = computed(() => ((props.type === 'logs' || props.type === 'error_list')
+  ? trafficCategoriesSummary(panelsStore.getTrafficCategoriesForPanel(props.panel.id))
+  : null))
+
 // Filter state (logs / error_list)
 const statusClassFilter = ref<string>('all')
 const searchFilter = ref<string>('')
@@ -907,12 +912,14 @@ async function buildExport(): Promise<PanelExportBuildResult> {
   const items = getItems(props.panel.id)
   const rows = items.map(item => omitUiFields(item, uiFields))
 
+  const trafficCategories = panelsStore.getTrafficCategoriesForPanel(props.panel.id)
+
   return {
     rows,
     summary: { total_rows: rows.length },
     extraMeta: props.type === 'logs'
-      ? { statusClass: props.panel.statusClass, search: props.panel.search }
-      : { search: props.panel.search },
+      ? { statusClass: props.panel.statusClass, search: props.panel.search, trafficCategories }
+      : { search: props.panel.search, trafficCategories },
     truncated,
   }
 }

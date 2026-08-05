@@ -29,32 +29,15 @@ const TABS_STORAGE_KEY = 'ledger_dashboard_tabs'
 const ACTIVE_TAB_STORAGE_KEY = 'ledger_active_tab'
 const TABS_VERSION_KEY = 'ledger_tabs_migrated_v1'
 const TABS_VERSION_KEY_V2 = 'ledger_tabs_migrated_v2'
-const TRAFFIC_CATEGORIES_STORAGE_KEY = 'ledger_traffic_categories'
 
-function loadTrafficCategoriesFromStorage(): TrafficCategory[] {
-  try {
-    if (typeof localStorage === 'undefined')
-      return [...TRAFFIC_CATEGORIES]
-    const raw = localStorage.getItem(TRAFFIC_CATEGORIES_STORAGE_KEY)
-    if (!raw)
-      return [...TRAFFIC_CATEGORIES]
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed) || parsed.length === 0)
-      return [...TRAFFIC_CATEGORIES]
+// A panel with no stored selection - or one stored before per-panel filters
+// existed - shows every category.
+function panelTrafficCategories(panel: Panel): TrafficCategory[] {
+  const stored = panel.trafficCategories?.filter((c): c is TrafficCategory => TRAFFIC_CATEGORIES.includes(c))
 
-    return parsed.filter((c): c is TrafficCategory => TRAFFIC_CATEGORIES.includes(c))
-  }
-  catch {
-    return [...TRAFFIC_CATEGORIES]
-  }
-}
-
-function saveTrafficCategoriesToStorage(categories: TrafficCategory[]) {
-  try {
-    if (typeof localStorage !== 'undefined')
-      localStorage.setItem(TRAFFIC_CATEGORIES_STORAGE_KEY, JSON.stringify(categories))
-  }
-  catch { /* noop */ }
+  return stored && stored.length > 0
+    ? stored
+    : [...TRAFFIC_CATEGORIES]
 }
 
 function loadTabsFromStorage(): DashboardTab[] {
@@ -112,18 +95,22 @@ export const usePanelsStore = defineStore('panels', () => {
   const countryBreakdownLoading = ref<Set<string>>(new Set())
   const countryBreakdownError = ref<Map<string, string>>(new Map())
 
-  // Dashboard-wide traffic filter: which caller categories to include in
-  // raw-log-backed panels (HTTP Request Log, Error List, country map).
-  // Chart/KPI panels read pre-aggregated rollups with no channel dimension,
-  // so they always show all traffic regardless of this selection - see
-  // isTrafficFilterActive, used by those panels to surface a "counts all
-  // traffic" hint rather than silently disagreeing with the filtered ones.
-  const trafficCategories = ref<TrafficCategory[]>(loadTrafficCategoriesFromStorage())
+  // Per-panel traffic filter: which caller categories a raw-log-backed panel
+  // (HTTP Request Log, Error List, country map) reads. Chart/KPI panels read
+  // pre-aggregated rollups with no channel dimension, so they always show all
+  // traffic - see isAnyTrafficFilterActive, used by those panels to surface a
+  // "counts all traffic" hint rather than silently disagreeing with a narrowed
+  // panel next to them.
+  const getTrafficCategoriesForPanel = (panelId: string): TrafficCategory[] => {
+    const panel = panels.value.find(p => p.id === panelId)
 
-  const isTrafficFilterActive = computed(() => trafficCategories.value.length < TRAFFIC_CATEGORIES.length)
+    return panel
+      ? panelTrafficCategories(panel)
+      : [...TRAFFIC_CATEGORIES]
+  }
 
-  function _appendTrafficChannelParams(searchParams: URLSearchParams) {
-    const channels = channelsForCategories(trafficCategories.value)
+  function _appendTrafficChannelParams(searchParams: URLSearchParams, panel: Panel) {
+    const channels = channelsForCategories(panelTrafficCategories(panel))
     if (channels) {
       for (const channel of channels)
         searchParams.append('client_channel', channel)
@@ -263,7 +250,7 @@ export const usePanelsStore = defineStore('panels', () => {
       if (panel.search) {
         searchParams.set('search', panel.search)
       }
-      _appendTrafficChannelParams(searchParams)
+      _appendTrafficChannelParams(searchParams, panel)
 
       const response = await client.get<any>(
         `/api/v1/errors/list?${searchParams.toString()}`,
@@ -384,7 +371,7 @@ export const usePanelsStore = defineStore('panels', () => {
       if (panel.search) {
         searchParams.set('search', panel.search)
       }
-      _appendTrafficChannelParams(searchParams)
+      _appendTrafficChannelParams(searchParams, panel)
 
       const response = await client.get<any>(
         `/api/v1/logs?${searchParams.toString()}`,
@@ -645,7 +632,7 @@ export const usePanelsStore = defineStore('panels', () => {
       else {
         searchParams.set('period', 'last7days')
       }
-      _appendTrafficChannelParams(searchParams)
+      _appendTrafficChannelParams(searchParams, panel)
 
       const response = await client.get<CountryBreakdownResponse>(
         `/api/v1/logs/country-breakdown?${searchParams.toString()}`,
@@ -681,22 +668,6 @@ export const usePanelsStore = defineStore('panels', () => {
     return countryBreakdownError.value.get(panelId) ?? null
   }
 
-  function setTrafficCategories(categories: TrafficCategory[]) {
-    trafficCategories.value = categories.length > 0
-      ? categories
-      : [...TRAFFIC_CATEGORIES]
-    saveTrafficCategoriesToStorage(trafficCategories.value)
-
-    for (const panel of panels.value) {
-      if (panel.type === 'logs')
-        fetchLogsForPanel(panel)
-      else if (panel.type === 'error_list')
-        fetchErrorsForPanel(panel)
-      else if (panel.type === 'country_map')
-        fetchCountryBreakdownForPanel(panel)
-    }
-  }
-
   const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
@@ -720,6 +691,7 @@ export const usePanelsStore = defineStore('panels', () => {
       'has_error',
       'statusClass',
       'search',
+      'trafficCategories',
     ]
     for (const key of allowed) {
       const value = (data as any)[key]
@@ -817,6 +789,9 @@ export const usePanelsStore = defineStore('panels', () => {
         search: data.search !== undefined
           ? data.search
           : panel.search ?? null,
+        trafficCategories: data.trafficCategories !== undefined
+          ? data.trafficCategories
+          : panel.trafficCategories ?? null,
       }
 
       const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
@@ -835,6 +810,43 @@ export const usePanelsStore = defineStore('panels', () => {
 
       return { success: false, error: errorMessage }
     }
+  }
+
+  const setTrafficCategoriesForPanel = async (
+    panelId: string,
+    categories: TrafficCategory[],
+  ): Promise<{ success: boolean, error?: string }> => {
+    const panel = panels.value.find(p => p.id === panelId)
+    if (!panel)
+      return { success: false, error: 'Panel not found' }
+
+    // "Everything selected" is stored as an empty list so the panel keeps
+    // meaning "all traffic" if a new category is added later.
+    const selection = categories.length >= TRAFFIC_CATEGORIES.length
+      ? []
+      : categories
+
+    const result = await updatePanel(panelId, { trafficCategories: selection })
+    if (!result.success)
+      return result
+
+    const updated = panels.value.find(p => p.id === panelId)
+    if (!updated)
+      return result
+
+    if (updated.type === 'logs') {
+      logsOffset.value.set(panelId, 0)
+      await fetchLogsForPanel(updated)
+    }
+    else if (updated.type === 'error_list') {
+      errorsOffset.value.set(panelId, 0)
+      await fetchErrorsForPanel(updated)
+    }
+    else if (updated.type === 'country_map') {
+      await fetchCountryBreakdownForPanel(updated)
+    }
+
+    return result
   }
 
   const deletePanel = async (panelId: string) => {
@@ -895,6 +907,7 @@ export const usePanelsStore = defineStore('panels', () => {
             has_error: panel.has_error ?? null,
             statusClass: panel.statusClass ?? null,
             search: panel.search ?? null,
+            trafficCategories: panel.trafficCategories ?? null,
           }
 
           return client.put(`/api/v1/dashboard/panels/${id}`, toServerPayload(updateData))
@@ -985,6 +998,11 @@ export const usePanelsStore = defineStore('panels', () => {
         periodTo: timeRange.periodTo !== undefined
           ? timeRange.periodTo
           : null,
+        // A full-panel PUT: anything omitted here is cleared server-side, so
+        // the panel's own filters have to be carried through a time change.
+        statusClass: panel.statusClass ?? null,
+        search: panel.search ?? null,
+        trafficCategories: panel.trafficCategories ?? null,
       }
 
       const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
@@ -1046,6 +1064,10 @@ export const usePanelsStore = defineStore('panels', () => {
       .filter((p): p is Panel => !!p)
       .sort((a, b) => a.index - b.index)
   })
+
+  const isAnyTrafficFilterActive = computed(() => activePanels.value.some(
+    p => panelTrafficCategories(p).length < TRAFFIC_CATEGORIES.length,
+  ))
 
   async function fetchTabs() {
     try {
@@ -1284,9 +1306,9 @@ export const usePanelsStore = defineStore('panels', () => {
     getCountryBreakdownForPanel,
     isCountryBreakdownLoading,
     getCountryBreakdownError,
-    trafficCategories,
-    isTrafficFilterActive,
-    setTrafficCategories,
+    getTrafficCategoriesForPanel,
+    isAnyTrafficFilterActive,
+    setTrafficCategoriesForPanel,
     createPanel,
     updatePanel,
     deletePanel,

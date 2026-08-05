@@ -51,7 +51,7 @@
         </v-chip>
 
         <v-tooltip
-          v-if="trafficFilterHint && panelsStore.isTrafficFilterActive"
+          v-if="trafficFilterHint && panelsStore.isAnyTrafficFilterActive"
           location="top"
           max-width="240"
         >
@@ -64,8 +64,26 @@
             />
           </template>
 
-          Counts all traffic — the traffic filter only applies to the HTTP Request Log, Error
-          List, and country map panels.
+          Counts all traffic — a traffic filter can only be set on HTTP Request Log, Error
+          List, and country map panels, and another panel here has one set.
+        </v-tooltip>
+
+        <v-tooltip
+          v-if="trafficFilterSummary"
+          location="top"
+          max-width="240"
+        >
+          <template #activator="{'props': tooltipProps}">
+            <v-icon
+              v-bind="tooltipProps"
+              icon="mdi-filter-variant"
+              size="x-small"
+              color="primary"
+              class="flex-shrink-0"
+            />
+          </template>
+
+          Showing only {{ trafficFilterSummary }} traffic. Change it under panel options.
         </v-tooltip>
       </div>
 
@@ -290,10 +308,13 @@ const props = defineProps<{
   icon: string
   iconColor: string
   // True for panels backed by pre-aggregated rollup tables (no client_channel
-  // dimension) - shows a hint that the dashboard-wide traffic filter doesn't
-  // narrow this panel, so its count isn't silently out of step with the
-  // filtered ones.
+  // dimension) - shows a hint that no traffic filter can narrow this panel, so
+  // its count isn't silently out of step with a filtered panel beside it.
   trafficFilterHint?: boolean
+  // Labels of the caller categories this panel is narrowed to, or null when it
+  // reads all traffic - a filtered panel must say so, otherwise its row counts
+  // read as missing data.
+  trafficFilterSummary?: string | null
 }>()
 
 const emit = defineEmits<{
