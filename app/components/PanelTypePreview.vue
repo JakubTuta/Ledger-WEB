@@ -308,7 +308,7 @@
       </g>
     </svg>
 
-    <!-- country_map: continent-shaped blobs colored by a request-volume scale -->
+    <!-- country_map: country-shaped blobs colored by a request-volume scale -->
     <svg
       v-else-if="type === 'country_map'"
       viewBox="0 0 80 52"

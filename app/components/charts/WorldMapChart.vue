@@ -19,25 +19,18 @@
       ? 'dark'
       : undefined"
     autoresize
-    @click="handleClick"
   />
 </template>
 
 <script setup lang="ts">
-import type { ContinentCode } from '~/utils/continents'
 import { useTheme } from 'vuetify'
 
 const props = defineProps<{
   // alpha-2 country code -> request count. The backend never returns
   // zero-count rows, so a country absent here is treated as zero requests,
   // same as one explicitly counted at zero - the map always covers every
-  // country/continent rather than distinguishing "no data" from "0".
+  // country rather than distinguishing "no data" from "0".
   countryCounts: Record<string, number>
-  focusedContinent: ContinentCode | null
-}>()
-
-const emit = defineEmits<{
-  countryClick: [alpha2: string]
 }>()
 
 const vuetifyTheme = useTheme()
@@ -49,40 +42,12 @@ onMounted(async () => {
   ready.value = true
 })
 
-const continentTotals = computed(() => {
-  const totals: Partial<Record<ContinentCode, number>> = {}
-  for (const [alpha2, count] of Object.entries(props.countryCounts)) {
-    const continent = continentForCountry(alpha2)
-    if (!continent)
-      continue
-    totals[continent] = (totals[continent] ?? 0) + count
-  }
-
-  return totals
-})
-
-const worldTotal = computed(() => Object.values(props.countryCounts).reduce((s, v) => s + v, 0))
-
 interface MapDatum { name: string, value: number }
 
-const mapData = computed<MapDatum[]>(() => {
-  const entries = Object.entries(ALPHA2_TO_CONTINENT) as [string, ContinentCode][]
-
-  if (props.focusedContinent) {
-    return entries
-      .filter(([, continent]) => continent === props.focusedContinent)
-      .map(([alpha2]) => ({ name: alpha2, value: props.countryCounts[alpha2] ?? 0 }))
-  }
-
-  return entries.map(([alpha2, continent]) => ({ name: alpha2, value: continentTotals.value[continent] ?? 0 }))
-})
+const mapData = computed<MapDatum[]>(() => Object.keys(ALPHA2_TO_NAME)
+  .map(alpha2 => ({ name: alpha2, value: props.countryCounts[alpha2] ?? 0 })))
 
 const maxValue = computed(() => Math.max(1, ...mapData.value.map(d => d.value)))
-
-const viewport = computed(() => (props.focusedContinent
-  ? CONTINENT_VIEWPORTS[props.focusedContinent]
-  : { center: [10, 15] as [number, number], zoom: 1.15 }),
-)
 
 const lowColor = computed(() => (isDark.value
   ? '#1e3a5f'
@@ -91,21 +56,9 @@ const highColor = computed(() => vuetifyTheme.current.value.colors.primary ?? '#
 
 function tooltipFormatter(params: any): string {
   const alpha2 = params.name as string
-  if (props.focusedContinent) {
-    const count = props.countryCounts[alpha2] ?? 0
+  const count = props.countryCounts[alpha2] ?? 0
 
-    return `<b>${countryName(alpha2)}</b><br/>${count.toLocaleString()} requests`
-  }
-
-  const continent = continentForCountry(alpha2)
-  if (!continent)
-    return countryName(alpha2)
-  const total = continentTotals.value[continent] ?? 0
-  const share = worldTotal.value > 0
-    ? ((total / worldTotal.value) * 100).toFixed(1)
-    : '0'
-
-  return `<b>${CONTINENT_NAMES[continent]}</b><br/>${total.toLocaleString()} requests (${share}% of total)`
+  return `<b>${countryName(alpha2)}</b><br/>${count.toLocaleString()} requests`
 }
 
 const chartOption = computed(() => ({
@@ -131,8 +84,8 @@ const chartOption = computed(() => ({
     map: 'world',
     nameProperty: 'iso_a2',
     roam: true,
-    center: viewport.value.center,
-    zoom: viewport.value.zoom,
+    center: [10, 15],
+    zoom: 1.15,
     scaleLimit: { min: 1, max: 8 },
     itemStyle: {
       // Same fill the visualMap gives a zero-request country, so regions
@@ -153,14 +106,6 @@ const chartOption = computed(() => ({
     data: mapData.value,
   }],
 }))
-
-function handleClick(params: any) {
-  if (params.componentType !== 'series')
-    return
-  const alpha2 = params.name as string
-  if (alpha2)
-    emit('countryClick', alpha2)
-}
 </script>
 
 <style scoped>

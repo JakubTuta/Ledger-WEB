@@ -720,11 +720,7 @@ const timeRangePanelShim = computed(() => ({
 } as unknown as Panel))
 
 function handleTimeApply(params: { period?: TimeRangePreset, periodFrom?: string, periodTo?: string }) {
-  exploreStore.setTimeRange({
-    period: params.period ?? null,
-    periodFrom: params.periodFrom ?? null,
-    periodTo: params.periodTo ?? null,
-  })
+  exploreStore.setTimeRange(params)
 }
 
 const traceIdForSelectedLog = computed<string | null>(() => {

@@ -386,7 +386,7 @@ const allPanelTypeOptions = [
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Routes ranked by latency or request count. Click column headers to sort.' },
   { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate — spot recurring failure patterns.' },
   { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent distributed traces. Click a row to pin it as a trace panel.' },
-  { label: 'Country Map', value: 'country_map', icon: 'mdi-map', description: 'World map colored by request volume per country, drills down by continent.' },
+  { label: 'Country Map', value: 'country_map', icon: 'mdi-map', description: 'World map colored by request volume per country.' },
 ]
 
 const panelTypeOptions = allPanelTypeOptions
