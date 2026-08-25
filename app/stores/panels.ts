@@ -719,7 +719,7 @@ export const usePanelsStore = defineStore('panels', () => {
     return bottleneckListError.value.get(panelId) ?? null
   }
 
-  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map']
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map', 'metric_series']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
     const payload: Record<string, any> = {}

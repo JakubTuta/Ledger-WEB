@@ -212,6 +212,32 @@
                   </template>
                 </v-combobox>
 
+                <!-- Metric config -->
+                <template v-if="form.panelType === 'metric_series'">
+                  <v-autocomplete
+                    v-model="form.metricName"
+                    :items="metricNameItems"
+                    :loading="metricNamesLoading"
+                    label="Metric"
+                    variant="outlined"
+                    density="compact"
+                    :disabled="loading || !form.projectId"
+                    :hint="metricNameHint"
+                    persistent-hint
+                    clearable
+                    class="mb-3"
+                  />
+
+                  <v-select
+                    v-model="form.metricAggregation"
+                    :items="metricAggregationItems"
+                    label="Aggregation"
+                    variant="outlined"
+                    density="compact"
+                    class="mb-3"
+                  />
+                </template>
+
                 <!-- Trace List config -->
                 <template v-if="form.panelType === 'trace_list'">
                   <v-text-field
@@ -304,7 +330,9 @@
 </template>
 
 <script setup lang="ts">
+import type { MetricAggregation } from '~/types/metrics'
 import type { CreatePanelRequest, Panel, PanelType, TimeRangePreset } from '~/types/panel'
+import { aggregationsFor, metricKindLabel } from '~/types/metrics'
 
 const props = defineProps<{
   modelValue: boolean
@@ -318,6 +346,7 @@ const emit = defineEmits<{
 
 const panelsStore = usePanelsStore()
 const projectsStore = useProjectsStore()
+const metricsStore = useMetricsStore()
 
 const formRef = ref()
 const isFormValid = ref(false)
@@ -340,6 +369,8 @@ const form = ref<{
   operationFilter: string
   minDurationMs: number | null
   hasError: boolean | null
+  metricName: string | null
+  metricAggregation: MetricAggregation
 }>({
   name: '',
   projectId: null,
@@ -353,6 +384,8 @@ const form = ref<{
   operationFilter: '',
   minDurationMs: null,
   hasError: null,
+  metricName: null,
+  metricAggregation: 'avg',
 })
 
 const isOpen = computed({
@@ -377,11 +410,50 @@ const selectedProject = computed(() => {
 
 const availableRoutes = computed(() => selectedProject.value?.available_routes || [])
 
+const metricNames = computed(() => (form.value.projectId
+  ? metricsStore.getNames(form.value.projectId).value
+  : []))
+const metricNamesLoading = computed(() => (form.value.projectId
+  ? metricsStore.isNamesLoading(form.value.projectId).value
+  : false))
+const metricNamesError = computed(() => (form.value.projectId
+  ? metricsStore.getNamesError(form.value.projectId).value
+  : ''))
+
+const metricNameItems = computed(() => metricNames.value.map(metric => ({
+  title: `${metric.name} (${metricKindLabel(metric.type)})`,
+  value: metric.name,
+})))
+
+const selectedMetric = computed(() => metricNames.value.find(metric => metric.name === form.value.metricName))
+
+const metricAggregationItems = computed(() => aggregationsFor(selectedMetric.value?.type ?? 'gauge')
+  .map(aggregation => ({ title: aggregation, value: aggregation })))
+
+const metricNameHint = computed(() => {
+  if (!form.value.projectId)
+    return 'Pick a project first'
+  if (metricNamesError.value)
+    return metricNamesError.value
+  if (!metricNamesLoading.value && metricNames.value.length === 0)
+    return 'No custom metrics received yet - you can pick one later'
+
+  return 'Leave empty to choose after creating the panel'
+})
+
+// Metric names come from what the project has actually sent, so the list is
+// only meaningful once both a project and this panel type are chosen.
+watch(() => [form.value.projectId, form.value.panelType], () => {
+  if (form.value.panelType === 'metric_series' && form.value.projectId)
+    metricsStore.fetchNames(form.value.projectId)
+})
+
 const allPanelTypeOptions = [
   { label: 'Traffic & Errors', value: 'errors', icon: 'mdi-chart-bar', description: 'Total request volume and error count over time with error-rate trend.' },
   { label: 'Summary KPIs', value: 'summary', icon: 'mdi-view-dashboard-outline', description: 'At-a-glance tiles: total requests, error rate %, avg latency, p95, and throughput.' },
   { label: 'Latency Overview', value: 'latency_overview', icon: 'mdi-chart-timeline-variant', description: 'Project-wide latency lines (avg, p95, p99) aggregated across all endpoints.' },
   { label: 'Endpoint Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines (avg/p95/p99) for one specific endpoint URL.' },
+  { label: 'Metric', value: 'metric_series', icon: 'mdi-chart-line-variant', description: 'Chart a counter, gauge or histogram your app sends, split into series by tag.' },
   { label: 'HTTP Request Log', value: 'logs', icon: 'mdi-web', description: 'Live log of HTTP requests with status, method, path, and duration.' },
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Grouped list of recent errors with occurrence counts and stack traces.' },
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Routes ranked by latency or request count. Click column headers to sort.' },
@@ -395,7 +467,7 @@ const panelTypeOptions = allPanelTypeOptions
 const showAdvanced = computed(() => {
   const t = form.value.panelType
 
-  return t === 'metrics' || t === 'trace_list'
+  return t === 'metrics' || t === 'trace_list' || t === 'metric_series'
 })
 
 const errorFilterOptions = [
@@ -503,6 +575,8 @@ function resetForm() {
     operationFilter: '',
     minDurationMs: null,
     hasError: null,
+    metricName: null,
+    metricAggregation: 'avg',
   }
   error.value = ''
   hasAttemptedSubmit.value = false
@@ -557,6 +631,12 @@ async function handleCreate() {
         ? form.value.hasError
         : undefined,
       trace_id: undefined,
+      metric_name: form.value.panelType === 'metric_series'
+        ? form.value.metricName || undefined
+        : undefined,
+      metric_aggregation: form.value.panelType === 'metric_series'
+        ? form.value.metricAggregation
+        : undefined,
       index: panelsStore.panels.length,
       period: form.value.period || null,
       periodFrom: form.value.period

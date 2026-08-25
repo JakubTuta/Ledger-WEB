@@ -11,7 +11,7 @@ export const setupGuides: SetupGuide[] = [
     steps: [
       {
         title: 'Install the SDK',
-        description: 'Python 3.10+ required. Supports FastAPI, Django, Flask, Starlette and Litestar.',
+        description: 'Python 3.10+ required. Middleware ships for FastAPI, Django and Flask; the FastAPI middleware is a Starlette BaseHTTPMiddleware, so it works on any Starlette app.',
         code: 'pip install ledger-sdk',
         label: 'bash',
         icon: 'mdi-console',
@@ -110,6 +110,28 @@ import logging
 logging.getLogger(__name__).warning("this reaches Ledger too")`,
       },
       {
+        title: 'Hook up your existing logging library',
+        description: 'Optional. If you already use loguru or structlog, tee it into Ledger instead of rewriting call sites — records take the same path as ledger.log_info, so trace correlation and truncation still apply. SQLAlchemy queries can be traced as child spans too.',
+        code: `import structlog
+from ledger.integrations.loguru import add_loguru_sink
+from ledger.integrations.sqlalchemy import instrument
+from ledger.integrations.structlog import ledger_structlog_processor
+
+# loguru: returns a handler id you can pass to logger.remove() later
+add_loguru_sink(ledger, level="INFO")
+
+# structlog: place before your rendering processor
+structlog.configure(
+    processors=[
+        ledger_structlog_processor(ledger),
+        structlog.processors.JSONRenderer(),
+    ]
+)
+
+# SQLAlchemy: one span per query
+instrument(engine)`,
+      },
+      {
         title: 'Skip noisy paths',
         description: 'Health checks and probes do not need to be logged. By default only requests matching a registered route are logged, so 404 scanner noise is dropped already.',
         code: `app.add_middleware(
@@ -188,7 +210,15 @@ counter.add(1, {"route": "/health"})`,
       },
       {
         title: 'Chart it',
-        description: 'Open Panel, add a metric panel, and pick your metric name. Series are grouped by the tags you sent.',
+        description: 'Open Panel, choose "New panel" and pick the Metric type, then select your metric name under Advanced. Split it into one line per tag value with "Split into series by tag", and narrow it with tag filters. Counters and histograms are exported every 60 seconds by default, so give the first points a moment to arrive.',
+      },
+      {
+        title: 'Or query it directly',
+        description: 'The same data is available over the REST API if you would rather build your own view.',
+        code: `GET /api/v1/metrics/names?project_id=<id>
+GET /api/v1/metrics/orders_processed/tags?project_id=<id>
+GET /api/v1/metrics/orders_processed/series?project_id=<id>
+    &aggregation=sum&group_by=region&interval=5m`,
       },
     ],
   },
@@ -240,10 +270,12 @@ async def get_order(id: int):
       },
       {
         title: 'Propagate across services automatically',
-        description: 'One call instruments every requests/httpx outbound call with traceparent headers.',
+        description: 'Each HTTP client has its own installer — call the one (or both) your code uses. Every outbound call then gets a client span and traceparent headers.',
         code: `import ledger.integrations.requests as ledger_requests
+import ledger.integrations.httpx as ledger_httpx
 
-ledger_requests.install()`,
+ledger_requests.install()   # instruments requests
+ledger_httpx.install()      # instruments httpx`,
       },
       {
         title: 'Or propagate manually',

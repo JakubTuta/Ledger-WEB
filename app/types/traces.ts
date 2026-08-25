@@ -55,19 +55,3 @@ export interface TraceListFilters {
   limit?: number
   offset?: number
 }
-
-export interface MetricTagInfo {
-  keys: string[]
-  sample_values: Record<string, string[]>
-}
-
-export interface TimeSeriesPoint {
-  timestamp: string
-  value: number
-}
-
-export interface TimeSeriesData {
-  name: string
-  points: TimeSeriesPoint[]
-  agg: string
-}

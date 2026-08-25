@@ -85,6 +85,16 @@
     @expand="emit('expand')"
   />
 
+  <MetricPanelCard
+    v-else-if="panel.type === 'metric_series'"
+    :panel="panel"
+    :project="project"
+    :disabled="disabled"
+    @delete="emit('delete')"
+    @time-options="emit('timeOptions')"
+    @expand="emit('expand')"
+  />
+
   <SummaryPanel
     v-else-if="panel.type === 'summary'"
     :panel="panel"

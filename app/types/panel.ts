@@ -1,6 +1,7 @@
+import type { MetricAggregation, MetricInterval } from '~/types/metrics'
 import type { TrafficCategory } from '~/utils/clientChannel'
 
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview' | 'country_map'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview' | 'country_map' | 'metric_series'
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 export type BottleneckSort = 'asc' | 'desc'
@@ -35,6 +36,12 @@ export interface Panel {
   // is never persisted, so a panel left on "all" keeps showing everything even
   // when a new category is introduced.
   trafficCategories?: TrafficCategory[]
+  // metric_series panel fields
+  metric_name?: string | null
+  metric_aggregation?: MetricAggregation | null
+  metric_group_by?: string[]
+  metric_tag_filters?: Record<string, string>
+  metric_interval?: MetricInterval | null
 }
 
 export interface PanelListResponse {
@@ -62,6 +69,12 @@ export interface CreatePanelRequest {
   search?: string
   sort?: BottleneckSort
   trafficCategories?: TrafficCategory[]
+  // metric_series panel fields
+  metric_name?: string | null
+  metric_aggregation?: MetricAggregation | null
+  metric_group_by?: string[]
+  metric_tag_filters?: Record<string, string>
+  metric_interval?: MetricInterval | null
 }
 
 export interface UpdatePanelRequest {
@@ -84,6 +97,11 @@ export interface UpdatePanelRequest {
   search?: string | null
   sort?: BottleneckSort | null
   trafficCategories?: TrafficCategory[] | null
+  metric_name?: string | null
+  metric_aggregation?: MetricAggregation | null
+  metric_group_by?: string[] | null
+  metric_tag_filters?: Record<string, string> | null
+  metric_interval?: MetricInterval | null
 }
 
 export interface AggregatedMetricData {

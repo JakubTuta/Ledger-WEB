@@ -107,6 +107,23 @@
       />
     </svg>
 
+    <!-- metric_series: one line per tag value -->
+    <svg
+      v-else-if="type === 'metric_series'"
+      viewBox="0 0 80 52"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <polyline
+        v-for="line in metricSeriesLines"
+        :key="line.id"
+        :points="line.points"
+        fill="none"
+        :stroke="line.color"
+        stroke-width="1.5"
+        opacity="0.9"
+      />
+    </svg>
+
     <!-- latency_overview: same as metrics but more lines -->
     <svg
       v-else-if="type === 'latency_overview'"
@@ -377,6 +394,14 @@ const latencyLines = [
   { id: 'avg', color: '#5b9cf6', points: '2,38 15,32 28,26 41,28 54,22 67,20 80,18' },
   { id: 'p95', color: '#f97316', points: '2,46 15,40 28,34 41,36 54,28 67,24 80,20' },
   { id: 'p99', color: '#f87171', points: '2,50 15,44 28,40 41,42 54,34 67,30 80,24' },
+]
+
+// Tag-grouped series: the same hues the metric chart assigns to its first three
+// slots, so the preview reads as the panel it creates.
+const metricSeriesLines = [
+  { id: 'first', color: '#1e88e5', points: '2,40 15,28 28,34 41,20 54,26 67,14 80,18' },
+  { id: 'second', color: '#d81b60', points: '2,46 15,44 28,30 41,36 54,32 67,28 80,24' },
+  { id: 'third', color: '#00897b', points: '2,50 15,48 28,44 41,46 54,40 67,42 80,36' },
 ]
 
 const latencyOverviewLines = [
