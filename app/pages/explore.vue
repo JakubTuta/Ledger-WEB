@@ -152,6 +152,26 @@
               />
             </template>
 
+            <v-alert
+              v-else-if="exploreStore.facetsError"
+              type="error"
+              variant="tonal"
+              density="compact"
+            >
+              {{ exploreStore.facetsError }}
+
+              <template #append>
+                <v-btn
+                  size="small"
+                  variant="text"
+                  :loading="exploreStore.facetsLoading"
+                  @click="exploreStore.fetchFacets()"
+                >
+                  Retry
+                </v-btn>
+              </template>
+            </v-alert>
+
             <div
               v-else
               class="text-caption text-medium-emphasis"

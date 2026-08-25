@@ -102,6 +102,31 @@
           />
         </div>
 
+        <!--
+          Fetch failed: kept ahead of the empty state so a server error
+          isn't reported to the user as "no data for this window".
+        -->
+        <v-alert
+          v-else-if="error && (!items || items.length === 0)"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="ma-3"
+        >
+          {{ error }}
+
+          <template #append>
+            <v-btn
+              size="small"
+              variant="text"
+              :loading="loading"
+              @click="emit('refresh')"
+            >
+              Retry
+            </v-btn>
+          </template>
+        </v-alert>
+
         <!-- No Data State -->
         <div
           v-else-if="!items || items.length === 0"
@@ -153,6 +178,7 @@
               <button
                 v-for="col in bottleneckColumns"
                 :key="col.stat"
+                type="button"
                 class="sort-col-header text-caption font-weight-medium flex-shrink-0"
                 :class="bottleneckStatisticFilter === col.stat
                   ? 'active-sort-col'
@@ -276,7 +302,7 @@
                     </v-chip>
 
                     <v-chip
-                      v-if="item.duration_ms != null"
+                      v-if="item.duration_ms !== null && item.duration_ms !== undefined"
                       size="x-small"
                       variant="outlined"
                     >
@@ -715,6 +741,7 @@ const props = defineProps<{
   project?: Project
   items?: ListItem[]
   loading?: boolean
+  error?: string | null
   disabled?: boolean
   hasMore?: boolean
   offset?: number
@@ -782,7 +809,7 @@ interface ListItem {
   value?: number
   request_count?: number
   min_value?: number
-  max_value_route?: number
+  max_value_route?: number | null
   avg_value?: number
   median_value?: number
 }
@@ -807,7 +834,13 @@ const searchPlaceholder = computed(() => {
 })
 
 // Filter state (bottleneck)
+// Seeded once from the panel's saved filter, deliberately not kept in sync
+// afterwards: these refs are the source of truth from mount on, and the watcher
+// below writes every change back to the panel. Re-reading props into them would
+// feed that write back in as an input and loop.
+// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const bottleneckStatisticFilter = ref<BottleneckStatistic>(props.panel.statistic ?? 'avg')
+// eslint-disable-next-line vue/no-setup-props-reactivity-loss
 const bottleneckSortFilter = ref<'asc' | 'desc'>(props.panel.sort ?? 'desc')
 
 const bottleneckColumns: { label: string, stat: BottleneckStatistic }[] = [
@@ -1030,7 +1063,7 @@ function formatDuration(ms?: number): string {
   return `${ms}ms`
 }
 
-function formatValue(ms?: number): string {
+function formatValue(ms?: number | null): string {
   if (ms == null || ms === 0)
     return '—'
   if (ms >= 60000)

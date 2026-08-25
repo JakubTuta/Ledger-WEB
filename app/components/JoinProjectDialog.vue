@@ -151,7 +151,9 @@ async function handleJoin() {
   if (result.success && result.project) {
     successData.value = result.project
     emit('joined')
-    setTimeout(() => { isOpen.value = false }, 1500)
+    setTimeout(() => {
+      isOpen.value = false
+    }, 1500)
   }
   else {
     error.value = result.error || 'Failed to join project'

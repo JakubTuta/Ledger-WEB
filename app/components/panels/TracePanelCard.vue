@@ -39,6 +39,17 @@
         />
       </div>
 
+      <!-- A failed request must not be reported as "trace not found". -->
+      <v-alert
+        v-else-if="detailError"
+        type="error"
+        variant="tonal"
+        density="compact"
+        class="ma-3"
+      >
+        {{ detailError }}
+      </v-alert>
+
       <div
         v-else-if="spans.length === 0"
         class="d-flex flex-column align-center justify-center pa-6 text-center"
@@ -333,6 +344,11 @@ const spans = computed(() => (props.panel.trace_id
 const isLoading = computed(() => (props.panel.trace_id
   ? tracesStore.isDetailLoading(props.panel.trace_id).value
   : false),
+)
+
+const detailError = computed(() => (props.panel.trace_id
+  ? tracesStore.getDetailError(props.panel.trace_id).value
+  : null),
 )
 
 const traceIdShort = computed(() => props.panel.trace_id?.slice(0, 16) ?? '')

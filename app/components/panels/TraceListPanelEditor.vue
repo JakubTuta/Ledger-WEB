@@ -111,18 +111,20 @@ const dialogOpen = computed({
 const saving = ref(false)
 
 const form = reactive({
-  service_filter: props.panel.service_filter ?? '',
-  operation_filter: props.panel.operation_filter ?? '',
-  min_duration_ms: props.panel.min_duration_ms ?? null as number | null,
-  has_error: props.panel.has_error ?? null as boolean | null,
+  service_filter: '',
+  operation_filter: '',
+  min_duration_ms: null as number | null,
+  has_error: null as boolean | null,
 })
 
+// Immediate so the initial values come from the same watcher that keeps them in
+// sync afterwards, rather than being read off props once during setup.
 watch(() => props.panel, (p) => {
   form.service_filter = p.service_filter ?? ''
   form.operation_filter = p.operation_filter ?? ''
   form.min_duration_ms = p.min_duration_ms ?? null
   form.has_error = p.has_error ?? null
-})
+}, { immediate: true })
 
 const errorFilterOptions = [
   { label: 'All traces', value: null },

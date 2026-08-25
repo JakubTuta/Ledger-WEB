@@ -10,11 +10,18 @@ export const useTracesStore = defineStore('traces', () => {
   const detailLoading = ref<Set<string>>(new Set())
   const listHasMore = ref<Map<string | number, boolean>>(new Map())
   const listOffset = ref<Map<string | number, number>>(new Map())
+  const listError = ref<Map<string | number, string>>(new Map())
+  const detailError = ref<Map<string, string>>(new Map())
 
-  const fetchList = async (panelId: string | number, filters: TraceListFilters, force = false, offset = 0) => {
+  function messageFor(error: any, fallback: string): string {
+    return error?.response?.data?.detail || error?.message || fallback
+  }
+
+  const fetchList = async (panelId: string | number, filters: TraceListFilters, force = false, offset = 0): Promise<boolean> => {
     if (listLoading.value.has(panelId) && !force && offset === 0)
-      return
+      return false
     listLoading.value.add(panelId)
+    listError.value.delete(panelId)
     try {
       const params: Record<string, any> = { limit: 25, offset }
       if (filters.project_id)
@@ -45,12 +52,17 @@ export const useTracesStore = defineStore('traces', () => {
 
       listOffset.value.set(panelId, offset)
       listHasMore.value.set(panelId, response.data.has_more ?? false)
+
+      return true
     }
-    catch (error) {
+    catch (error: any) {
       console.error('Error fetching trace list:', error)
       if (offset === 0)
         listsByPanel.value.set(panelId, [])
       listHasMore.value.set(panelId, false)
+      listError.value.set(panelId, messageFor(error, 'Failed to load traces'))
+
+      return false
     }
     finally {
       listLoading.value.delete(panelId)
@@ -63,14 +75,16 @@ export const useTracesStore = defineStore('traces', () => {
     if (!force && detailsById.value.has(traceId))
       return
     detailLoading.value.add(traceId)
+    detailError.value.delete(traceId)
     try {
       const response = await client.get<TraceDetailResponse>(`/api/v1/traces/${traceId}`, {
         params: { project_id: projectId },
       })
       detailsById.value.set(traceId, response.data.spans ?? [])
     }
-    catch (error) {
+    catch (error: any) {
       console.error('Error fetching trace detail:', error)
+      detailError.value.set(traceId, messageFor(error, 'Failed to load trace'))
     }
     finally {
       detailLoading.value.delete(traceId)
@@ -89,11 +103,20 @@ export const useTracesStore = defineStore('traces', () => {
 
   const getListOffset = (panelId: string | number) => computed(() => listOffset.value.get(panelId) ?? 0)
 
+  const getListError = (panelId: string | number) => computed(() => listError.value.get(panelId) ?? null)
+
+  const getDetailError = (traceId: string) => computed(() => detailError.value.get(traceId) ?? null)
+
   const MAX_EXPORT_TRACES = 5000
 
+  // Throws on a failed page rather than returning what it managed to collect:
+  // fetchList() clears has_more on error, so swallowing the failure would end
+  // the loop and hand the caller a partial export labelled complete.
   const fetchAllListForPanel = async (panelId: string | number, filters: TraceListFilters): Promise<{ truncated: boolean }> => {
     if ((listsByPanel.value.get(panelId) ?? []).length === 0) {
-      await fetchList(panelId, filters, false, 0)
+      const ok = await fetchList(panelId, filters, false, 0)
+      if (!ok)
+        throw new Error(listError.value.get(panelId) ?? 'Failed to load traces')
     }
 
     while (listHasMore.value.get(panelId) ?? false) {
@@ -102,7 +125,9 @@ export const useTracesStore = defineStore('traces', () => {
         return { truncated: true }
 
       // eslint-disable-next-line no-await-in-loop
-      await fetchList(panelId, filters, false, before)
+      const ok = await fetchList(panelId, filters, false, before)
+      if (!ok)
+        throw new Error(listError.value.get(panelId) ?? 'Failed to load traces')
 
       const after = (listsByPanel.value.get(panelId) ?? []).length
       if (after === before)
@@ -124,5 +149,7 @@ export const useTracesStore = defineStore('traces', () => {
     isDetailLoading,
     getListHasMore,
     getListOffset,
+    getListError,
+    getDetailError,
   }
 })

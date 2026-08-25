@@ -15,7 +15,7 @@
         <div class="d-flex align-center gap-1">
           <span>{{ tab.name }}</span>
 
-          <v-menu :close-on-content-click="true">
+          <v-menu close-on-content-click>
             <template #activator="{'props': menuProps}">
               <v-btn
                 v-bind="menuProps"

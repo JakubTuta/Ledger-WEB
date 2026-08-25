@@ -12,6 +12,10 @@ const LIMIT = 50
 // Poll interval for the live-tail fallback path (used only when the SSE
 // stream can't be established - see connectTailStream() below).
 const TAIL_POLL_MS = 4000
+// Ceiling on the client-side log buffer while tailing. Without it a long-lived
+// tail on a busy project grows the array (and the O(n) duplicate check on every
+// pushed event) without bound until the tab runs out of memory.
+const TAIL_MAX_LOGS = 1000
 
 const TIME_RANGE_STORAGE_KEY = 'ledger_explore_time_range'
 
@@ -107,6 +111,7 @@ export const useExploreStore = defineStore('explore', () => {
 
   const facets = ref<ExploreFacets | null>(null)
   const facetsLoading = ref(false)
+  const facetsError = ref<string | null>(null)
 
   const selectedLog = ref<ExploreLogEntry | null>(null)
 
@@ -206,6 +211,7 @@ export const useExploreStore = defineStore('explore', () => {
     if (!filters.value.projectId)
       return
     facetsLoading.value = true
+    facetsError.value = null
     try {
       // Deliberately excludes `search`: a free-text term can't be answered
       // from the log_facets_1h rollup the facets endpoint reads, so sending it
@@ -225,9 +231,12 @@ export const useExploreStore = defineStore('explore', () => {
         client_channel: response.data.client_channel,
       }
     }
-    catch (error) {
+    catch (error: any) {
       console.error('Error fetching log facets:', error)
       facets.value = null
+      // Without this the sidebar falls back to its "select a project" copy,
+      // which reads as "nothing to filter on" rather than "the request failed".
+      facetsError.value = error?.response?.data?.detail || error?.message || 'Failed to load filters'
     }
     finally {
       facetsLoading.value = false
@@ -382,7 +391,7 @@ export const useExploreStore = defineStore('explore', () => {
       const parsed = JSON.parse(data) as ExploreLogEntry
       if (logs.value.some(l => l.id === parsed.id))
         return
-      logs.value = [parsed, ...logs.value]
+      logs.value = [parsed, ...logs.value].slice(0, TAIL_MAX_LOGS)
     }
     catch (error) {
       console.error('Error parsing log tail event:', error, 'Data was:', data)
@@ -498,7 +507,7 @@ export const useExploreStore = defineStore('explore', () => {
         const existingIds = new Set(logs.value.map(l => l.id))
         const fresh = incoming.filter(l => !existingIds.has(l.id))
         if (fresh.length > 0)
-          logs.value = [...fresh, ...logs.value]
+          logs.value = [...fresh, ...logs.value].slice(0, TAIL_MAX_LOGS)
       }
       else {
         tailSince = now.toISOString()
@@ -550,6 +559,7 @@ export const useExploreStore = defineStore('explore', () => {
     loadError,
     facets,
     facetsLoading,
+    facetsError,
     selectedLog,
     tailActive,
     fetchLogs,

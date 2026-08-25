@@ -1,18 +1,8 @@
 import type { ProjectQuotaResponse, UsageStatsDay, UsageStatsResponse } from '~/types/quota'
 import { defineStore } from 'pinia'
 
-function emptyQuota(projectId: number): ProjectQuotaResponse {
-  return {
-    project_id: projectId,
-    project_name: '',
-    project_slug: '',
-    environment: '',
-    logs: { quota: 0, usage: 0, remaining: 0 },
-    spans: { quota: 0, usage: 0, remaining: 0 },
-    metrics: { quota: 0, usage: 0, remaining: 0 },
-    quota_reset_at: '',
-    retention_days: 0,
-  }
+function messageFor(error: any, fallback: string): string {
+  return error?.response?.data?.detail || error?.message || fallback
 }
 
 export const useQuotaStore = defineStore('quota', () => {
@@ -21,13 +11,15 @@ export const useQuotaStore = defineStore('quota', () => {
   const quotasByProject = ref<Record<number, ProjectQuotaResponse>>({})
   const loadingStates = ref<Record<number, boolean>>({})
   const lastFetchTimes = ref<Record<number, Date>>({})
+  const errorsByProject = ref<Record<number, string | null>>({})
 
   const usageStatsByProject = ref<Record<number, UsageStatsDay[]>>({})
   const usageStatsLoadingStates = ref<Record<number, boolean>>({})
   const usageStatsLastFetchTimes = ref<Record<number, Date>>({})
+  const usageStatsErrorsByProject = ref<Record<number, string | null>>({})
 
   const getQuotaForProject = (projectId: number) => {
-    return computed(() => quotasByProject.value[projectId] || emptyQuota(projectId))
+    return computed(() => quotasByProject.value[projectId] ?? null)
   }
 
   const isLoadingForProject = (projectId: number) => {
@@ -38,6 +30,10 @@ export const useQuotaStore = defineStore('quota', () => {
     return computed(() => !!quotasByProject.value[projectId])
   }
 
+  const getErrorForProject = (projectId: number) => {
+    return computed(() => errorsByProject.value[projectId] ?? null)
+  }
+
   const fetchQuotaForProject = async (projectId: number, force = false) => {
     if (loadingStates.value[projectId])
       return
@@ -46,6 +42,7 @@ export const useQuotaStore = defineStore('quota', () => {
       return
 
     loadingStates.value[projectId] = true
+    errorsByProject.value[projectId] = null
 
     try {
       const response = await client.get<ProjectQuotaResponse>(`/api/v1/projects/${projectId}/quota`)
@@ -53,10 +50,13 @@ export const useQuotaStore = defineStore('quota', () => {
       quotasByProject.value[projectId] = response.data
       lastFetchTimes.value[projectId] = new Date()
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching quota for project ${projectId}:`, error)
 
-      quotasByProject.value[projectId] = emptyQuota(projectId)
+      // Deliberately leaves any previously fetched quota in place and records
+      // the failure instead of writing zeroed placeholders: a failed request
+      // and a genuinely empty quota must not look the same to the user.
+      errorsByProject.value[projectId] = messageFor(error, 'Failed to load quota usage')
     }
     finally {
       loadingStates.value[projectId] = false
@@ -79,6 +79,10 @@ export const useQuotaStore = defineStore('quota', () => {
     return computed(() => !!usageStatsByProject.value[projectId])
   }
 
+  const getUsageStatsErrorForProject = (projectId: number) => {
+    return computed(() => usageStatsErrorsByProject.value[projectId] ?? null)
+  }
+
   const fetchUsageStatsForProject = async (projectId: number, force = false) => {
     if (usageStatsLoadingStates.value[projectId])
       return
@@ -87,6 +91,7 @@ export const useQuotaStore = defineStore('quota', () => {
       return
 
     usageStatsLoadingStates.value[projectId] = true
+    usageStatsErrorsByProject.value[projectId] = null
 
     try {
       const response = await client.get<UsageStatsResponse>(
@@ -96,10 +101,10 @@ export const useQuotaStore = defineStore('quota', () => {
       usageStatsByProject.value[projectId] = response.data.usage
       usageStatsLastFetchTimes.value[projectId] = new Date()
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching usage stats for project ${projectId}:`, error)
 
-      usageStatsByProject.value[projectId] = []
+      usageStatsErrorsByProject.value[projectId] = messageFor(error, 'Failed to load usage history')
     }
     finally {
       usageStatsLoadingStates.value[projectId] = false
@@ -114,17 +119,21 @@ export const useQuotaStore = defineStore('quota', () => {
     quotasByProject,
     loadingStates,
     lastFetchTimes,
+    errorsByProject,
     getQuotaForProject,
     isLoadingForProject,
     hasDataForProject,
+    getErrorForProject,
     fetchQuotaForProject,
     refreshQuotaForProject,
     usageStatsByProject,
     usageStatsLoadingStates,
     usageStatsLastFetchTimes,
+    usageStatsErrorsByProject,
     getUsageStatsForProject,
     isLoadingUsageStatsForProject,
     hasUsageStatsForProject,
+    getUsageStatsErrorForProject,
     fetchUsageStatsForProject,
     refreshUsageStatsForProject,
   }

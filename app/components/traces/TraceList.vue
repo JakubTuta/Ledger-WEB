@@ -81,7 +81,7 @@
           size="x-small"
           class="trace-pin-col flex-shrink-0"
           title="Pin trace"
-          @click="emit('pin-trace', {'trace_id': trace.trace_id})"
+          @click="emit('pinTrace', {'trace_id': trace.trace_id})"
         />
       </div>
     </div>
@@ -126,14 +126,14 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'pin-trace': [payload: { trace_id: string, project_id?: string }]
-  'load-page': [offset: number]
+  pinTrace: [payload: { trace_id: string, project_id?: string }]
+  loadPage: [offset: number]
 }>()
 
 function onIntersect(isIntersecting: boolean) {
   if (isIntersecting && props.hasMore && !props.isLoading) {
     const newOffset = (props.offset ?? 0) + (props.traces?.length ?? 0)
-    emit('load-page', newOffset)
+    emit('loadPage', newOffset)
   }
 }
 

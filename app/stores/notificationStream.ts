@@ -403,7 +403,7 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     }
   }
 
-  const connect = async () => {
+  async function connect() {
     if (!import.meta.client)
       return
     if (!authStore.isAuthenticated || !authStore.token)

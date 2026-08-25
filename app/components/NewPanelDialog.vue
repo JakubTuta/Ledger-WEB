@@ -97,6 +97,7 @@
               <a
                 href="https://github.com/ledger-sdk/python#tracing"
                 target="_blank"
+                rel="noopener noreferrer"
                 class="ml-1"
               >See setup guide.</a>
             </v-alert>

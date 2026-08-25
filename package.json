@@ -14,36 +14,35 @@
     "lint:fix": "bun --bun run eslint --ext .ts,.js,.vue . --fix"
   },
   "dependencies": {
-    "@antfu/eslint-config": "^6.2.0",
     "@mdi/font": "^7.4.47",
-    "@nuxt/types": "^2.18.1",
     "@nuxtjs/color-mode": "^4.0.0",
     "@nuxtjs/sitemap": "^7.6.0",
     "@pinia/nuxt": "^0.11.3",
-    "@types/node": "^24.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.46.4",
-    "@unocss/eslint-plugin": "^66.5.6",
     "@unocss/nuxt": "^66.5.6",
     "@vueuse/core": "^14.0.0",
     "@vueuse/nuxt": "^14.0.0",
     "axios": "^1.13.2",
     "echarts": "^6.0.0",
-    "eslint": "^9.39.1",
     "nuxt": "^4.2.1",
     "pinia": "^3.0.4",
     "topojson-client": "^3.1.0",
-    "typescript": "^5.9.3",
     "unocss": "^66.5.6",
     "vite-plugin-vuetify": "^2.1.2",
     "vue": "^3.5.24",
     "vue-echarts": "^8.0.1",
     "vue-router": "^4.6.3",
-    "vue-tsc": "^3.1.4",
     "vuedraggable": "^4.1.0",
     "vuetify": "^3.10.11",
     "world-atlas": "^2.0.2"
   },
   "devDependencies": {
-    "@types/topojson-client": "^3.1.5"
+    "@antfu/eslint-config": "^6.2.0",
+    "@types/node": "^24.10.1",
+    "@types/topojson-client": "^3.1.5",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@unocss/eslint-plugin": "^66.5.6",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.1.4"
   }
 }

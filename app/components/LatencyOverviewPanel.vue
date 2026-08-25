@@ -27,6 +27,31 @@
           />
         </div>
 
+        <!--
+          Fetch failed: kept ahead of the empty state so a server error
+          isn't reported to the user as "no data available".
+        -->
+        <v-alert
+          v-else-if="error"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="ma-3"
+        >
+          {{ error }}
+
+          <template #append>
+            <v-btn
+              size="small"
+              variant="text"
+              :loading="loading"
+              @click="emit('refresh')"
+            >
+              Retry
+            </v-btn>
+          </template>
+        </v-alert>
+
         <!-- No Data -->
         <div
           v-else-if="!aggregated || aggregated.data.length === 0"
@@ -112,6 +137,7 @@ const props = defineProps<{
   project?: Project
   metrics?: AggregatedMetricsResponse
   loading?: boolean
+  error?: string | null
   disabled?: boolean
 }>()
 
@@ -169,10 +195,10 @@ const aggregated = computed((): AggregatedMetricsResponse | undefined => {
       log_count: totalCount,
       error_count: rows.reduce((s, r) => s + r.error_count, 0),
       avg_duration_ms: wAvg,
-      min_duration_ms: isFinite(minMs)
+      min_duration_ms: Number.isFinite(minMs)
         ? minMs
         : 0,
-      max_duration_ms: isFinite(maxMs)
+      max_duration_ms: Number.isFinite(maxMs)
         ? maxMs
         : 0,
       p95_duration_ms: wP95,

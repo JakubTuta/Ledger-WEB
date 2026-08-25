@@ -204,6 +204,7 @@
                         :environment="project.environment"
                         :quota-data="quotaStore.getQuotaForProject(project.project_id).value"
                         :is-loading="quotaStore.isLoadingForProject(project.project_id).value"
+                        :error="quotaStore.getErrorForProject(project.project_id).value"
                         @refresh="handleQuotaRefresh"
                       />
                     </v-card>
@@ -217,7 +218,28 @@
                           30-Day Usage History
                         </div>
 
+                        <v-alert
+                          v-if="quotaStore.getUsageStatsErrorForProject(project.project_id).value"
+                          type="error"
+                          variant="tonal"
+                          density="compact"
+                        >
+                          {{ quotaStore.getUsageStatsErrorForProject(project.project_id).value }}
+
+                          <template #append>
+                            <v-btn
+                              size="small"
+                              variant="text"
+                              :loading="quotaStore.isLoadingUsageStatsForProject(project.project_id).value"
+                              @click="quotaStore.refreshUsageStatsForProject(project.project_id)"
+                            >
+                              Retry
+                            </v-btn>
+                          </template>
+                        </v-alert>
+
                         <UsageHistoryChart
+                          v-else
                           :usage="quotaStore.getUsageStatsForProject(project.project_id).value"
                           height="280"
                         />

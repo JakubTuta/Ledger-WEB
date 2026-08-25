@@ -62,6 +62,10 @@ function saveTabsToStorage(tabs: DashboardTab[]) {
   catch { /* noop */ }
 }
 
+function panelErrorMessage(error: any, fallback: string): string {
+  return error?.response?.data?.detail || error?.message || fallback
+}
+
 let _syncTabsTimer: ReturnType<typeof setTimeout> | null = null
 
 export const usePanelsStore = defineStore('panels', () => {
@@ -73,23 +77,43 @@ export const usePanelsStore = defineStore('panels', () => {
   const lastFetchTime = ref<Date | null>(null)
   const hasData = computed(() => panels.value.length > 0)
 
+  // Every panel data source carries its own error map alongside its loading
+  // state: without one a failed fetch is indistinguishable from an empty
+  // result, and each panel's empty state tells the user to go set up their SDK.
   const panelMetrics = ref<Map<string, AggregatedMetricsResponse>>(new Map())
   const metricsLoading = ref<Set<string>>(new Set())
+  const metricsError = ref<Map<string, string>>(new Map())
 
   const panelErrors = ref<Map<string, any[]>>(new Map())
   const errorsLoading = ref<Set<string>>(new Set())
   const errorsOffset = ref<Map<string, number>>(new Map())
   const errorsHasMore = ref<Map<string, boolean>>(new Map())
+  const errorsError = ref<Map<string, string>>(new Map())
 
   const panelLogs = ref<Map<string, any[]>>(new Map())
   const logsLoading = ref<Set<string>>(new Set())
   const logsOffset = ref<Map<string, number>>(new Map())
   const logsHasMore = ref<Map<string, boolean>>(new Map())
+  const logsError = ref<Map<string, string>>(new Map())
 
-  const panelBottleneckEntries = ref<Map<string, (BottleneckListEntry & { max_value_route?: number })[]>>(new Map())
+  const panelBottleneckEntries = ref<Map<string, (BottleneckListEntry & { max_value_route?: number | null })[]>>(new Map())
   const panelBottleneckMeta = ref<Map<string, { max_value: number, total: number, has_more: boolean }>>(new Map())
   const bottleneckListLoading = ref<Set<string>>(new Set())
   const bottleneckOffset = ref<Map<string, number>>(new Map())
+  const bottleneckListError = ref<Map<string, string>>(new Map())
+
+  // --- Tabs state ---
+  const tabs = ref<DashboardTab[]>(import.meta.client
+    ? loadTabsFromStorage()
+    : [])
+  const activeTabId = ref<string>(
+    import.meta.client
+      ? (localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) ?? '')
+      : '',
+  )
+
+  const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? tabs.value[0] ?? null,
+  )
 
   const panelCountryBreakdown = ref<Map<string, CountryBreakdownEntry[]>>(new Map())
   const countryBreakdownLoading = ref<Set<string>>(new Set())
@@ -154,6 +178,7 @@ export const usePanelsStore = defineStore('panels', () => {
       return
 
     metricsLoading.value.add(panel.id)
+    metricsError.value.delete(panel.id)
 
     try {
       const searchParams = new URLSearchParams()
@@ -207,8 +232,9 @@ export const usePanelsStore = defineStore('panels', () => {
 
       panelMetrics.value.set(panel.id, response.data)
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching metrics for panel ${panel.id}:`, error)
+      metricsError.value.set(panel.id, panelErrorMessage(error, 'Failed to load metrics'))
     }
     finally {
       metricsLoading.value.delete(panel.id)
@@ -228,6 +254,7 @@ export const usePanelsStore = defineStore('panels', () => {
       return
 
     errorsLoading.value.add(panel.id)
+    errorsError.value.delete(panel.id)
 
     try {
       const searchParams = new URLSearchParams()
@@ -273,12 +300,13 @@ export const usePanelsStore = defineStore('panels', () => {
       errorsOffset.value.set(panel.id, offset)
       errorsHasMore.value.set(panel.id, response.data.has_more)
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching errors for panel ${panel.id}:`, error)
       if (offset === 0) {
         panelErrors.value.set(panel.id, [])
       }
       errorsHasMore.value.set(panel.id, false)
+      errorsError.value.set(panel.id, panelErrorMessage(error, 'Failed to load errors'))
     }
     finally {
       errorsLoading.value.delete(panel.id)
@@ -346,6 +374,7 @@ export const usePanelsStore = defineStore('panels', () => {
       return
 
     logsLoading.value.add(panel.id)
+    logsError.value.delete(panel.id)
 
     try {
       const searchParams = new URLSearchParams()
@@ -394,12 +423,13 @@ export const usePanelsStore = defineStore('panels', () => {
       logsOffset.value.set(panel.id, offset)
       logsHasMore.value.set(panel.id, response.data.has_more)
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching logs for panel ${panel.id}:`, error)
       if (offset === 0) {
         panelLogs.value.set(panel.id, [])
       }
       logsHasMore.value.set(panel.id, false)
+      logsError.value.set(panel.id, panelErrorMessage(error, 'Failed to load logs'))
     }
     finally {
       logsLoading.value.delete(panel.id)
@@ -453,6 +483,7 @@ export const usePanelsStore = defineStore('panels', () => {
       : 0
 
     bottleneckListLoading.value.add(panel.id)
+    bottleneckListError.value.delete(panel.id)
 
     try {
       const searchParams = new URLSearchParams()
@@ -500,8 +531,11 @@ export const usePanelsStore = defineStore('panels', () => {
       })
       bottleneckOffset.value.set(panel.id, offset + data.entries.length)
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching bottleneck list for panel ${panel.id}:`, error)
+      if (!opts?.append)
+        panelBottleneckEntries.value.set(panel.id, [])
+      bottleneckListError.value.set(panel.id, panelErrorMessage(error, 'Failed to load bottlenecks'))
     }
     finally {
       bottleneckListLoading.value.delete(panel.id)
@@ -602,8 +636,9 @@ export const usePanelsStore = defineStore('panels', () => {
 
       panelMetrics.value.set(panel.id, response.data)
     }
-    catch (error) {
+    catch (error: any) {
       console.error(`Error fetching heatmap for panel ${panel.id}:`, error)
+      metricsError.value.set(panel.id, panelErrorMessage(error, 'Failed to load heatmap'))
     }
     finally {
       metricsLoading.value.delete(panel.id)
@@ -666,6 +701,22 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const getCountryBreakdownError = (panelId: string) => {
     return countryBreakdownError.value.get(panelId) ?? null
+  }
+
+  const getMetricsError = (panelId: string) => {
+    return metricsError.value.get(panelId) ?? null
+  }
+
+  const getErrorsError = (panelId: string) => {
+    return errorsError.value.get(panelId) ?? null
+  }
+
+  const getLogsError = (panelId: string) => {
+    return logsError.value.get(panelId) ?? null
+  }
+
+  const getBottleneckListError = (panelId: string) => {
+    return bottleneckListError.value.get(panelId) ?? null
   }
 
   const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map']
@@ -738,7 +789,7 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
-  const updatePanel = async (panelId: string, data: Partial<UpdatePanelRequest>) => {
+  async function updatePanel(panelId: string, data: Partial<UpdatePanelRequest>) {
     try {
       const panel = panels.value.find(p => p.id === panelId)
       if (!panel) {
@@ -864,6 +915,13 @@ export const usePanelsStore = defineStore('panels', () => {
       logsHasMore.value.delete(panelId)
       panelCountryBreakdown.value.delete(panelId)
       countryBreakdownError.value.delete(panelId)
+      metricsError.value.delete(panelId)
+      errorsError.value.delete(panelId)
+      logsError.value.delete(panelId)
+      bottleneckListError.value.delete(panelId)
+      panelBottleneckEntries.value.delete(panelId)
+      panelBottleneckMeta.value.delete(panelId)
+      bottleneckOffset.value.delete(panelId)
 
       tabs.value.forEach((tab) => {
         tab.panelIds = tab.panelIds.filter(id => id !== panelId)
@@ -1041,19 +1099,6 @@ export const usePanelsStore = defineStore('panels', () => {
       return { success: false, error: errorMessage }
     }
   }
-
-  // --- Tabs state ---
-  const tabs = ref<DashboardTab[]>(import.meta.client
-    ? loadTabsFromStorage()
-    : [])
-  const activeTabId = ref<string>(
-    import.meta.client
-      ? (localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) ?? '')
-      : '',
-  )
-
-  const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? tabs.value[0] ?? null,
-  )
 
   const activePanels = computed(() => {
     if (!activeTab.value)
@@ -1246,6 +1291,9 @@ export const usePanelsStore = defineStore('panels', () => {
     const created: Panel[] = []
     for (let i = 0; i < template.panels.length; i++) {
       const seed = template.panels[i]!
+      // Sequential on purpose: createPanel() appends to the active tab's
+      // panelIds and persists it, so parallel creates would race on that list.
+      // eslint-disable-next-line no-await-in-loop
       const result = await createPanel({
         ...seed,
         project_id: String(projectId),
@@ -1306,6 +1354,10 @@ export const usePanelsStore = defineStore('panels', () => {
     getCountryBreakdownForPanel,
     isCountryBreakdownLoading,
     getCountryBreakdownError,
+    getMetricsError,
+    getErrorsError,
+    getLogsError,
+    getBottleneckListError,
     getTrafficCategoriesForPanel,
     isAnyTrafficFilterActive,
     setTrafficCategoriesForPanel,

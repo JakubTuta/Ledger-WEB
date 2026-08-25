@@ -58,6 +58,31 @@
           />
         </div>
 
+        <!--
+          Fetch failed: kept ahead of the empty state so a server error
+          isn't reported to the user as "no data available".
+        -->
+        <v-alert
+          v-else-if="error"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="ma-3"
+        >
+          {{ error }}
+
+          <template #append>
+            <v-btn
+              size="small"
+              variant="text"
+              :loading="loading"
+              @click="emit('refresh')"
+            >
+              Retry
+            </v-btn>
+          </template>
+        </v-alert>
+
         <!-- No Data State -->
         <div
           v-else-if="!metrics || chartData.length === 0"
@@ -144,6 +169,7 @@ const props = defineProps<{
   project?: Project
   metrics?: AggregatedMetricsResponse
   loading?: boolean
+  error?: string | null
   disabled?: boolean
 }>()
 

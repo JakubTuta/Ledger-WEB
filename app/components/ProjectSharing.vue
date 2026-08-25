@@ -159,8 +159,8 @@ const removeLoading = ref(false)
 const leaveLoading = ref(false)
 const actionError = ref('')
 
-const members = sharingStore.getMembersForProject(props.project.project_id)
-const isLoading = sharingStore.isLoadingForProject(props.project.project_id)
+const members = computed(() => sharingStore.getMembersForProject(props.project.project_id).value)
+const isLoading = computed(() => sharingStore.isLoadingForProject(props.project.project_id).value)
 
 const currentUserId = computed(() => authStore.user?.account_id)
 

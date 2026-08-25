@@ -22,6 +22,32 @@
         />
       </div>
 
+      <!--
+        Fetch failed: must not render the "no traces yet, set up your SDK"
+        onboarding block, which would blame the user's integration for a
+        server-side failure.
+      -->
+      <v-alert
+        v-else-if="listError && traces.length === 0"
+        type="error"
+        variant="tonal"
+        density="compact"
+        class="ma-3"
+      >
+        {{ listError }}
+
+        <template #append>
+          <v-btn
+            size="small"
+            variant="text"
+            :loading="isLoading"
+            @click="handleRefresh"
+          >
+            Retry
+          </v-btn>
+        </template>
+      </v-alert>
+
       <!-- Empty state with SDK setup guidance -->
       <div
         v-else-if="!isLoading && traces.length === 0"
@@ -186,6 +212,7 @@ const panelsStore = usePanelsStore()
 
 const traces = computed(() => tracesStore.getListForPanel(props.panel.id).value)
 const isLoading = computed(() => tracesStore.isListLoading(props.panel.id).value)
+const listError = computed(() => tracesStore.getListError(props.panel.id).value)
 const hasMore = computed(() => tracesStore.getListHasMore(props.panel.id).value)
 const offset = computed(() => tracesStore.getListOffset(props.panel.id).value)
 

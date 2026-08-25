@@ -33,40 +33,75 @@
         {{ environment }}
       </div>
 
-      <div
-        v-for="signal in signalMeters"
-        :key="signal.label"
+      <v-alert
+        v-if="error"
+        type="error"
+        variant="tonal"
+        density="compact"
         class="mb-4"
       >
-        <div class="d-flex justify-space-between align-center mb-1">
-          <span class="text-subtitle-2">{{ signal.label }}</span>
+        {{ error }}
 
-          <span class="text-caption text-grey">
-            {{ signal.usage.toLocaleString() }} / {{ signal.quota.toLocaleString() }}
-          </span>
-        </div>
+        <template #append>
+          <v-btn
+            size="small"
+            variant="text"
+            :loading="isLoading"
+            @click="handleRefresh"
+          >
+            Retry
+          </v-btn>
+        </template>
+      </v-alert>
 
-        <v-progress-linear
-          :model-value="signal.percentage"
-          :color="signal.color"
-          height="20"
-          rounded
+      <v-skeleton-loader
+        v-else-if="isLoading && !quotaData"
+        type="list-item-three-line"
+      />
+
+      <div
+        v-else-if="!quotaData"
+        class="text-body-2 text-grey"
+      >
+        No quota usage recorded for this project yet.
+      </div>
+
+      <template v-else>
+        <div
+          v-for="signal in signalMeters"
+          :key="signal.label"
+          class="mb-4"
         >
-          <template #default>
-            <strong class="text-caption text-white">{{ signal.percentage }}%</strong>
-          </template>
-        </v-progress-linear>
-      </div>
+          <div class="d-flex justify-space-between align-center mb-1">
+            <span class="text-subtitle-2">{{ signal.label }}</span>
 
-      <div class="mt-2 text-center">
-        <div class="text-h6 font-weight-bold">
-          {{ timeUntilReset }}
+            <span class="text-caption text-grey">
+              {{ signal.usage.toLocaleString() }} / {{ signal.quota.toLocaleString() }}
+            </span>
+          </div>
+
+          <v-progress-linear
+            :model-value="signal.percentage"
+            :color="signal.color"
+            height="20"
+            rounded
+          >
+            <template #default>
+              <strong class="text-caption text-white">{{ signal.percentage }}%</strong>
+            </template>
+          </v-progress-linear>
         </div>
 
-        <div class="text-caption text-grey mt-1">
-          until quota reset
+        <div class="mt-2 text-center">
+          <div class="text-h6 font-weight-bold">
+            {{ timeUntilReset }}
+          </div>
+
+          <div class="text-caption text-grey mt-1">
+            until quota reset
+          </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -79,8 +114,9 @@ const props = defineProps<{
   projectId: number
   projectName: string
   environment: string
-  quotaData: ProjectQuotaResponse
+  quotaData: ProjectQuotaResponse | null
   isLoading?: boolean
+  error?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -137,12 +173,13 @@ function colorFor(percentage: number): string {
   return 'success'
 }
 
+const EMPTY_SIGNAL: SignalQuota = { quota: 0, usage: 0, remaining: 0 }
+
 const signalMeters = computed(() => {
-  const empty: SignalQuota = { quota: 0, usage: 0, remaining: 0 }
   const signals = [
-    { label: 'Logs', data: props.quotaData?.logs ?? empty },
-    { label: 'Spans', data: props.quotaData?.spans ?? empty },
-    { label: 'Metrics', data: props.quotaData?.metrics ?? empty },
+    { label: 'Logs', data: props.quotaData?.logs ?? EMPTY_SIGNAL },
+    { label: 'Spans', data: props.quotaData?.spans ?? EMPTY_SIGNAL },
+    { label: 'Metrics', data: props.quotaData?.metrics ?? EMPTY_SIGNAL },
   ]
 
   return signals.map(({ label, data }) => {

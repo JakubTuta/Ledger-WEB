@@ -154,7 +154,9 @@ async function copyToClipboard() {
   try {
     await navigator.clipboard.writeText(inviteData.value.code)
     copied.value = true
-    setTimeout(() => { copied.value = false }, 2000)
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
   }
   catch (err) {
     console.error('Failed to copy to clipboard:', err)

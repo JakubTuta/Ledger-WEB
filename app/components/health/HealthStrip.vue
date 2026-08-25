@@ -14,6 +14,28 @@
       />
     </div>
 
+    <!-- Error -->
+    <v-alert
+      v-else-if="healthStore.error && summaries.length === 0"
+      type="error"
+      variant="tonal"
+      density="compact"
+      class="ma-1"
+    >
+      {{ healthStore.error }}
+
+      <template #append>
+        <v-btn
+          size="small"
+          variant="text"
+          :loading="healthStore.isLoading"
+          @click="healthStore.refresh()"
+        >
+          Retry
+        </v-btn>
+      </template>
+    </v-alert>
+
     <!-- No projects -->
     <div
       v-else-if="summaries.length === 0"
@@ -38,7 +60,7 @@
         :environment="getProjectEnvironment(summary.project_id)"
         :compact="mobile"
         :selected="props.selectedProjectId === String(summary.project_id)"
-        @click="emit('project-click', $event)"
+        @click="emit('projectClick', $event)"
       />
     </div>
   </div>
@@ -53,7 +75,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'project-click': [projectId: string]
+  projectClick: [projectId: string]
 }>()
 
 const { mobile } = useDisplay()

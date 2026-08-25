@@ -78,7 +78,7 @@ const errorDescription = computed(() => {
 })
 
 useSeoMeta({
-  title: `${props.error?.statusCode || 'Error'} — Ledger`,
+  title: () => `${props.error?.statusCode || 'Error'} — Ledger`,
   robots: 'noindex, nofollow',
 })
 

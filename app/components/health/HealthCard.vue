@@ -182,25 +182,25 @@ const derivedStatus = computed(() => {
 
 const statusColor = computed(() => {
   switch (derivedStatus.value) {
-    case 'healthy': return 'success'
     case 'degraded': return 'warning'
     case 'down': return 'error'
+    default: return 'success'
   }
 })
 
 const statusLabel = computed(() => {
   switch (derivedStatus.value) {
-    case 'healthy': return 'Healthy'
     case 'degraded': return 'Degraded'
     case 'down': return 'Down'
+    default: return 'Healthy'
   }
 })
 
 const sparklineColor = computed(() => {
   switch (derivedStatus.value) {
-    case 'healthy': return '#66bb6a'
     case 'degraded': return '#ffa726'
     case 'down': return '#ef5350'
+    default: return '#66bb6a'
   }
 })
 
