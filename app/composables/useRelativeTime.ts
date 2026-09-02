@@ -20,7 +20,9 @@ export function useRelativeTime() {
       clearInterval(timer)
   })
 
-  function formatTimestamp(timestamp: string): string {
+  function formatTimestamp(timestamp?: string | null): string {
+    if (!timestamp)
+      return '—'
     try {
       const date = new Date(timestamp)
       const diff = currentTime.value - date.getTime()
@@ -51,7 +53,9 @@ export function useRelativeTime() {
     }
   }
 
-  function formatFullTimestamp(timestamp: string): string {
+  function formatFullTimestamp(timestamp?: string | null): string {
+    if (!timestamp)
+      return '—'
     try {
       const date = new Date(timestamp)
       const dd = String(date.getDate()).padStart(2, '0')

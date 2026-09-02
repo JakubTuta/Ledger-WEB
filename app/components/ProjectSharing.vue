@@ -78,7 +78,7 @@
 
           <template #append>
             <v-btn
-              v-if="isOwner && member.account_id !== currentUserId"
+              v-if="isOwner && String(member.account_id) !== String(currentUserId)"
               icon="mdi-delete"
               variant="text"
               color="error"
@@ -164,7 +164,7 @@ const isLoading = computed(() => sharingStore.isLoadingForProject(props.project.
 
 const currentUserId = computed(() => authStore.user?.account_id)
 
-const isOwner = computed(() => members.value.some(m => m.account_id === currentUserId.value && m.role === 'owner'),
+const isOwner = computed(() => members.value.some(m => String(m.account_id) === String(currentUserId.value) && m.role === 'owner'),
 )
 
 function formatDate(dateString: string) {

@@ -96,7 +96,7 @@
                 </div>
 
                 <v-switch
-                  v-model="projectSettings[project.project_id].enabled"
+                  v-model="settingsFor(project.project_id).enabled"
                   color="primary"
                   hide-details
                   density="compact"
@@ -109,7 +109,7 @@
 
             <v-expansion-panel-text>
               <div
-                v-if="projectSettings[project.project_id].enabled"
+                v-if="settingsFor(project.project_id).enabled"
                 class="pt-4"
               >
                 <!-- Notification Levels -->
@@ -192,6 +192,10 @@ const projectSettings = ref<Record<number, ProjectNotificationSettings>>({})
 const showSuccessAlert = ref(false)
 const errorMessage = ref('')
 
+function settingsFor(projectId: number): ProjectNotificationSettings {
+  return projectSettings.value[projectId] ?? { enabled: false, levels: [], types: ['exception'] }
+}
+
 const availableLevels = [
   { value: 'critical' as NotificationLevel, label: 'Critical', color: 'error' },
   { value: 'error' as NotificationLevel, label: 'Error', color: 'error' },
@@ -216,8 +220,9 @@ function getProjectSettingsSummary(projectId: number): string {
     return 'All exception levels'
   }
 
-  if (settings.levels.length === 1) {
-    return `${settings.levels[0].charAt(0).toUpperCase() + settings.levels[0].slice(1)} only`
+  const [onlyLevel] = settings.levels
+  if (settings.levels.length === 1 && onlyLevel) {
+    return `${onlyLevel.charAt(0).toUpperCase() + onlyLevel.slice(1)} only`
   }
 
   return 'Error and Critical'

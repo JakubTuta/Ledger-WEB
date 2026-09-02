@@ -225,9 +225,7 @@ const isOpen = computed({
 
 watch(() => props.modelValue, (newValue) => {
   if (newValue) {
-    selectedProjectId.value = props.projectId || (projectsStore.projects.length > 0
-      ? projectsStore.projects[0].project_id
-      : null)
+    selectedProjectId.value = props.projectId || (projectsStore.projects[0]?.project_id ?? null)
   }
   else {
     resetForm()

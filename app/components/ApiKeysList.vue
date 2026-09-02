@@ -202,9 +202,7 @@ const regenerateLoading = ref(false)
 const newlyCreatedKey = ref<{ full_key: string } | null>(null)
 const showNewKey = ref(false)
 
-const selectedProjectId = computed(() => (projectsStore.projects.length > 0
-  ? projectsStore.projects[0].project_id
-  : 0))
+const selectedProjectId = computed(() => projectsStore.projects[0]?.project_id ?? 0)
 
 const allApiKeys = computed(() => {
   return [...apiKeysStore.apiKeys].sort((a, b) => {

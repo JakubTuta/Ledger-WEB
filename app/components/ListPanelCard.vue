@@ -736,7 +736,7 @@ import type { BottleneckStatistic, Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 import { omitUiFields } from '~/utils/export'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   panel: Panel
   project?: Project
   items?: ListItem[]
@@ -747,7 +747,9 @@ const props = defineProps<{
   offset?: number
   maxValue?: number
   type: 'errors' | 'logs' | 'error_list' | 'bottleneck'
-}>()
+}>(), {
+  maxValue: 0,
+})
 
 const emit = defineEmits<{
   delete: []
@@ -808,10 +810,11 @@ interface ListItem {
   route?: string
   value?: number
   request_count?: number
-  min_value?: number
+  min_value?: number | null
+  max_value?: number | null
   max_value_route?: number | null
-  avg_value?: number
-  median_value?: number
+  avg_value?: number | null
+  median_value?: number | null
 }
 
 const { formatTimestamp, formatFullTimestamp } = useRelativeTime()
@@ -821,7 +824,7 @@ const trafficFilterSummary = computed(() => ((props.type === 'logs' || props.typ
   : null))
 
 // Filter state (logs / error_list)
-const statusClassFilter = ref<string>('all')
+const statusClassFilter = ref<'all' | '2xx' | '4xx' | '5xx'>('all')
 const searchFilter = ref<string>('')
 
 const searchPlaceholder = computed(() => {
