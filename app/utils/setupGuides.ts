@@ -11,7 +11,7 @@ export const setupGuides: SetupGuide[] = [
     steps: [
       {
         title: 'Install the SDK',
-        description: 'Python 3.10+ required. Middleware ships for FastAPI, Django and Flask; the FastAPI middleware is a Starlette BaseHTTPMiddleware, so it works on any Starlette app.',
+        description: 'Python 3.10+ required. Middleware ships for FastAPI, Django and Flask; the FastAPI middleware is a Starlette BaseHTTPMiddleware, so it also works on a plain Starlette app as long as fastapi is installed.',
         code: 'pip install ledger-sdk',
         label: 'bash',
         icon: 'mdi-console',
@@ -23,7 +23,7 @@ export const setupGuides: SetupGuide[] = [
       {
         title: 'Store the key in your environment',
         description: 'Never hardcode the key in source control.',
-        code: `export LEDGER_API_KEY="ledger_proj_1_your_api_key"
+        code: `export LEDGER_API_KEY="ledger_your_api_key"
 export LEDGER_BASE_URL="${SERVER_URL}"`,
         label: 'bash',
         icon: 'mdi-console',
@@ -102,12 +102,12 @@ except Exception as e:
       },
       {
         title: 'Forward standard library logging',
-        description: 'Optional. Routes every logging.getLogger(...) call — yours and third-party libraries — to Ledger.',
-        code: `ledger.instrument_logging()
+        description: 'Optional. Routes every logging.getLogger(...) call — yours and third-party libraries — to Ledger. Python\'s root logger only emits WARNING and above by default, so pass level=logging.INFO to forward INFO records too.',
+        code: `import logging
 
-import logging
+ledger.instrument_logging(level=logging.INFO)
 
-logging.getLogger(__name__).warning("this reaches Ledger too")`,
+logging.getLogger(__name__).info("this reaches Ledger too")`,
       },
       {
         title: 'Hook up your existing logging library',
@@ -210,7 +210,7 @@ counter.add(1, {"route": "/health"})`,
       },
       {
         title: 'Chart it',
-        description: 'Open Panel, choose "New panel" and pick the Metric type, then select your metric name under Advanced. Split it into one line per tag value with "Split into series by tag", and narrow it with tag filters. Counters and histograms are exported every 60 seconds by default, so give the first points a moment to arrive.',
+        description: 'Open Panel, click "Add Panel", pick the Metric type, then select your metric name under Advanced. Once the panel exists, edit it to split the metric into one line per tag value with "Split into series by tag" and to narrow it with tag filters. Metrics are exported every 60 seconds by default, so give the first points a moment to arrive.',
       },
       {
         title: 'Or query it directly',
@@ -230,7 +230,7 @@ GET /api/v1/metrics/orders_processed/series?project_id=<id>
     steps: [
       {
         title: 'Tracing is already on',
-        description: 'Creating a LedgerClient registers a real OpenTelemetry TracerProvider as the process-global provider. Traces show up in the Traces panel.',
+        description: 'Creating a LedgerClient registers a real OpenTelemetry TracerProvider as the process-global provider. Add a Trace List panel to see them.',
         code: `from ledger import LedgerClient, get_tracer
 
 ledger = LedgerClient(
@@ -242,7 +242,7 @@ tracer = get_tracer(__name__)`,
       },
       {
         title: 'Set the sample rate',
-        description: 'Sampling defaults to 0.1 (10% of traces). Raise it in development, keep it low in high-traffic production.',
+        description: 'Sampling defaults to 0.1 (10% of traces), so in development most requests will not produce a stored trace until you raise it. Keep it low in high-traffic production.',
         code: `ledger = LedgerClient(
     api_key=os.getenv("LEDGER_API_KEY"),
     trace_sample_rate=1.0,
@@ -299,7 +299,7 @@ with tracer.start_as_current_span("downstream-handler", context=ctx):
       },
       {
         title: 'Correlate logs with traces',
-        description: 'Any log emitted inside an active span automatically carries trace_id and span_id, so the dashboard links them both ways. Nothing to configure.',
+        description: 'Any log emitted inside an active span automatically carries trace_id and span_id, so the dashboard links it to the trace. Nothing to configure — but only sampled traces are stored, so with the default 0.1 sample rate most of those links have no trace behind them.',
       },
     ],
   },
@@ -315,10 +315,10 @@ with tracer.start_as_current_span("downstream-handler", context=ctx):
       },
       {
         title: 'Set the standard OTLP environment variables',
-        description: 'Every OpenTelemetry SDK honours these — no code changes needed.',
+        description: 'Every OpenTelemetry SDK honours these — no code changes needed. Ledger stores sums, gauges and explicit-bucket histograms; exponential histograms and summaries are not supported yet and are skipped.',
         code: `export OTEL_EXPORTER_OTLP_ENDPOINT="${SERVER_URL}"
 export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
-export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ledger_proj_1_your_api_key"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ledger_your_api_key"
 export OTEL_SERVICE_NAME="my-service"`,
         label: 'bash',
         icon: 'mdi-console',
@@ -334,7 +334,7 @@ export OTEL_SERVICE_NAME="my-service"`,
       },
       {
         title: 'Node.js — bootstrap',
-        description: 'Load this file before your app entrypoint.',
+        description: 'Load this file before your app entrypoint. It exports traces only; to send logs and metrics too, add @opentelemetry/exporter-logs-otlp-proto and @opentelemetry/exporter-metrics-otlp-proto and register them with the SDK.',
         code: `const { NodeSDK } = require('@opentelemetry/sdk-node')
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto')
 const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node')
@@ -368,7 +368,7 @@ sdk.start()`,
         title: 'Or post OTLP directly',
         description: 'Traces go to /v1/traces, logs to /v1/logs, metrics to /v1/metrics. All accept application/x-protobuf or application/json, gzip optional.',
         code: `curl -X POST ${SERVER_URL}/v1/logs \\
-  -H "Authorization: Bearer ledger_proj_1_your_api_key" \\
+  -H "Authorization: Bearer ledger_your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{
     "resourceLogs": [{
@@ -387,7 +387,7 @@ sdk.start()`,
       },
       {
         title: 'Verify ingestion',
-        description: 'Open Explore and filter by your service name. Data appears within seconds of the first export flush.',
+        description: 'Open Explore and pick your service name in the Service filter, or search for a message you logged. Traces appear in a Trace List panel, which can filter by service too. Data arrives within seconds of the first export flush.',
       },
     ],
   },

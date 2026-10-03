@@ -108,7 +108,7 @@
           </v-sheet>
 
           <v-btn
-            to="/how-to-setup"
+            to="/how-to-setup#metrics"
             variant="text"
             size="small"
             color="primary"

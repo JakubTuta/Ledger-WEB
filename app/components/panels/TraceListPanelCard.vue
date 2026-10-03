@@ -98,9 +98,8 @@
           </div>
 
           <v-btn
-            href="https://github.com/JakubTuta/ledger-sdk#tracing"
+            to="/how-to-setup#tracing"
             target="_blank"
-            rel="noopener noreferrer"
             variant="text"
             size="small"
             color="primary"

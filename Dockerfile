@@ -21,8 +21,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build arguments for environment variables
-ARG NUXT_PUBLIC_API_BASE_URL
-ENV NUXT_PUBLIC_API_BASE_URL=${NUXT_PUBLIC_API_BASE_URL}
+ARG NUXT_PUBLIC_SERVER_URL
+ENV NUXT_PUBLIC_SERVER_URL=${NUXT_PUBLIC_SERVER_URL}
 
 # Build the application
 RUN bun run build

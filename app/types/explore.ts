@@ -62,4 +62,5 @@ export interface ExploreFilters {
   environment: string | null
   search: string
   clientChannel: string[]
+  service: string | null
 }

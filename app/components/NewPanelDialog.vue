@@ -94,12 +94,13 @@
               icon="mdi-information-outline"
             >
               Requires SDK tracing.
-              <a
-                href="https://github.com/ledger-sdk/python#tracing"
+              <NuxtLink
+                to="/how-to-setup#tracing"
                 target="_blank"
-                rel="noopener noreferrer"
                 class="ml-1"
-              >See setup guide.</a>
+              >
+                See setup guide.
+              </NuxtLink>
             </v-alert>
           </div>
 

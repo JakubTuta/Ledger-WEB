@@ -386,7 +386,7 @@
 <span class="hl">from ledger.integrations.fastapi import LedgerMiddleware</span>
 
 app = FastAPI()
-<span class="hl">ledger = LedgerClient(api_key="your_key")</span>
+<span class="hl">ledger = LedgerClient(api_key="ledger_your_api_key")</span>
 
 <span class="hl">app.add_middleware(LedgerMiddleware, ledger_client=ledger)</span>
 
@@ -864,7 +864,7 @@ const ecosystem = [
     icon: 'mdi-language-python',
     color: 'info',
     title: 'Python SDK',
-    description: 'pip install ledger-sdk — supports FastAPI, Django, Flask, Starlette, Litestar.',
+    description: 'pip install ledger-sdk — middleware for FastAPI, Django and Flask.',
     cta: 'View on GitHub',
     link: 'https://github.com/JakubTuta/Ledger-SDK',
     external: true,
@@ -873,7 +873,7 @@ const ecosystem = [
     icon: 'mdi-vector-polyline',
     color: 'accent',
     title: 'Any OpenTelemetry SDK',
-    description: 'Ledger accepts standard OTLP/HTTP traces and logs, so Go, Java, Node, and every other OTel SDK works out of the box.',
+    description: 'Ledger accepts standard OTLP/HTTP traces, logs and metrics, so Go, Java, Node, and every other OTel SDK works out of the box.',
     cta: 'OTLP setup guide',
     link: '/how-to-setup#opentelemetry',
     external: false,

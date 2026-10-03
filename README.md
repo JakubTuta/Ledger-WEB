@@ -5,7 +5,7 @@
 ### Beautiful, real-time log analytics in your browser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Nuxt 3](https://img.shields.io/badge/Nuxt-3-00DC82.svg)](https://nuxt.com/)
+[![Nuxt 4](https://img.shields.io/badge/Nuxt-4-00DC82.svg)](https://nuxt.com/)
 [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D.svg)](https://vuejs.org/)
 
 [Live Dashboard](https://ledger.jtuta.cloud) • [Setup Guide](https://ledger.jtuta.cloud/how-to-setup) • [Python SDK](https://github.com/JakubTuta/Ledger-SDK) • [Backend](https://github.com/JakubTuta/Ledger-APP) • [API Docs](https://bump.sh/tuta-corp/doc/ledger-api/)
@@ -42,7 +42,7 @@ Build your own monitoring layouts with drag-and-drop panels. Mix logs, metrics, 
 
 ### Alerts & Monitoring
 
-Threshold-based alerts delivered via in-app notifications, email, or webhook. Track error rates and log volume over time.
+Threshold-based alerts delivered via in-app notifications, email, webhook, Slack, Discord, PagerDuty, or Opsgenie, plus uptime and heartbeat monitors. Track error rates and log volume over time.
 
 ![Alerts and Monitoring](screenshots/monitoring_setup.png)
 
@@ -62,14 +62,16 @@ bun run dev
 
 Open `http://localhost:3000`.
 
-Create a `.env` file to point at your API server:
+Create a `.env` file to point at your API server. Without it the dashboard talks to
+`http://localhost:8000`, which is *not* where a Ledger-APP stack from `docker-compose` listens
+(its gateway is published on `GATEWAY_HTTP_PORT`, default 8020):
 
 ```env
-# Local development
-NUXT_PUBLIC_API_BASE_URL=http://localhost:8000
+# Local Ledger-APP stack
+NUXT_PUBLIC_SERVER_URL=http://localhost:8020
 
 # Or use the hosted server
-# NUXT_PUBLIC_API_BASE_URL=https://ledger-server.jtuta.cloud
+# NUXT_PUBLIC_SERVER_URL=https://ledger-server.jtuta.cloud
 ```
 
 ---

@@ -65,7 +65,7 @@
             density="comfortable"
             :loading="exploreStore.isLoading"
             title="Refresh"
-            @click="exploreStore.refresh()"
+            @click="forceRefresh"
           />
         </div>
       </v-card-text>
@@ -102,6 +102,23 @@
                 Clear
               </v-btn>
             </div>
+
+            <v-combobox
+              v-model="serviceFilter"
+              :items="exploreStore.services"
+              :loading="exploreStore.servicesLoading"
+              :error-messages="exploreStore.servicesError ?? undefined"
+              :disabled="!exploreStore.filters.projectId"
+              label="Service"
+              placeholder="All services"
+              variant="outlined"
+              density="compact"
+              prepend-inner-icon="mdi-server-outline"
+              hint="Names seen in recent logs. Type any other name to filter by it."
+              persistent-hint
+              clearable
+              class="mb-3"
+            />
 
             <div
               v-if="exploreStore.facetsLoading && !exploreStore.facets"
@@ -225,7 +242,7 @@
               class="mt-3"
               size="small"
               variant="outlined"
-              @click="exploreStore.refresh()"
+              @click="forceRefresh"
             >
               Retry
             </v-btn>
@@ -657,7 +674,19 @@ watch(searchInput, (value) => {
   }, 300)
 })
 
+function forceRefresh() {
+  return exploreStore.refresh({ force: true })
+}
+
+const serviceFilter = computed<string | null>({
+  get: () => exploreStore.filters.service,
+  set: (value: string | null) => {
+    exploreStore.setService(value)
+  },
+})
+
 const hasActiveFacetFilters = computed(() => !!exploreStore.filters.level
+  || !!exploreStore.filters.service
   || !!exploreStore.filters.logType
   || !!exploreStore.filters.environment
   || exploreStore.filters.statusClass.length > 0

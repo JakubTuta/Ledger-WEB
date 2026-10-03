@@ -46,6 +46,7 @@ function defaultFilters(): ExploreFilters {
     environment: null,
     search: '',
     clientChannel: [],
+    service: null,
   }
 }
 
@@ -113,6 +114,11 @@ export const useExploreStore = defineStore('explore', () => {
   const facetsLoading = ref(false)
   const facetsError = ref<string | null>(null)
 
+  const services = ref<string[]>([])
+  const servicesLoading = ref(false)
+  const servicesError = ref<string | null>(null)
+  let servicesLoadedFor: string | null = null
+
   const selectedLog = ref<ExploreLogEntry | null>(null)
 
   const tailActive = ref(false)
@@ -130,7 +136,9 @@ export const useExploreStore = defineStore('explore', () => {
     }
   }
 
-  function buildBaseParams(options: { includeSearch: boolean } = { includeSearch: true }): URLSearchParams {
+  // `includeListOnlyFilters: false` leaves out the filters the facet rollup
+  // can't answer (search, service) - see fetchFacets().
+  function buildBaseParams(options: { includeListOnlyFilters: boolean } = { includeListOnlyFilters: true }): URLSearchParams {
     const params = new URLSearchParams()
     if (filters.value.projectId)
       params.set('project_id', filters.value.projectId)
@@ -142,8 +150,10 @@ export const useExploreStore = defineStore('explore', () => {
       params.set('environment', filters.value.environment)
     for (const sc of filters.value.statusClass)
       params.append('status_class', sc)
-    if (options.includeSearch && filters.value.search)
+    if (options.includeListOnlyFilters && filters.value.search)
       params.set('search', filters.value.search)
+    if (options.includeListOnlyFilters && filters.value.service)
+      params.set('service', filters.value.service)
     for (const channel of filters.value.clientChannel)
       params.append('client_channel', channel)
 
@@ -213,12 +223,12 @@ export const useExploreStore = defineStore('explore', () => {
     facetsLoading.value = true
     facetsError.value = null
     try {
-      // Deliberately excludes `search`: a free-text term can't be answered
-      // from the log_facets_1h rollup the facets endpoint reads, so sending it
-      // forces a full scan of every log row in the window. The sidebar counts
-      // describe the structural filters plus the time range; the search box
-      // narrows the log list only.
-      const params = buildBaseParams({ includeSearch: false })
+      // Deliberately excludes `search` and `service`: neither can be answered
+      // from the log_facets_1h rollup the facets endpoint reads, so sending
+      // them forces a full scan of every log row in the window. The sidebar
+      // counts describe the structural filters plus the time range; the search
+      // box and the service filter narrow the log list only.
+      const params = buildBaseParams({ includeListOnlyFilters: false })
       buildTimeParams(params)
       const response = await client.get<ExploreFacets & { project_id: number }>(
         `/api/v1/logs/facets?${params.toString()}`,
@@ -243,8 +253,51 @@ export const useExploreStore = defineStore('explore', () => {
     }
   }
 
-  const refresh = async () => {
-    await Promise.all([fetchLogs(), fetchFacets()])
+  // Service names depend only on the project and the time range, so facet
+  // clicks and search edits reuse the loaded list instead of refetching it.
+  const fetchServices = async (force = false) => {
+    if (!filters.value.projectId)
+      return
+
+    const currentKey = () => [
+      filters.value.projectId,
+      filters.value.period,
+      filters.value.periodFrom,
+      filters.value.periodTo,
+    ].join('|')
+    const key = currentKey()
+    if (!force && key === servicesLoadedFor)
+      return
+
+    servicesLoading.value = true
+    servicesError.value = null
+    try {
+      const params = new URLSearchParams({ project_id: filters.value.projectId })
+      buildTimeParams(params)
+      const response = await client.get<{ services: string[] }>(
+        `/api/v1/logs/services?${params.toString()}`,
+      )
+      // A newer project/time-range selection may have started while this was in flight.
+      if (key !== currentKey())
+        return
+      services.value = response.data.services
+      servicesLoadedFor = key
+    }
+    catch (error: any) {
+      console.error('Error fetching log services:', error)
+      if (key !== currentKey())
+        return
+      services.value = []
+      servicesLoadedFor = null
+      servicesError.value = error?.response?.data?.detail || error?.message || 'Failed to load services'
+    }
+    finally {
+      servicesLoading.value = false
+    }
+  }
+
+  const refresh = async (opts: { force?: boolean } = {}) => {
+    await Promise.all([fetchLogs(), fetchFacets(), fetchServices(opts.force)])
   }
 
   // Restores the time range remembered for the currently selected project,
@@ -267,6 +320,7 @@ export const useExploreStore = defineStore('explore', () => {
     if (filters.value.projectId === projectId)
       return
     filters.value.projectId = projectId
+    filters.value.service = null
     restoreTimeRange()
     nextCursor.value = null
     await refresh()
@@ -300,6 +354,13 @@ export const useExploreStore = defineStore('explore', () => {
   // only re-runs the log query.
   const setSearch = async (term: string) => {
     filters.value.search = term
+    nextCursor.value = null
+    await fetchLogs()
+  }
+
+  // Like search, the service filter only narrows the log list (see fetchFacets).
+  const setService = async (service: string | null) => {
+    filters.value.service = service || null
     nextCursor.value = null
     await fetchLogs()
   }
@@ -560,16 +621,21 @@ export const useExploreStore = defineStore('explore', () => {
     facets,
     facetsLoading,
     facetsError,
+    services,
+    servicesLoading,
+    servicesError,
     selectedLog,
     tailActive,
     fetchLogs,
     loadMore,
     fetchFacets,
+    fetchServices,
     refresh,
     restoreTimeRange,
     setProject,
     setTimeRange,
     setSearch,
+    setService,
     toggleFacet,
     isFacetActive,
     clearFilters,
