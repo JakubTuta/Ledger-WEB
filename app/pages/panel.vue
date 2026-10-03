@@ -314,6 +314,7 @@ useSeoMeta({
 
 const { mobile } = useDisplay()
 const panelsStore = usePanelsStore()
+const metricsStore = useMetricsStore()
 const projectsStore = useProjectsStore()
 const healthStore = useHealthStore()
 const route = useRoute()
@@ -512,7 +513,7 @@ async function handlePanelCreated(panel: Panel) {
   else if (panel.type === 'country_map') {
     await panelsStore.fetchCountryBreakdownForPanel(panel)
   }
-  else if (panel.type === 'trace_list' || panel.type === 'trace') {
+  else if (panel.type === 'trace_list' || panel.type === 'trace' || panel.type === 'metric_series') {
     // These panels fetch their own data on mount
   }
   else {
@@ -536,6 +537,9 @@ function fetchAllMetrics() {
     }
     else if (panel.type === 'country_map') {
       panelsStore.fetchCountryBreakdownForPanel(panel)
+    }
+    else if (panel.type === 'metric_series') {
+      metricsStore.fetchSeriesForPanel(panel, true)
     }
     else if (panel.type === 'trace_list' || panel.type === 'trace') {
       // These panels self-manage data fetching

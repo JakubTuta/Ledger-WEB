@@ -1,7 +1,5 @@
 export type NotificationLevel = 'error' | 'critical' | 'info' | 'warning'
 
-export type NotificationType = 'exception'
-
 export type NotificationKind
   = | 'error_notification'
     | 'error'
@@ -9,22 +7,6 @@ export type NotificationKind
     | 'quota_warning'
     | 'alert'
     | 'info'
-
-export interface ProjectNotificationSettings {
-  enabled: boolean
-  levels: NotificationLevel[]
-  types: NotificationType[]
-}
-
-export interface NotificationPreferencesResponse {
-  enabled: boolean
-  projects: Record<string, ProjectNotificationSettings>
-}
-
-export interface NotificationPreferencesUpdate {
-  enabled: boolean
-  projects: Record<string, ProjectNotificationSettings>
-}
 
 export interface SSEConnectedEvent {
   timestamp: string

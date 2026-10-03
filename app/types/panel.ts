@@ -42,6 +42,8 @@ export interface Panel {
   metric_group_by?: string[]
   metric_tag_filters?: Record<string, string>
   metric_interval?: MetricInterval | null
+  // error_list panels: unset shows 4xx responses alongside errors and 5xx
+  include_client_errors?: boolean | null
 }
 
 export interface PanelListResponse {
@@ -75,6 +77,7 @@ export interface CreatePanelRequest {
   metric_group_by?: string[]
   metric_tag_filters?: Record<string, string>
   metric_interval?: MetricInterval | null
+  include_client_errors?: boolean | null
 }
 
 export interface UpdatePanelRequest {
@@ -102,6 +105,7 @@ export interface UpdatePanelRequest {
   metric_group_by?: string[] | null
   metric_tag_filters?: Record<string, string> | null
   metric_interval?: MetricInterval | null
+  include_client_errors?: boolean | null
 }
 
 export interface AggregatedMetricData {

@@ -456,7 +456,7 @@ const allPanelTypeOptions = [
   { label: 'Endpoint Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines (avg/p95/p99) for one specific endpoint URL.' },
   { label: 'Metric', value: 'metric_series', icon: 'mdi-chart-line-variant', description: 'Chart a counter, gauge or histogram your app sends, split into series by tag.' },
   { label: 'HTTP Request Log', value: 'logs', icon: 'mdi-web', description: 'Live log of HTTP requests with status, method, path, and duration.' },
-  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Grouped list of recent errors with occurrence counts and stack traces.' },
+  { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Grouped list of recent errors and failed requests (4xx optional) with occurrence counts and stack traces.' },
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Routes ranked by latency or request count. Click column headers to sort.' },
   { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate — spot recurring failure patterns.' },
   { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent distributed traces. Click a row to pin it as a trace panel.' },

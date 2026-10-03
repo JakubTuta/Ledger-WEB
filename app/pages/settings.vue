@@ -16,13 +16,6 @@
       />
 
       <v-list-item
-        :active="activeSection === 'notifications'"
-        title="Notifications"
-        prepend-icon="mdi-bell"
-        @click="mobileSectionClick('notifications')"
-      />
-
-      <v-list-item
         :active="activeSection === 'quota'"
         title="Quota usage"
         prepend-icon="mdi-chart-line"
@@ -79,13 +72,6 @@
               title="Projects"
               prepend-icon="mdi-folder-multiple"
               @click="scrollToSection('projects')"
-            />
-
-            <v-list-item
-              :active="activeSection === 'notifications'"
-              title="Notifications"
-              prepend-icon="mdi-bell"
-              @click="scrollToSection('notifications')"
             />
 
             <v-list-item
@@ -165,22 +151,6 @@
               </v-card>
             </div>
 
-            <!-- Notifications Section -->
-            <div
-              ref="notificationsSection"
-              style="min-height: calc(100vh - 120px);"
-            >
-              <v-card flat>
-                <v-card-title class="text-h5 font-weight-bold mb-4">
-                  Notifications
-                </v-card-title>
-
-                <v-card-text>
-                  <NotificationPreferences />
-                </v-card-text>
-              </v-card>
-            </div>
-
             <!-- Quota Usage Section -->
             <div
               ref="quotaSection"
@@ -209,42 +179,7 @@
                       />
                     </v-card>
 
-                    <v-card
-                      variant="elevated"
-                      class="mt-2"
-                    >
-                      <v-card-text>
-                        <div class="text-subtitle-2 mb-2">
-                          30-Day Usage History
-                        </div>
-
-                        <v-alert
-                          v-if="quotaStore.getUsageStatsErrorForProject(project.project_id).value"
-                          type="error"
-                          variant="tonal"
-                          density="compact"
-                        >
-                          {{ quotaStore.getUsageStatsErrorForProject(project.project_id).value }}
-
-                          <template #append>
-                            <v-btn
-                              size="small"
-                              variant="text"
-                              :loading="quotaStore.isLoadingUsageStatsForProject(project.project_id).value"
-                              @click="quotaStore.refreshUsageStatsForProject(project.project_id)"
-                            >
-                              Retry
-                            </v-btn>
-                          </template>
-                        </v-alert>
-
-                        <UsageHistoryChart
-                          v-else
-                          :usage="quotaStore.getUsageStatsForProject(project.project_id).value"
-                          height="280"
-                        />
-                      </v-card-text>
-                    </v-card>
+                    <UsageHistory :project-id="project.project_id" />
                   </div>
 
                   <v-alert
@@ -345,25 +280,26 @@ const projectsStore = useProjectsStore()
 const { projects } = storeToRefs(projectsStore)
 const apiKeysStore = useApiKeysStore()
 
-const activeSection = ref<'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing'>('projects')
+type SettingsSection = 'projects' | 'quota' | 'apiKeys' | 'sharing'
+
+const activeSection = ref<SettingsSection>('projects')
 const selectedProjectId = ref<number | null>(null)
 const showJoinDialog = ref(false)
 const mobileNavDrawer = ref(false)
 const scrollContainer = ref<HTMLElement | null>(null)
 const projectsSection = ref<HTMLElement | null>(null)
-const notificationsSection = ref<HTMLElement | null>(null)
 const quotaSection = ref<HTMLElement | null>(null)
 const apiKeysSection = ref<HTMLElement | null>(null)
 const sharingSection = ref<HTMLElement | null>(null)
 
 let isScrolling = false
 
-function mobileSectionClick(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing') {
+function mobileSectionClick(section: SettingsSection) {
   mobileNavDrawer.value = false
   nextTick(() => scrollToSection(section))
 }
 
-function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiKeys' | 'sharing') {
+function scrollToSection(section: SettingsSection) {
   if (!scrollContainer.value)
     return
 
@@ -372,9 +308,6 @@ function scrollToSection(section: 'projects' | 'notifications' | 'quota' | 'apiK
   switch (section) {
     case 'projects':
       targetElement = projectsSection.value
-      break
-    case 'notifications':
-      targetElement = notificationsSection.value
       break
     case 'quota':
       targetElement = quotaSection.value
@@ -414,16 +347,12 @@ function handleScroll() {
   const scrollTop = container.scrollTop
   const offset = 100
 
-  const notificationsOffset = notificationsSection.value?.offsetTop ?? 0
   const quotaOffset = quotaSection.value?.offsetTop ?? 0
   const apiKeysOffset = apiKeysSection.value?.offsetTop ?? 0
   const sharingOffset = sharingSection.value?.offsetTop ?? 0
 
-  if (scrollTop < notificationsOffset - offset) {
+  if (scrollTop < quotaOffset - offset) {
     activeSection.value = 'projects'
-  }
-  else if (scrollTop < quotaOffset - offset) {
-    activeSection.value = 'notifications'
   }
   else if (scrollTop < apiKeysOffset - offset) {
     activeSection.value = 'quota'

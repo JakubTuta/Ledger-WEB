@@ -85,6 +85,11 @@
         </v-btn-toggle>
       </div>
 
+      <ErrorListOptions
+        v-if="type === 'error_list'"
+        :panel="panel"
+      />
+
       <TrafficCategoryOptions :panel="panel" />
     </template>
 

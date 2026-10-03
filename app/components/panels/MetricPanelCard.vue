@@ -263,7 +263,6 @@
 
 <script setup lang="ts">
 import type { PanelExportBuildResult } from '~/composables/usePanelExport'
-import type { MetricSeriesQuery } from '~/types/metrics'
 import type { Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
@@ -303,21 +302,6 @@ const showExportError = computed({
   },
 })
 
-function buildQuery(): MetricSeriesQuery {
-  const now = new Date()
-
-  return {
-    project_id: props.panel.project_id,
-    name: props.panel.metric_name ?? '',
-    aggregation: props.panel.metric_aggregation ?? 'avg',
-    group_by: props.panel.metric_group_by ?? [],
-    tag_filters: props.panel.metric_tag_filters ?? {},
-    interval: props.panel.metric_interval ?? null,
-    from: props.panel.periodFrom || new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    to: props.panel.periodTo || now.toISOString(),
-  }
-}
-
 function buildExport(): PanelExportBuildResult {
   const rows = (data.value?.series ?? []).flatMap(series => series.points.map(point => ({
     metric: data.value?.name ?? '',
@@ -340,13 +324,7 @@ function buildExport(): PanelExportBuildResult {
 }
 
 async function handleRefresh() {
-  if (!props.panel.metric_name) {
-    metricsStore.clearPanel(props.panel.id)
-
-    return
-  }
-
-  await metricsStore.fetchSeries(props.panel.id, buildQuery(), true)
+  await metricsStore.fetchSeriesForPanel(props.panel, true)
 }
 
 watch(hasDistribution, (available) => {
@@ -355,12 +333,11 @@ watch(hasDistribution, (available) => {
 })
 
 watch(
-  () => [props.panel.metric_name, props.panel.metric_aggregation, props.panel.metric_interval, props.panel.periodFrom, props.panel.periodTo],
+  () => [props.panel.metric_name, props.panel.metric_aggregation, props.panel.metric_interval, props.panel.period, props.panel.periodFrom, props.panel.periodTo],
   () => handleRefresh(),
 )
 
 onMounted(() => {
-  if (props.panel.metric_name)
-    metricsStore.fetchSeries(props.panel.id, buildQuery())
+  metricsStore.fetchSeriesForPanel(props.panel)
 })
 </script>

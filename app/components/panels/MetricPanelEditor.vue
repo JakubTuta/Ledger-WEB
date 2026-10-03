@@ -42,6 +42,16 @@
           this dialog.
         </v-alert>
 
+        <v-alert
+          v-if="saveError"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ saveError }}
+        </v-alert>
+
         <v-autocomplete
           v-model="form.metric_name"
           :items="metricNameItems"
@@ -174,6 +184,7 @@ const dialogOpen = computed({
 })
 
 const saving = ref(false)
+const saveError = ref('')
 
 const form = reactive({
   metric_name: null as string | null,
@@ -233,8 +244,10 @@ watch(() => props.panel, (panel) => {
 }, { immediate: true })
 
 watch(dialogOpen, (open) => {
-  if (open)
+  if (open) {
+    saveError.value = ''
     metricsStore.fetchNames(props.panel.project_id)
+  }
 })
 
 watch(() => form.metric_name, (name, previous) => {
@@ -255,25 +268,29 @@ watch(() => form.metric_name, (name, previous) => {
 
 async function handleSave() {
   saving.value = true
+  saveError.value = ''
 
-  try {
-    const tagFilters = Object.fromEntries(
-      Object.entries(form.metric_tag_filters).filter(([, value]) => !!value),
-    ) as Record<string, string>
+  const tagFilters = Object.fromEntries(
+    Object.entries(form.metric_tag_filters).filter(([, value]) => !!value),
+  ) as Record<string, string>
 
-    await panelsStore.updatePanel(props.panel.id, {
-      metric_name: form.metric_name,
-      metric_aggregation: form.metric_aggregation,
-      metric_group_by: form.metric_group_by,
-      metric_tag_filters: tagFilters,
-      metric_interval: form.metric_interval,
-    } as any)
+  const result = await panelsStore.updatePanel(props.panel.id, {
+    metric_name: form.metric_name,
+    metric_aggregation: form.metric_aggregation,
+    metric_group_by: form.metric_group_by,
+    metric_tag_filters: tagFilters,
+    metric_interval: form.metric_interval,
+  })
 
-    emit('saved')
-    dialogOpen.value = false
+  saving.value = false
+
+  if (!result.success) {
+    saveError.value = result.error ?? 'Failed to save the metric settings'
+
+    return
   }
-  finally {
-    saving.value = false
-  }
+
+  emit('saved')
+  dialogOpen.value = false
 }
 </script>

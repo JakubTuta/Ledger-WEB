@@ -66,6 +66,41 @@ function panelErrorMessage(error: any, fallback: string): string {
   return error?.response?.data?.detail || error?.message || fallback
 }
 
+// The server replaces a panel wholesale on every PUT, so each update has to
+// resend every persisted field: anything left out is cleared.
+function panelToUpdateRequest(panel: Panel): UpdatePanelRequest {
+  return {
+    name: panel.name,
+    index: panel.index,
+    project_id: panel.project_id,
+    type: panel.type,
+    endpoint: panel.endpoint || null,
+    routes: panel.routes || null,
+    statistic: panel.statistic || null,
+    period: panel.period || null,
+    periodFrom: panel.periodFrom || null,
+    periodTo: panel.periodTo || null,
+    trace_id: panel.trace_id ?? null,
+    service_filter: panel.service_filter ?? null,
+    operation_filter: panel.operation_filter ?? null,
+    min_duration_ms: panel.min_duration_ms ?? null,
+    has_error: panel.has_error ?? null,
+    statusClass: panel.statusClass ?? null,
+    search: panel.search ?? null,
+    trafficCategories: panel.trafficCategories ?? null,
+    metric_name: panel.metric_name ?? null,
+    metric_aggregation: panel.metric_aggregation ?? null,
+    metric_group_by: panel.metric_group_by ?? null,
+    metric_tag_filters: panel.metric_tag_filters ?? null,
+    metric_interval: panel.metric_interval ?? null,
+    include_client_errors: panel.include_client_errors ?? null,
+  }
+}
+
+function definedFields<T extends object>(fields: T): Partial<T> {
+  return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) as Partial<T>
+}
+
 let _syncTabsTimer: ReturnType<typeof setTimeout> | null = null
 
 export const usePanelsStore = defineStore('panels', () => {
@@ -276,6 +311,9 @@ export const usePanelsStore = defineStore('panels', () => {
 
       if (panel.search) {
         searchParams.set('search', panel.search)
+      }
+      if (panel.include_client_errors === false) {
+        searchParams.set('include_client_errors', 'false')
       }
       _appendTrafficChannelParams(searchParams, panel)
 
@@ -743,6 +781,12 @@ export const usePanelsStore = defineStore('panels', () => {
       'statusClass',
       'search',
       'trafficCategories',
+      'metric_name',
+      'metric_aggregation',
+      'metric_group_by',
+      'metric_tag_filters',
+      'metric_interval',
+      'include_client_errors',
     ]
     for (const key of allowed) {
       const value = (data as any)[key]
@@ -796,54 +840,7 @@ export const usePanelsStore = defineStore('panels', () => {
         return { success: false, error: 'Panel not found' }
       }
 
-      const updateData: UpdatePanelRequest = {
-        name: data.name ?? panel.name,
-        index: data.index ?? panel.index,
-        project_id: data.project_id ?? panel.project_id,
-        type: data.type ?? panel.type,
-        endpoint: data.endpoint !== undefined
-          ? data.endpoint
-          : panel.endpoint || null,
-        routes: data.routes !== undefined
-          ? data.routes
-          : panel.routes || null,
-        statistic: data.statistic !== undefined
-          ? data.statistic
-          : panel.statistic || null,
-        period: data.period !== undefined
-          ? data.period
-          : panel.period || null,
-        periodFrom: data.periodFrom !== undefined
-          ? data.periodFrom
-          : panel.periodFrom || null,
-        periodTo: data.periodTo !== undefined
-          ? data.periodTo
-          : panel.periodTo || null,
-        trace_id: data.trace_id !== undefined
-          ? data.trace_id
-          : panel.trace_id ?? null,
-        service_filter: data.service_filter !== undefined
-          ? data.service_filter
-          : panel.service_filter ?? null,
-        operation_filter: data.operation_filter !== undefined
-          ? data.operation_filter
-          : panel.operation_filter ?? null,
-        min_duration_ms: data.min_duration_ms !== undefined
-          ? data.min_duration_ms
-          : panel.min_duration_ms ?? null,
-        has_error: data.has_error !== undefined
-          ? data.has_error
-          : panel.has_error ?? null,
-        statusClass: data.statusClass !== undefined
-          ? data.statusClass
-          : panel.statusClass ?? null,
-        search: data.search !== undefined
-          ? data.search
-          : panel.search ?? null,
-        trafficCategories: data.trafficCategories !== undefined
-          ? data.trafficCategories
-          : panel.trafficCategories ?? null,
-      }
+      const updateData: UpdatePanelRequest = { ...panelToUpdateRequest(panel), ...definedFields(data) }
 
       const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
 
@@ -947,26 +944,7 @@ export const usePanelsStore = defineStore('panels', () => {
           if (!panel)
             return Promise.resolve()
 
-          const updateData: UpdatePanelRequest = {
-            name: panel.name,
-            index,
-            project_id: panel.project_id,
-            type: panel.type,
-            endpoint: panel.endpoint || null,
-            routes: panel.routes || null,
-            statistic: panel.statistic || null,
-            period: panel.period || null,
-            periodFrom: panel.periodFrom || null,
-            periodTo: panel.periodTo || null,
-            trace_id: panel.trace_id ?? null,
-            service_filter: panel.service_filter ?? null,
-            operation_filter: panel.operation_filter ?? null,
-            min_duration_ms: panel.min_duration_ms ?? null,
-            has_error: panel.has_error ?? null,
-            statusClass: panel.statusClass ?? null,
-            search: panel.search ?? null,
-            trafficCategories: panel.trafficCategories ?? null,
-          }
+          const updateData: UpdatePanelRequest = { ...panelToUpdateRequest(panel), index }
 
           return client.put(`/api/v1/dashboard/panels/${id}`, toServerPayload(updateData))
         }),
@@ -1029,6 +1007,23 @@ export const usePanelsStore = defineStore('panels', () => {
     await fetchErrorsForPanel(panel)
   }
 
+  const setErrorListClientErrors = async (
+    panelId: string,
+    include: boolean,
+  ): Promise<{ success: boolean, error?: string }> => {
+    const result = await updatePanel(panelId, { include_client_errors: include })
+    if (!result.success)
+      return result
+
+    const updated = panels.value.find(p => p.id === panelId)
+    if (updated) {
+      errorsOffset.value.set(panelId, 0)
+      await fetchErrorsForPanel(updated)
+    }
+
+    return result
+  }
+
   const updatePanelTimeRange = async (
     panelId: string,
     timeRange: { period?: TimeRangePreset | null, periodFrom?: string | null, periodTo?: string | null },
@@ -1040,27 +1035,10 @@ export const usePanelsStore = defineStore('panels', () => {
       }
 
       const updateData: UpdatePanelRequest = {
-        name: panel.name,
-        index: panel.index,
-        project_id: panel.project_id,
-        type: panel.type,
-        endpoint: panel.endpoint || null,
-        routes: panel.routes || null,
-        statistic: panel.statistic || null,
-        period: timeRange.period !== undefined
-          ? timeRange.period
-          : null,
-        periodFrom: timeRange.periodFrom !== undefined
-          ? timeRange.periodFrom
-          : null,
-        periodTo: timeRange.periodTo !== undefined
-          ? timeRange.periodTo
-          : null,
-        // A full-panel PUT: anything omitted here is cleared server-side, so
-        // the panel's own filters have to be carried through a time change.
-        statusClass: panel.statusClass ?? null,
-        search: panel.search ?? null,
-        trafficCategories: panel.trafficCategories ?? null,
+        ...panelToUpdateRequest(panel),
+        period: timeRange.period ?? null,
+        periodFrom: timeRange.periodFrom ?? null,
+        periodTo: timeRange.periodTo ?? null,
       }
 
       const response = await client.put<Panel>(`/api/v1/dashboard/panels/${panelId}`, toServerPayload(updateData))
@@ -1085,7 +1063,7 @@ export const usePanelsStore = defineStore('panels', () => {
       else if (response.data.type === 'country_map') {
         await fetchCountryBreakdownForPanel(response.data)
       }
-      else if (response.data.type !== 'trace' && response.data.type !== 'trace_list') {
+      else if (response.data.type !== 'trace' && response.data.type !== 'trace_list' && response.data.type !== 'metric_series') {
         await fetchMetricsForPanel(response.data)
       }
 
@@ -1342,6 +1320,7 @@ export const usePanelsStore = defineStore('panels', () => {
     getLogsOffset,
     updateLogsFilter,
     updateErrorListFilter,
+    setErrorListClientErrors,
     fetchBottleneckListForPanel,
     fetchAllBottleneckEntriesForPanel,
     updateBottleneckListFilter,

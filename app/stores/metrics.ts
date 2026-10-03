@@ -6,7 +6,9 @@ import type {
   MetricTagKey,
   MetricTagsResponse,
 } from '~/types/metrics'
+import type { Panel } from '~/types/panel'
 import { defineStore } from 'pinia'
+import { resolvePanelTimeRange } from '~/utils/panelTimeRange'
 
 /**
  * Read side of custom metrics - the counters, gauges and histograms an
@@ -152,6 +154,28 @@ export const useMetricsStore = defineStore('metrics', () => {
     }
   }
 
+  // A panel without a metric has nothing to query; it shows its own prompt.
+  function fetchSeriesForPanel(panel: Panel, force = false): Promise<boolean> {
+    if (!panel.metric_name) {
+      clearPanel(panel.id)
+
+      return Promise.resolve(true)
+    }
+
+    const { from, to } = resolvePanelTimeRange(panel)
+
+    return fetchSeries(panel.id, {
+      project_id: panel.project_id,
+      name: panel.metric_name,
+      aggregation: panel.metric_aggregation ?? 'avg',
+      group_by: panel.metric_group_by ?? [],
+      tag_filters: panel.metric_tag_filters ?? {},
+      interval: panel.metric_interval ?? null,
+      from,
+      to,
+    }, force)
+  }
+
   function clearPanel(panelId: string): void {
     seriesByPanel.value.delete(panelId)
     seriesError.value.delete(panelId)
@@ -170,6 +194,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     fetchNames,
     fetchTags,
     fetchSeries,
+    fetchSeriesForPanel,
     clearPanel,
   }
 })
