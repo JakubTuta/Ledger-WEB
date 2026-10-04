@@ -58,61 +58,63 @@
     </v-card>
 
     <v-card elevation="1">
-      <v-table
+      <ScrollableTable
         v-if="groups.length"
-        hover
+        :min-width="760"
       >
-        <thead>
-          <tr>
-            <th>Status</th>
+        <v-table hover>
+          <thead>
+            <tr>
+              <th>Status</th>
 
-            <th>Error</th>
+              <th>Error</th>
 
-            <th>Occurrences</th>
+              <th>Occurrences</th>
 
-            <th>First seen</th>
+              <th>First seen</th>
 
-            <th>Last seen</th>
-          </tr>
-        </thead>
+              <th>Last seen</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          <tr
-            v-for="group in groups"
-            :key="group.id"
-            class="cursor-pointer"
-            :class="{'bg-surface-light': selectedGroup?.id === group.id}"
-            @click="selectGroup(group.id)"
-          >
-            <td>
-              <v-chip
-                size="small"
-                :color="ERROR_GROUP_STATUS_META[group.status].color"
-                :prepend-icon="ERROR_GROUP_STATUS_META[group.status].icon"
-                variant="tonal"
-              >
-                {{ ERROR_GROUP_STATUS_META[group.status].label }}
-              </v-chip>
-            </td>
+          <tbody>
+            <tr
+              v-for="group in groups"
+              :key="group.id"
+              class="cursor-pointer"
+              :class="{'bg-surface-light': selectedGroup?.id === group.id}"
+              @click="selectGroup(group.id)"
+            >
+              <td>
+                <v-chip
+                  size="small"
+                  :color="ERROR_GROUP_STATUS_META[group.status].color"
+                  :prepend-icon="ERROR_GROUP_STATUS_META[group.status].icon"
+                  variant="tonal"
+                >
+                  {{ ERROR_GROUP_STATUS_META[group.status].label }}
+                </v-chip>
+              </td>
 
-            <td>
-              <div class="font-weight-medium">
-                {{ group.error_type }}
-              </div>
+              <td>
+                <div class="font-weight-medium">
+                  {{ group.error_type }}
+                </div>
 
-              <div class="text-caption text-medium-emphasis error-message-cell text-truncate">
-                {{ group.error_message }}
-              </div>
-            </td>
+                <div class="text-caption text-medium-emphasis error-message-cell text-truncate">
+                  {{ group.error_message }}
+                </div>
+              </td>
 
-            <td>{{ group.occurrence_count }}</td>
+              <td>{{ group.occurrence_count }}</td>
 
-            <td>{{ formatTime(group.first_seen) }}</td>
+              <td>{{ formatTime(group.first_seen) }}</td>
 
-            <td>{{ formatTime(group.last_seen) }}</td>
-          </tr>
-        </tbody>
-      </v-table>
+              <td>{{ formatTime(group.last_seen) }}</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </ScrollableTable>
 
       <div
         v-else-if="!isLoading"

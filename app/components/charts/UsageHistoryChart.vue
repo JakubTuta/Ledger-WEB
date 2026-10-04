@@ -103,9 +103,9 @@ const chartOption = computed(() => {
         const label = params[0]?.axisValue ?? ''
         const index = params[0]?.dataIndex ?? 0
         let html = `<b>${label}</b>`
-        html += `<br/>Logs: ${logData[index]?.toLocaleString()} (${logPercent[index]}%)`
-        html += `<br/>Spans: ${spanData[index]?.toLocaleString()} (${spanPercent[index]}%)`
-        html += `<br/>Metrics: ${metricData[index]?.toLocaleString()} (${metricPercent[index]}%)`
+        html += `<br/>Logs: ${logData[index]?.toLocaleString()} (${formatPercent(logPercent[index] ?? 0)})`
+        html += `<br/>Spans: ${spanData[index]?.toLocaleString()} (${formatPercent(spanPercent[index] ?? 0)})`
+        html += `<br/>Metrics: ${metricData[index]?.toLocaleString()} (${formatPercent(metricPercent[index] ?? 0)})`
 
         return html
       },

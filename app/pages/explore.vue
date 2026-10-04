@@ -945,7 +945,7 @@ onUnmounted(() => {
 
 .explore-log-list {
   height: 100%;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .explore-header-row {
@@ -956,11 +956,13 @@ onUnmounted(() => {
   padding: 6px 12px 6px 0;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   min-height: 32px;
+  min-width: 720px;
 }
 
 .explore-row {
   padding: 6px 12px 6px 0;
   min-height: 36px;
+  min-width: 720px;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 

@@ -297,7 +297,7 @@
 </template>
 
 <script setup lang="ts">
-import type { InboxNotification, NotificationKind } from '~/types/notifications'
+import type { InboxNotification, NotificationFilters, NotificationKind } from '~/types/notifications'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -313,7 +313,6 @@ const { projects } = storeToRefs(projectsStore)
 const notifications = ref<InboxNotification[]>([])
 const isLoading = ref(false)
 const hasMore = ref(false)
-const offset = ref(0)
 const selectedIds = ref<Set<string>>(new Set())
 const LIMIT = 30
 
@@ -328,46 +327,57 @@ const filters = reactive({
 const projectOptions = computed(() => projects.value.map(p => ({ id: p.project_id, name: p.name })),
 )
 
-const kindOptions = [
-  { label: 'Error notification', value: 'error_notification' },
-  { label: 'Alert', value: 'alert' },
-  { label: 'Info', value: 'info' },
+const kindOptions: { label: string, value: NotificationKind }[] = [
+  { label: 'Error', value: 'error' },
+  { label: 'Alert firing', value: 'alert_firing' },
+  { label: 'Alert resolved', value: 'alert_resolved' },
+  { label: 'Quota warning', value: 'quota_warning' },
 ]
+
+function localDayBoundaryIso(date: string, daysFromDate = 0): string {
+  const boundary = new Date(`${date}T00:00:00`)
+  boundary.setDate(boundary.getDate() + daysFromDate)
+
+  return boundary.toISOString()
+}
+
+function oldestLoadedId(): number | undefined {
+  const ids = notifications.value.map(n => Number(n.id))
+
+  return ids.length > 0
+    ? Math.min(...ids)
+    : undefined
+}
+
+function buildFilters(beforeId?: number): NotificationFilters {
+  return {
+    limit: LIMIT,
+    unread: filters.unreadOnly,
+    project_id: filters.projectId ?? undefined,
+    kind: filters.kind ?? undefined,
+    created_after: filters.from
+      ? localDayBoundaryIso(filters.from)
+      : undefined,
+    created_before: filters.to
+      ? localDayBoundaryIso(filters.to, 1)
+      : undefined,
+    before_id: beforeId,
+  }
+}
 
 async function loadNotifications(reset = true) {
   isLoading.value = true
   if (reset) {
-    offset.value = 0
     notifications.value = []
     selectedIds.value = new Set()
   }
 
-  const params: Record<string, any> = {
-    limit: LIMIT,
-    offset: offset.value,
-  }
-  if (filters.unreadOnly)
-    params.unread = true
-  if (filters.projectId)
-    params.project_id = filters.projectId
-  if (filters.kind)
-    params.kind = filters.kind
-  if (filters.from)
-    params.from = filters.from
-  if (filters.to)
-    params.to = filters.to
-
-  const data = await streamStore.fetchHistory(params)
+  const data = await streamStore.fetchHistory(buildFilters(reset
+    ? undefined
+    : oldestLoadedId()))
   if (data) {
-    const mapped = data.notifications.map(n => ({ ...n, expanded: false }))
-    if (reset) {
-      notifications.value = mapped
-    }
-    else {
-      notifications.value.push(...mapped)
-    }
+    notifications.value.push(...data.notifications.map(n => ({ ...n, expanded: false })))
     hasMore.value = data.has_more
-    offset.value += data.notifications.length
   }
   isLoading.value = false
 }

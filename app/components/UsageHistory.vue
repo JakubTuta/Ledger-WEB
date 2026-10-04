@@ -57,7 +57,7 @@
       <UsageHistoryChart
         v-else
         :usage="usage"
-        height="280"
+        :height="280"
       />
     </v-card-text>
   </v-card>

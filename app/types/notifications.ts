@@ -4,6 +4,7 @@ export type NotificationKind
   = | 'error_notification'
     | 'error'
     | 'alert_firing'
+    | 'alert_resolved'
     | 'quota_warning'
     | 'alert'
     | 'info'
@@ -14,6 +15,8 @@ export interface SSEConnectedEvent {
 }
 
 export interface SSEErrorNotification {
+  kind?: NotificationKind
+  log_type?: string
   error_type: string
   message: string
   level: NotificationLevel
@@ -73,8 +76,8 @@ export interface NotificationFilters {
   unread?: boolean
   kind?: NotificationKind
   project_id?: number
-  from?: string
-  to?: string
+  created_after?: string
+  created_before?: string
   limit?: number
-  offset?: number
+  before_id?: number
 }

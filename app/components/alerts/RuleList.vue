@@ -22,7 +22,10 @@
       <span class="text-body-2">No alert rules yet</span>
     </div>
 
-    <div v-else>
+    <ScrollableTable
+      v-else
+      :min-width="820"
+    >
       <div class="rule-header d-flex align-center px-3 py-2">
         <span class="col-toggle" />
 
@@ -111,7 +114,7 @@
           />
         </div>
       </div>
-    </div>
+    </ScrollableTable>
   </div>
 </template>
 

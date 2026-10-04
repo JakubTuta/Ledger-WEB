@@ -87,7 +87,7 @@
             rounded
           >
             <template #default>
-              <strong class="text-caption text-white">{{ signal.percentage }}%</strong>
+              <strong class="text-caption text-white">{{ formatPercent(signal.percentage) }}</strong>
             </template>
           </v-progress-linear>
         </div>
@@ -157,7 +157,7 @@ function percentageFor(signal: SignalQuota): number {
   if (signal.quota === 0)
     return 0
 
-  const percentage = Math.round((signal.usage / signal.quota) * 100)
+  const percentage = Math.round((signal.usage / signal.quota) * 10000) / 100
 
   return Number.isNaN(percentage)
     ? 0

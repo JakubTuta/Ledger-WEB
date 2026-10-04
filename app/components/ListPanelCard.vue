@@ -1147,7 +1147,7 @@ onUnmounted(() => {
 /* Logs: compact row list */
 .log-list {
   height: 100%;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .log-header-row {
@@ -1158,9 +1158,11 @@ onUnmounted(() => {
   padding: 4px 12px 4px 0;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   min-height: 28px;
+  min-width: 520px;
 }
 
 .log-row {
+  min-width: 520px;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 

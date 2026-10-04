@@ -25,6 +25,14 @@ export const METRIC_CATALOG: MetricDef[] = [
 
 export const COMPARATOR_OPTIONS: AlertComparator[] = ['>', '<', '>=', '<=']
 
+// Mirrors _LOOKBACK_MINUTES and _MIN_RATE_SAMPLE in the analytics alert evaluator.
+export const RATE_RULE_WINDOW_MINUTES = 10
+export const RATE_RULE_MIN_EVENTS = 20
+
+export function isRateMetric(key: string): boolean {
+  return key.startsWith('error_rate_')
+}
+
 export interface ConnectorMeta {
   label: string
   icon: string
@@ -141,6 +149,23 @@ export interface AlertEventConnector {
   name: string
 }
 
+export type AlertEventState = 'firing' | 'resolved'
+
+export interface AlertEventStateMeta {
+  label: string
+  icon: string
+  color: string
+}
+
+export const ALERT_EVENT_STATE_META: Record<AlertEventState, AlertEventStateMeta> = {
+  firing: { label: 'Firing', icon: 'mdi-fire', color: 'error' },
+  resolved: { label: 'Resolved', icon: 'mdi-check-circle', color: 'success' },
+}
+
+export function alertEventStateMeta(state: AlertEventState | undefined): AlertEventStateMeta {
+  return ALERT_EVENT_STATE_META[state ?? 'firing'] ?? ALERT_EVENT_STATE_META.firing
+}
+
 export interface AlertEvent {
   id: number
   rule_id: number | null
@@ -154,6 +179,7 @@ export interface AlertEvent {
   severity: number
   connectors_sent: string
   fired_at: string
+  state: AlertEventState
 }
 
 export interface AlertEventListResponse {

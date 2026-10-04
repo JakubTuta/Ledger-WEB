@@ -2,6 +2,7 @@ import type {
   InboxNotification,
   NotificationFilters,
   NotificationItem,
+  NotificationKind,
   NotificationLevel,
   NotificationsListResponse,
   RawInboxListResponse,
@@ -27,6 +28,56 @@ function formatMetricNumber(value: unknown): string {
     : n.toFixed(2).replace(/\.?0+$/, '')
 }
 
+interface NotificationLabel {
+  errorType: string
+  message: string
+}
+
+function describeRuleAlert(payload: Record<string, any>, resolved: boolean): NotificationLabel {
+  const unit = payload.unit && payload.unit !== 'count'
+    ? payload.unit
+    : ''
+  const name = payload.name ?? 'Alert rule'
+  const current = `now ${formatMetricNumber(payload.value)}${unit}`
+
+  if (resolved)
+    return { errorType: 'Alert resolved', message: `${name}: recovered (${current})` }
+
+  return {
+    errorType: 'Alert firing',
+    message: `${name}: ${payload.metric} ${payload.comparator} `
+      + `${formatMetricNumber(payload.threshold)}${unit} (${current})`,
+  }
+}
+
+function describeMonitorAlert(payload: Record<string, any>, resolved: boolean): NotificationLabel {
+  const name = payload.monitor_name ?? 'Monitor'
+
+  return resolved
+    ? { errorType: 'Monitor recovered', message: `${name} is back up` }
+    : { errorType: 'Monitor down', message: `${name} is down` }
+}
+
+// alert_firing / alert_resolved rows come from two producers with different payload shapes:
+// alert rules and uptime monitors.
+function describeAlertNotification(kind: NotificationKind, payload: Record<string, any>): NotificationLabel {
+  const resolved = kind === 'alert_resolved'
+
+  return payload.monitor_id !== undefined
+    ? describeMonitorAlert(payload, resolved)
+    : describeRuleAlert(payload, resolved)
+}
+
+// Publishers older than the `kind` field only mark alert rules via log_type.
+function liveNotificationKind(live: SSEErrorNotification): NotificationKind {
+  if (live.kind)
+    return live.kind
+
+  return live.log_type === 'alert'
+    ? 'alert_firing'
+    : 'error_notification'
+}
+
 function adaptRawNotification(raw: RawInboxNotification): InboxNotification {
   let payload: Record<string, any> = {}
   try {
@@ -42,15 +93,8 @@ function adaptRawNotification(raw: RawInboxNotification): InboxNotification {
   let message: string = payload.message ?? ''
   let errorType: string = payload.error_type ?? ''
 
-  if (raw.kind === 'alert_firing') {
-    const unit = payload.unit && payload.unit !== 'count'
-      ? payload.unit
-      : ''
-    const name = payload.name ?? 'Alert rule'
-    errorType = 'Alert firing'
-    message = `${name}: ${payload.metric} ${payload.comparator} `
-      + `${formatMetricNumber(payload.threshold)}${unit} `
-      + `(now ${formatMetricNumber(payload.value)}${unit})`
+  if (raw.kind === 'alert_firing' || raw.kind === 'alert_resolved') {
+    ({ errorType, message } = describeAlertNotification(raw.kind, payload))
   }
   else if (raw.kind === 'quota_warning') {
     errorType = errorType || 'Quota warning'
@@ -246,13 +290,21 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   const fetchHistory = async (
     filters: NotificationFilters = {},
   ): Promise<NotificationsListResponse | null> => {
-    const params: Record<string, any> = {
+    const params: Record<string, string | number | boolean> = {
       limit: filters.limit ?? 50,
     }
     if (filters.unread)
       params.unread_only = true
-    if ((filters as any).before_id)
-      params.before_id = (filters as any).before_id
+    if (filters.before_id)
+      params.before_id = filters.before_id
+    if (filters.project_id)
+      params.project_id = filters.project_id
+    if (filters.kind)
+      params.kind = filters.kind
+    if (filters.created_after)
+      params.created_after = filters.created_after
+    if (filters.created_before)
+      params.created_before = filters.created_before
 
     try {
       const response = await client.get<RawInboxListResponse>(
@@ -347,13 +399,9 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
 
         notifications.value.unshift(notification)
 
-        const isAlert = (parsedData as any).log_type === 'alert'
-
         const inboxItem: InboxNotification = {
           id: notification.id,
-          kind: isAlert
-            ? 'alert_firing'
-            : 'error_notification',
+          kind: liveNotificationKind(parsedData),
           level: parsedData.level,
           message: parsedData.message,
           error_type: parsedData.error_type,

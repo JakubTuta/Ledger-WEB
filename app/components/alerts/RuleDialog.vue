@@ -122,6 +122,14 @@
             />
           </div>
 
+          <div
+            v-if="isRateMetric(metric)"
+            class="text-caption text-medium-emphasis"
+          >
+            Measured over the last {{ RATE_RULE_WINDOW_MINUTES }} minutes. Not evaluated until that window
+            holds at least {{ RATE_RULE_MIN_EVENTS }} events, so a quiet period cannot trip it.
+          </div>
+
           <div class="text-overline mb-1 mt-4">
             Send to
           </div>
@@ -240,7 +248,7 @@
 
 <script setup lang="ts">
 import type { AlertComparator, AlertRule, AlertUnit, ConnectorKind } from '~/types/alerts'
-import { connectorMeta, METRIC_CATALOG } from '~/types/alerts'
+import { connectorMeta, isRateMetric, METRIC_CATALOG, RATE_RULE_MIN_EVENTS, RATE_RULE_WINDOW_MINUTES } from '~/types/alerts'
 
 const props = defineProps<{
   modelValue: boolean

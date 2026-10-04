@@ -152,7 +152,7 @@ function formatDuration(ms: number): string {
 <style scoped>
 .trace-list {
   height: 100%;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .trace-header-row {
@@ -163,9 +163,11 @@ function formatDuration(ms: number): string {
   padding: 4px 8px 4px 0;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   min-height: 28px;
+  min-width: 560px;
 }
 
 .trace-row {
+  min-width: 560px;
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
