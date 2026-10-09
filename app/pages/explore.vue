@@ -648,7 +648,6 @@ const exploreStore = useExploreStore()
 const projectsStore = useProjectsStore()
 const panelsStore = usePanelsStore()
 const router = useRouter()
-const route = useRoute()
 
 const timeDialogOpen = ref(false)
 const viewingTrace = ref(false)
@@ -656,13 +655,9 @@ const viewingTrace = ref(false)
 const projectOptions = computed(() => projectsStore.projects.map(p => ({ id: String(p.project_id), name: p.name })),
 )
 
-const selectedProjectId = computed({
-  get: () => exploreStore.filters.projectId,
-  set: (value: string | null) => {
-    exploreStore.setProject(value)
-    updateUrlParams()
-  },
-})
+const selectedProjectId = useSelectedProject()
+
+watch(selectedProjectId, projectId => exploreStore.setProject(projectId))
 
 const searchInput = ref('')
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
@@ -822,13 +817,6 @@ function onIntersect(isIntersecting: boolean) {
     exploreStore.loadMore()
 }
 
-function updateUrlParams() {
-  const query: Record<string, string> = {}
-  if (exploreStore.filters.projectId)
-    query.project = exploreStore.filters.projectId
-  router.replace({ query })
-}
-
 // --- Formatting helpers ---
 const levelColor = logLevelColor
 
@@ -865,21 +853,13 @@ function formatDuration(ms?: number | null): string {
 
 const { formatTimestamp, formatFullTimestamp } = useRelativeTime()
 
-function loadFiltersFromUrl() {
-  const query = route.query
-  if (query.project && typeof query.project === 'string')
-    exploreStore.filters.projectId = query.project
-}
-
 onMounted(async () => {
-  loadFiltersFromUrl()
-
   await projectsStore.fetchProjects()
 
-  if (!exploreStore.filters.projectId && projectsStore.projects.length > 0)
-    exploreStore.filters.projectId = String(projectsStore.projects[0]!.project_id)
-
-  if (exploreStore.filters.projectId) {
+  if (exploreStore.filters.projectId !== selectedProjectId.value) {
+    await exploreStore.setProject(selectedProjectId.value)
+  }
+  else if (selectedProjectId.value) {
     exploreStore.restoreTimeRange()
     await exploreStore.refresh()
   }

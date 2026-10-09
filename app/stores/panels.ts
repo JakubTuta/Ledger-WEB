@@ -30,6 +30,7 @@ const TABS_STORAGE_KEY = 'ledger_dashboard_tabs'
 const ACTIVE_TAB_STORAGE_KEY = 'ledger_active_tab'
 const TABS_VERSION_KEY = 'ledger_tabs_migrated_v1'
 const TABS_VERSION_KEY_V2 = 'ledger_tabs_migrated_v2'
+const DEFAULT_TAB_NAME = 'Default'
 
 // A panel with no stored selection - or one stored before per-panel filters
 // existed - shows every category.
@@ -150,6 +151,11 @@ export const usePanelsStore = defineStore('panels', () => {
 
   const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? tabs.value[0] ?? null,
   )
+
+  // Tabs are only created or reconciled once the server copy has been loaded:
+  // any tab change syncs the whole list back, so doing it earlier would
+  // overwrite the server tabs with whatever happened to be cached locally.
+  const tabsLoaded = ref(false)
 
   const panelCountryBreakdown = ref<Map<string, CountryBreakdownEntry[]>>(new Map())
   const countryBreakdownLoading = ref<Set<string>>(new Set())
@@ -817,7 +823,7 @@ export const usePanelsStore = defineStore('panels', () => {
         targetTab = projectTabs.find(t => t.projectId === panelProjectId) ?? null
       }
       if (!targetTab) {
-        targetTab = addTab('Default', null, panelProjectId)
+        targetTab = addTab(DEFAULT_TAB_NAME, null, panelProjectId)
         setActiveTab(targetTab.id)
       }
       targetTab.panelIds.push(response.data.id)
@@ -1093,25 +1099,50 @@ export const usePanelsStore = defineStore('panels', () => {
     p => panelTrafficCategories(p).length < TRAFFIC_CATEGORIES.length,
   ))
 
-  async function fetchTabs() {
+  // The active tab is deliberately not taken from the server: it is
+  // per-browser state, restored from localStorage when returning to the
+  // dashboard, and reset to the project's first tab on login.
+  async function fetchTabs(force = false) {
+    if (tabsLoaded.value && !force)
+      return
+
     try {
       const response = await client.get<{ tabs: DashboardTab[], active_tab_id: string | null }>('/api/v1/dashboard/tabs')
       const serverTabs = response.data.tabs
-      const serverActiveTabId = response.data.active_tab_id
 
       if (serverTabs.length > 0) {
         tabs.value = serverTabs
         saveTabsToStorage(serverTabs)
-        if (serverActiveTabId) {
-          activeTabId.value = serverActiveTabId
-          if (import.meta.client)
-            localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, serverActiveTabId)
-        }
       }
+      tabsLoaded.value = true
     }
     catch (error) {
       console.error('Error fetching tabs from server:', error)
     }
+  }
+
+  // Every project always has a tab open: the remembered one if it belongs to
+  // the project, otherwise its first tab, otherwise a freshly created one.
+  function ensureActiveTabForProject(projectId: string | null, { selectFirst = false } = {}) {
+    if (!projectId || !tabsLoaded.value)
+      return
+
+    const projectTabs = tabsForProject(projectId)
+    if (projectTabs.length === 0) {
+      setActiveTab(addTab(DEFAULT_TAB_NAME, null, projectId).id)
+
+      return
+    }
+
+    if (selectFirst || !projectTabs.some(t => t.id === activeTabId.value))
+      setActiveTab(projectTabs[0]!.id)
+  }
+
+  function resetTabSelection() {
+    activeTabId.value = ''
+    tabsLoaded.value = false
+    if (import.meta.client)
+      localStorage.removeItem(ACTIVE_TAB_STORAGE_KEY)
   }
 
   function syncTabsToServer(currentTabs: DashboardTab[], currentActiveTabId: string) {
@@ -1172,16 +1203,22 @@ export const usePanelsStore = defineStore('panels', () => {
     }
   }
 
+  function canDeleteTab(tabId: string): boolean {
+    const tab = tabs.value.find(t => t.id === tabId)
+
+    return !!tab && tabsForProject(tab.projectId).length > 1
+  }
+
   async function deleteTab(tabId: string) {
     const tab = tabs.value.find(t => t.id === tabId)
-    if (tab) {
-      await Promise.all(tab.panelIds.map(id => deletePanel(id)))
-    }
+    if (!tab || !canDeleteTab(tabId))
+      return
+
+    await Promise.all(tab.panelIds.map(id => deletePanel(id)))
     tabs.value = tabs.value.filter(t => t.id !== tabId)
     persistTabs(tabs.value)
-    if (activeTabId.value === tabId && tabs.value.length > 0) {
-      setActiveTab(tabs.value[0]!.id)
-    }
+    if (activeTabId.value === tabId)
+      setActiveTab(tabsForProject(tab.projectId)[0]!.id)
   }
 
   function reorderTabs(newOrder: string[]) {
@@ -1220,7 +1257,7 @@ export const usePanelsStore = defineStore('panels', () => {
         }
         let firstTabId: string | null = null
         for (const [pid, ids] of byProject) {
-          const t = addTab('Default', null, pid)
+          const t = addTab(DEFAULT_TAB_NAME, null, pid)
           t.panelIds = ids
           if (!firstTabId)
             firstTabId = t.id
@@ -1393,7 +1430,10 @@ export const usePanelsStore = defineStore('panels', () => {
     activeTabId,
     activeTab,
     activePanels,
+    tabsLoaded,
     fetchTabs,
+    ensureActiveTabForProject,
+    resetTabSelection,
     setActiveTab,
     addTab,
     tabsForProject,

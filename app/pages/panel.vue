@@ -3,7 +3,7 @@
     <!-- Health Strip -->
     <HealthStrip
       class="mb-4"
-      :selected-project-id="filters.projectId"
+      :selected-project-id="selectedProjectId"
       @project-click="handleHealthProjectClick"
     />
 
@@ -16,7 +16,7 @@
         <div class="d-flex align-center ga-2 flex-wrap">
           <TabBar
             v-if="panelsStore.tabs.length > 0"
-            :project-id="filters.projectId ?? undefined"
+            :project-id="selectedProjectId ?? undefined"
             class="flex-grow-1"
             style="min-width: 0;"
             @template-applied="handlePanelsRefresh"
@@ -39,7 +39,7 @@
                 color="primary"
                 prepend-icon="mdi-plus"
                 size="small"
-                :disabled="!filters.projectId"
+                :disabled="!selectedProjectId"
                 @click="newPanelDialog = true"
               >
                 Add Panel
@@ -111,7 +111,7 @@
                   <v-list-item
                     prepend-icon="mdi-plus"
                     title="Add Panel"
-                    :disabled="!filters.projectId"
+                    :disabled="!selectedProjectId"
                     @click="newPanelDialog = true"
                   />
 
@@ -192,7 +192,7 @@
         offset-md="2"
       >
         <OnboardingGuide
-          :selected-project-id="filters.projectId"
+          :selected-project-id="selectedProjectId"
           @add-panel="newPanelDialog = true"
         />
       </v-col>
@@ -276,7 +276,7 @@
     <!-- Dialogs -->
     <NewPanelDialog
       v-model="newPanelDialog"
-      :initial-project-id="filters.projectId"
+      :initial-project-id="selectedProjectId"
       @created="handlePanelCreated"
     />
 
@@ -321,12 +321,7 @@ const healthStore = useHealthStore()
 const route = useRoute()
 const router = useRouter()
 
-// Filters
-const filters = ref<{
-  projectId: string | null
-}>({
-  projectId: null,
-})
+const selectedProjectId = useSelectedProject()
 
 // Panel size slider
 const panelSizeSteps = [
@@ -392,8 +387,8 @@ const timeOptionsDialog = ref<{
 const filteredPanels = computed(() => {
   let result = panelsStore.activePanels
 
-  if (filters.value.projectId) {
-    result = result.filter(p => p.project_id === filters.value.projectId)
+  if (selectedProjectId.value) {
+    result = result.filter(p => p.project_id === selectedProjectId.value)
   }
 
   return result
@@ -477,7 +472,7 @@ async function confirmDelete() {
 }
 
 function handleHealthProjectClick(projectId: string) {
-  filters.value.projectId = projectId
+  selectedProjectId.value = projectId
 }
 
 function openTimeOptionsDialog(panel: Panel) {
@@ -559,7 +554,7 @@ async function handlePanelsRefresh() {
 // Keyboard shortcuts
 useDashboardShortcuts({
   onNewPanel: () => {
-    if (filters.value.projectId)
+    if (selectedProjectId.value)
       newPanelDialog.value = true
   },
   onRefresh: () => fetchAllMetrics(),
@@ -569,28 +564,9 @@ useDashboardShortcuts({
   onShowHelp: () => { shortcutsDialog.value = true },
 })
 
-watch(() => filters.value.projectId, (projectId) => {
-  updateUrlParams()
-  if (projectId) {
-    const tabs = panelsStore.tabsForProject(projectId)
-    if (tabs.length > 0 && !tabs.find(t => t.id === panelsStore.activeTabId)) {
-      panelsStore.setActiveTab(tabs[0]!.id)
-    }
-  }
+watch(selectedProjectId, (projectId) => {
+  panelsStore.ensureActiveTabForProject(projectId, { selectFirst: true })
 })
-function updateUrlParams() {
-  const query: Record<string, string> = {}
-  if (filters.value.projectId)
-    query.project = filters.value.projectId
-  router.replace({ query })
-}
-
-function loadFiltersFromUrl() {
-  const query = route.query
-  if (query.project && typeof query.project === 'string') {
-    filters.value.projectId = query.project
-  }
-}
 
 // Close the overlay if its panel is deleted out from under it - only once
 // panels have actually loaded, so a valid deep link isn't closed before
@@ -603,22 +579,17 @@ watch(() => panelsStore.panels, () => {
 
 // Lifecycle
 onMounted(async () => {
-  loadFiltersFromUrl()
-
   await Promise.all([
     projectsStore.fetchProjects(),
     panelsStore.fetchPanels(),
   ])
-
-  if (!filters.value.projectId && projectsStore.projects.length > 0) {
-    filters.value.projectId = String(projectsStore.projects[0]!.project_id)
-  }
 
   await fetchAllMetrics()
 
   // Migrate legacy single-array panels to first tab, then load server tabs
   panelsStore.migrateToTabs()
   await panelsStore.fetchTabs()
+  panelsStore.ensureActiveTabForProject(selectedProjectId.value)
 
   const projectIds = projectsStore.projects.map(p => String(p.project_id))
   if (projectIds.length > 0) {

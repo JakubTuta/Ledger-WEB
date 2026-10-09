@@ -1,6 +1,7 @@
 <template>
   <div class="d-flex align-center">
     <v-tabs
+      :key="projectId"
       :model-value="panelsStore.activeTabId"
       color="primary"
       density="compact"
@@ -38,6 +39,10 @@
                 prepend-icon="mdi-delete"
                 title="Delete"
                 base-color="error"
+                :disabled="isLastTab"
+                :subtitle="isLastTab
+                  ? 'A project needs at least one tab'
+                  : undefined"
                 @click="confirmDelete(tab)"
               />
             </v-list>
@@ -186,8 +191,13 @@ const visibleTabs = computed(() => panelsStore.tabsForProject(props.projectId
   : null),
 )
 
+const isLastTab = computed(() => visibleTabs.value.length <= 1)
+
+// v-tabs is mandatory="force": while the previous project's tabs unmount it
+// force-selects one of them, so selections outside this project are ignored
+// and the tabs are remounted (keyed by project) on every project switch.
 function handleTabChange(tabId: unknown) {
-  if (typeof tabId === 'string')
+  if (typeof tabId === 'string' && visibleTabs.value.some(t => t.id === tabId))
     panelsStore.setActiveTab(tabId)
 }
 

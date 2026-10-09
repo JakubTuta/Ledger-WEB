@@ -333,19 +333,13 @@ useSeoMeta({
 
 const errorsStore = useErrorsStore()
 const projectsStore = useProjectsStore()
-const route = useRoute()
-const router = useRouter()
 
 const ACTIONABLE_STATUSES: ErrorGroupStatus[] = ['unresolved', 'resolved', 'ignored', 'muted']
 
 const projectOptions = computed(() => projectsStore.projects.map(p => ({ id: String(p.project_id), name: p.name })),
 )
 
-const selectedProjectId = ref<string | null>(
-  typeof route.query.project === 'string'
-    ? route.query.project
-    : null,
-)
+const selectedProjectId = useSelectedProject()
 
 const statusFilter = ref<ErrorGroupStatus | null>('unresolved')
 const selectedGroupId = ref<number | null>(null)
@@ -438,8 +432,6 @@ const sparklineOption = computed(() => {
 
 watch(selectedProjectId, () => {
   closeDetail()
-  if (selectedProjectId.value)
-    router.replace({ query: { ...route.query, project: selectedProjectId.value } })
   load()
 })
 
@@ -449,13 +441,8 @@ watch(statusFilter, () => {
 })
 
 onMounted(async () => {
-  if (!projectsStore.projects.length)
-    await projectsStore.fetchProjects()
-
-  if (!selectedProjectId.value && projectsStore.projects.length > 0)
-    selectedProjectId.value = String(projectsStore.projects[0]!.project_id)
-  else
-    load()
+  await projectsStore.fetchProjects()
+  load()
 })
 </script>
 

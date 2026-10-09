@@ -260,18 +260,12 @@ useSeoMeta({
 
 const monitorsStore = useMonitorsStore()
 const projectsStore = useProjectsStore()
-const route = useRoute()
-const router = useRouter()
 const runtimeConfig = useRuntimeConfig()
 
 const projectOptions = computed(() => projectsStore.projects.map(p => ({ id: String(p.project_id), name: p.name })),
 )
 
-const selectedProjectId = ref<string | null>(
-  typeof route.query.project === 'string'
-    ? route.query.project
-    : null,
-)
+const selectedProjectId = useSelectedProject()
 
 const projectIdNum = computed(() => (selectedProjectId.value
   ? Number(selectedProjectId.value)
@@ -359,19 +353,10 @@ async function remove(monitor: { id: number }) {
   await monitorsStore.deleteMonitor(projectIdNum.value, monitor.id)
 }
 
-watch(selectedProjectId, () => {
-  if (selectedProjectId.value)
-    router.replace({ query: { ...route.query, project: selectedProjectId.value } })
-  load()
-})
+watch(selectedProjectId, load)
 
 onMounted(async () => {
-  if (!projectsStore.projects.length)
-    await projectsStore.fetchProjects()
-
-  if (!selectedProjectId.value && projectsStore.projects.length > 0)
-    selectedProjectId.value = String(projectsStore.projects[0]!.project_id)
-  else
-    load()
+  await projectsStore.fetchProjects()
+  load()
 })
 </script>

@@ -66,8 +66,32 @@
       </v-btn>
     </div>
 
+    <v-alert
+      v-if="apiKeysStore.error"
+      type="error"
+      variant="tonal"
+      class="mb-4"
+    >
+      {{ apiKeysStore.error }}. Check your connection and try again.
+
+      <template #append>
+        <v-btn
+          variant="text"
+          :loading="apiKeysStore.isLoading"
+          @click="retryFetch"
+        >
+          Retry
+        </v-btn>
+      </template>
+    </v-alert>
+
+    <v-skeleton-loader
+      v-if="apiKeysStore.isLoading && !apiKeysStore.hasData"
+      type="list-item-three-line@3"
+    />
+
     <v-list
-      v-if="allApiKeys.length > 0"
+      v-else-if="allApiKeys.length > 0"
       lines="three"
     >
       <v-list-item
@@ -150,7 +174,7 @@
     </v-list>
 
     <v-alert
-      v-else
+      v-else-if="!apiKeysStore.error"
       type="info"
       variant="flat"
     >
@@ -202,7 +226,11 @@ const regenerateLoading = ref(false)
 const newlyCreatedKey = ref<{ full_key: string } | null>(null)
 const showNewKey = ref(false)
 
-const selectedProjectId = computed(() => projectsStore.projects[0]?.project_id ?? 0)
+const selectedProjectId = computed(() => Number(projectsStore.selectedProjectId) || undefined)
+
+function retryFetch() {
+  apiKeysStore.refreshApiKeys(projectsStore.projects.map(p => p.project_id))
+}
 
 const allApiKeys = computed(() => {
   return [...apiKeysStore.apiKeys].sort((a, b) => {

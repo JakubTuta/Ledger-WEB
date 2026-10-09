@@ -13,6 +13,9 @@ export const useMonitorsStore = defineStore('monitors', () => {
   const isActionLoading = (monitorId: number) => actionLoading.value.has(monitorId)
 
   const fetchMonitors = async (projectId: number) => {
+    if (listLoading.value.has(projectId))
+      return { success: true }
+
     listLoading.value.add(projectId)
     try {
       const response = await client.get<Monitor[]>(`/api/v1/monitors?project_id=${projectId}`)

@@ -230,7 +230,17 @@ const { projects } = storeToRefs(projectsStore)
 const { connectors } = storeToRefs(alertsStore)
 
 const connectorKinds: ConnectorKind[] = ['webhook', 'email', 'in_app', 'slack', 'discord', 'pagerduty', 'opsgenie']
-const selectedProjectId = ref<number | null>(null)
+const sharedProjectId = useSelectedProject()
+const selectedProjectId = computed<number | null>({
+  get: () => (sharedProjectId.value
+    ? Number(sharedProjectId.value)
+    : null),
+  set: (id) => {
+    sharedProjectId.value = id === null
+      ? null
+      : String(id)
+  },
+})
 
 const connectDialogOpen = ref(false)
 const connectDialogKind = ref<ConnectorKind>('webhook')
@@ -366,11 +376,6 @@ watch(selectedProjectId, (id) => {
     alertsStore.fetchHistory(id)
     alertsStore.fetchMaintenanceWindows(id)
   }
-})
-
-watch(projects, (list) => {
-  if (list.length > 0 && !selectedProjectId.value)
-    selectedProjectId.value = list[0]!.project_id
 }, { immediate: true })
 
 onMounted(() => {

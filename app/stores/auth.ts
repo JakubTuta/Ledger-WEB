@@ -102,6 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       authInitialized.value = true
       await fetchCurrentUser()
+      usePanelsStore().resetTabSelection()
       await router.push('/panel')
 
       return { success: true }
@@ -131,6 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       authInitialized.value = true
       await fetchCurrentUser()
+      usePanelsStore().resetTabSelection()
       await router.push('/panel')
 
       return { success: true }
@@ -160,6 +162,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       authInitialized.value = true
+      usePanelsStore().resetTabSelection()
       await router.push('/panel')
 
       return { success: true, message: response.data.detail }

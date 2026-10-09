@@ -43,7 +43,7 @@
     class="pa-4"
     :style="mobile
       ? ''
-      : 'height: calc(100vh - 40px);'"
+      : 'height: calc(100dvh - var(--v-layout-top));'"
   >
     <v-card
       class="w-100"
@@ -283,7 +283,6 @@ const apiKeysStore = useApiKeysStore()
 type SettingsSection = 'projects' | 'quota' | 'apiKeys' | 'sharing'
 
 const activeSection = ref<SettingsSection>('projects')
-const selectedProjectId = ref<number | null>(null)
 const showJoinDialog = ref(false)
 const mobileNavDrawer = ref(false)
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -384,11 +383,7 @@ async function fetchData() {
 watch(projects, (newProjects) => {
   if (newProjects.length > 0) {
     fetchQuotasForAllProjects()
-
-    if (selectedProjectId.value === null) {
-      selectedProjectId.value = newProjects[0]!.project_id
-      apiKeysStore.fetchApiKeys(selectedProjectId.value)
-    }
+    apiKeysStore.fetchApiKeys(newProjects.map(p => p.project_id))
   }
 }, { immediate: true })
 
