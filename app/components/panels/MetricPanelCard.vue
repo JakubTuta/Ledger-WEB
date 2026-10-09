@@ -123,6 +123,7 @@
         :data="data"
         :mode="chartMode"
         height="100%"
+        @exemplar-click="openTrace"
       />
     </template>
 
@@ -223,6 +224,16 @@
         </v-chip>
 
         <v-chip
+          v-if="data?.exemplars?.length"
+          size="x-small"
+          variant="tonal"
+          prepend-icon="mdi-rhombus"
+          title="Diamond markers are sample measurements; click one to open the trace behind it"
+        >
+          {{ data.exemplars.length }} exemplars
+        </v-chip>
+
+        <v-chip
           v-if="data?.truncated"
           size="x-small"
           variant="tonal"
@@ -252,6 +263,15 @@
   />
 
   <v-snackbar
+    v-model="traceSnackbar"
+    timeout="2500"
+    color="info"
+    location="bottom right"
+  >
+    {{ traceSnackbarMessage }}
+  </v-snackbar>
+
+  <v-snackbar
     v-model="showExportError"
     timeout="3000"
     color="error"
@@ -279,6 +299,10 @@ const emit = defineEmits<{
 }>()
 
 const metricsStore = useMetricsStore()
+const panelsStore = usePanelsStore()
+
+const traceSnackbar = ref(false)
+const traceSnackbarMessage = ref('')
 
 const configOpen = ref(false)
 const chartMode = ref<'series' | 'distribution'>('series')
@@ -325,6 +349,23 @@ function buildExport(): PanelExportBuildResult {
 
 async function handleRefresh() {
   await metricsStore.fetchSeriesForPanel(props.panel, true)
+}
+
+async function openTrace(traceId: string) {
+  const result = await panelsStore.openTracePanel(props.panel.project_id, traceId, props.panel)
+  if (!result.panel) {
+    traceSnackbarMessage.value = result.error ?? 'Could not open the trace'
+    traceSnackbar.value = true
+
+    return
+  }
+
+  traceSnackbarMessage.value = result.created
+    ? 'Trace panel created'
+    : 'Trace panel already pinned'
+  traceSnackbar.value = true
+  await nextTick()
+  document.getElementById(`panel-${result.panel.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 watch(hasDistribution, (available) => {

@@ -214,8 +214,15 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
   let abortController: AbortController | null = null
   let reconnectTimeout: NodeJS.Timeout | null = null
   let reconnectAttempts = 0
-  const MAX_RECONNECT_ATTEMPTS = 5
-  const RECONNECT_DELAY = 3000
+  // A dashboard left open (a wall screen, an on-call laptop) must come back
+  // after a gateway deploy or network blip, so retries never stop; they back
+  // off to one attempt a minute.
+  const RECONNECT_BASE_DELAY = 3000
+  const RECONNECT_MAX_DELAY = 60000
+  // During an error storm every event lands here; without a ceiling the arrays
+  // (and the per-event duplicate scan) grow until the tab stalls.
+  const LIVE_NOTIFICATIONS_LIMIT = 100
+  const INBOX_LIMIT = 500
 
   // --- Inbox REST methods ---
 
@@ -370,7 +377,9 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
     if (inbox.value.some(n => n.id === notification.id))
       return
     inbox.value.unshift({ ...notification, expanded: false })
-    inboxTotal.value++
+    if (inbox.value.length > INBOX_LIMIT)
+      inbox.value.splice(INBOX_LIMIT)
+    inboxTotal.value = inbox.value.length
     detectNewAlerts([notification])
   }
 
@@ -398,6 +407,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
         }
 
         notifications.value.unshift(notification)
+        if (notifications.value.length > LIVE_NOTIFICATIONS_LIMIT)
+          notifications.value.splice(LIVE_NOTIFICATIONS_LIMIT)
 
         const inboxItem: InboxNotification = {
           id: notification.id,
@@ -440,15 +451,19 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
       abortController = null
     }
 
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && authStore.isAuthenticated) {
-      reconnectAttempts++
-      reconnectTimeout = setTimeout(() => {
-        connect()
-      }, RECONNECT_DELAY)
-    }
-    else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      connectionError.value = 'Unable to connect to notification stream'
-    }
+    if (!authStore.isAuthenticated)
+      return
+
+    const delay = Math.min(RECONNECT_BASE_DELAY * 2 ** reconnectAttempts, RECONNECT_MAX_DELAY)
+    reconnectAttempts++
+    if (reconnectAttempts > 3)
+      connectionError.value = 'Notification stream unavailable, retrying'
+    if (reconnectTimeout)
+      clearTimeout(reconnectTimeout)
+    reconnectTimeout = setTimeout(() => {
+      reconnectTimeout = null
+      connect()
+    }, delay)
   }
 
   async function connect() {
@@ -473,6 +488,10 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
         signal: abortController.signal,
       })
 
+      if (response.status === 401) {
+        // The stream outlived the 15-minute access token; refresh before retrying.
+        await authStore.refreshAccessToken()
+      }
       if (!response.ok)
         throw new Error(`SSE connection failed: ${response.status}`)
       if (!response.body)
@@ -514,6 +533,8 @@ export const useNotificationStreamStore = defineStore('notificationStream', () =
               }
             }
           }
+          // The server ended the stream (e.g. a gateway restart): reconnect.
+          handleConnectionError()
         }
         catch (error: any) {
           if (error.name === 'AbortError')

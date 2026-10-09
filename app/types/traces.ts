@@ -1,3 +1,5 @@
+import type { ExploreLogEntry } from '~/types/explore'
+
 export type SpanStatus = 'OK' | 'ERROR' | 'UNSET'
 
 export interface SpanEvent {
@@ -42,6 +44,12 @@ export interface TraceListResponse {
 export interface TraceDetailResponse {
   trace_id: string
   spans: Span[]
+}
+
+export interface TraceLogsResponse {
+  logs: ExploreLogEntry[]
+  /** More logs matched than were returned. */
+  truncated: boolean
 }
 
 export interface TraceListFilters {

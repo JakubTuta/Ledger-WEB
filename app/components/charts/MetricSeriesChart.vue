@@ -10,6 +10,7 @@
         ? 'dark'
         : undefined"
       autoresize
+      @click="handleChartClick"
     />
   </div>
 </template>
@@ -28,6 +29,11 @@ const props = withDefaults(defineProps<{
   height: '100%',
 })
 
+const emit = defineEmits<{
+  /** An exemplar marker was clicked; open the trace that produced it. */
+  exemplarClick: [traceId: string]
+}>()
+
 // Fixed assignment order, never cycled: a series keeps its hue when a filter
 // removes its neighbours. Both ramps are validated for the CVD, chroma,
 // lightness and contrast checks against their own surface - dark is its own
@@ -38,6 +44,8 @@ const SERIES_COLORS_DARK = ['#1e88e5', '#d81b60', '#00897b', '#e65100', '#7e57c2
 // hue alone: every series carries a legend entry and its own marker symbol.
 const SERIES_SYMBOLS = ['circle', 'rect', 'triangle', 'diamond', 'roundRect', 'pin', 'arrow']
 const OVERFLOW_COLOR = '#78909c'
+// Exemplars must read as "individual samples", not as another series line.
+const EXEMPLAR_COLOR = '#fdd835'
 
 const MAX_PLOTTED_SERIES = SERIES_COLORS_LIGHT.length
 
@@ -194,6 +202,10 @@ function buildSeriesOption() {
     })
   }
 
+  const exemplars = exemplarSeries(bucketList)
+  if (exemplars)
+    plotted.push(exemplars as any)
+
   const showLegend = plotted.length >= 2
 
   return {
@@ -221,7 +233,9 @@ function buildSeriesOption() {
         const label = params[0]?.axisValue ?? ''
         const rows = params
           .filter((param: any) => param.value !== null && param.value !== undefined)
-          .map((param: any) => `${param.marker}${param.seriesName}: <b>${formatValue(param.value)}</b>`)
+          .map((param: any) => (param.seriesType === 'scatter'
+            ? `${param.marker}exemplar: <b>${formatValue(param.value[1])}</b> (click to open trace)`
+            : `${param.marker}${param.seriesName}: <b>${formatValue(param.value)}</b>`))
           .join('<br/>')
 
         return `<b>${label}</b><br/>${rows || 'no data'}`
@@ -253,23 +267,64 @@ function buildSeriesOption() {
   }
 }
 
-function bucketRangeLabel(bounds: (number | null)[], index: number): string {
-  const upper = bounds[index]
-  const lower = index === 0
-    ? 0
-    : bounds[index - 1]
+/** Index of the chart bucket an exemplar's timestamp falls in. */
+function bucketIndexFor(bucketList: string[], timestamp: string): number {
+  const at = new Date(timestamp).getTime()
+  let index = 0
+  for (let i = 0; i < bucketList.length; i++) {
+    if (new Date(bucketList[i]!).getTime() <= at)
+      index = i
+    else
+      break
+  }
 
-  if (upper === null || upper === undefined)
-    return `> ${formatValue(lower ?? 0)}`
+  return index
+}
 
-  return `${formatValue(lower ?? 0)} - ${formatValue(upper)}`
+function exemplarSeries(bucketList: string[]) {
+  const exemplars = props.data?.exemplars ?? []
+  if (!exemplars.length || !bucketList.length)
+    return null
+
+  return {
+    name: 'Exemplars',
+    type: 'scatter',
+    symbol: 'diamond',
+    symbolSize: 10,
+    z: 10,
+    cursor: 'pointer',
+    itemStyle: { color: EXEMPLAR_COLOR, borderColor: '#5d4037', borderWidth: 1 },
+    data: exemplars.map(exemplar => ({
+      value: [bucketIndexFor(bucketList, exemplar.timestamp), exemplar.value],
+      traceId: exemplar.trace_id,
+    })),
+  }
+}
+
+function handleChartClick(params: any) {
+  const traceId = params?.data?.traceId
+  if (params?.seriesType === 'scatter' && typeof traceId === 'string' && traceId)
+    emit('exemplarClick', traceId)
+}
+
+interface BucketEdges {
+  lower_bound: number | null
+  upper_bound: number | null
+}
+
+function bucketRangeLabel(bucket: BucketEdges): string {
+  if (bucket.upper_bound === null)
+    return `> ${formatValue(bucket.lower_bound ?? 0)}`
+  if (bucket.lower_bound === null)
+    return `≤ ${formatValue(bucket.upper_bound)}`
+
+  return `${formatValue(bucket.lower_bound)} - ${formatValue(bucket.upper_bound)}`
 }
 
 function buildDistributionOption() {
   const histogram = props.data?.histograms?.[0]
-  const bounds = histogram?.buckets.map(bucket => bucket.upper_bound) ?? []
   const counts = histogram?.buckets.map(bucket => bucket.count) ?? []
-  const labels = bounds.map((_bound, index) => bucketRangeLabel(bounds, index))
+  const labels = histogram?.buckets.map(bucket => bucketRangeLabel(bucket)) ?? []
 
   return {
     backgroundColor: 'transparent',

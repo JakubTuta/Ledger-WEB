@@ -302,6 +302,7 @@
 <script setup lang="ts">
 import type { Panel, TimeRangePreset } from '~/types/panel'
 import { useDisplay } from 'vuetify'
+import { isSelfFetchingPanel } from '~/types/panel'
 
 definePageMeta({
   middleware: 'auth',
@@ -513,7 +514,7 @@ async function handlePanelCreated(panel: Panel) {
   else if (panel.type === 'country_map') {
     await panelsStore.fetchCountryBreakdownForPanel(panel)
   }
-  else if (panel.type === 'trace_list' || panel.type === 'trace' || panel.type === 'metric_series') {
+  else if (isSelfFetchingPanel(panel.type)) {
     // These panels fetch their own data on mount
   }
   else {
@@ -541,7 +542,7 @@ function fetchAllMetrics() {
     else if (panel.type === 'metric_series') {
       metricsStore.fetchSeriesForPanel(panel, true)
     }
-    else if (panel.type === 'trace_list' || panel.type === 'trace') {
+    else if (isSelfFetchingPanel(panel.type)) {
       // These panels self-manage data fetching
     }
     else {

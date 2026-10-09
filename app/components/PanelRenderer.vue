@@ -95,6 +95,26 @@
     @expand="emit('expand')"
   />
 
+  <ServiceMapPanelCard
+    v-else-if="panel.type === 'service_map'"
+    :panel="panel"
+    :project="project"
+    :disabled="disabled"
+    @delete="emit('delete')"
+    @time-options="emit('timeOptions')"
+    @expand="emit('expand')"
+  />
+
+  <ServiceRedPanelCard
+    v-else-if="panel.type === 'service_red'"
+    :panel="panel"
+    :project="project"
+    :disabled="disabled"
+    @delete="emit('delete')"
+    @time-options="emit('timeOptions')"
+    @expand="emit('expand')"
+  />
+
   <SummaryPanel
     v-else-if="panel.type === 'summary'"
     :panel="panel"

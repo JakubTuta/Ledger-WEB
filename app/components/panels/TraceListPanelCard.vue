@@ -188,7 +188,7 @@
 
 <script setup lang="ts">
 import type { PanelExportBuildResult } from '~/composables/usePanelExport'
-import type { CreatePanelRequest, Panel } from '~/types/panel'
+import type { Panel } from '~/types/panel'
 import type { Project } from '~/types/project'
 
 const props = defineProps<{
@@ -238,7 +238,7 @@ async function buildExport(): Promise<PanelExportBuildResult> {
 }
 
 function buildFilters() {
-  const now = new Date()
+  const range = resolvePanelTimeRange(props.panel)
 
   return {
     project_id: props.panel.project_id,
@@ -246,8 +246,8 @@ function buildFilters() {
     operation: props.panel.operation_filter,
     min_duration_ms: props.panel.min_duration_ms,
     has_error: props.panel.has_error,
-    from: props.panel.periodFrom || new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    to: props.panel.periodTo || now.toISOString(),
+    from: range.from,
+    to: range.to,
   }
 }
 
@@ -260,49 +260,16 @@ async function handleLoadPage(newOffset: number) {
 }
 
 async function handlePinTrace(payload: { trace_id: string }) {
-  const existing = panelsStore.findTracePanelByTraceId(payload.trace_id)
-
-  if (existing) {
-    pinSnackbarMessage.value = 'Trace panel already pinned'
-    pinSnackbar.value = true
-    await nextTick()
-    const el = document.getElementById(`panel-${existing.id}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-
+  const result = await panelsStore.openTracePanel(props.panel.project_id, payload.trace_id, props.panel)
+  if (!result.panel)
     return
-  }
 
-  const hasPeriod = !!props.panel.period
-  const hasDates = !!props.panel.periodFrom && !!props.panel.periodTo
-
-  const newPanel: CreatePanelRequest = {
-    name: `Trace ${payload.trace_id.slice(0, 8)}…`,
-    type: 'trace',
-    project_id: props.panel.project_id,
-    trace_id: payload.trace_id,
-    index: panelsStore.panels.length,
-    period: hasPeriod
-      ? props.panel.period
-      : (hasDates
-          ? null
-          : 'last7days'),
-    periodFrom: hasDates && !hasPeriod
-      ? props.panel.periodFrom
-      : null,
-    periodTo: hasDates && !hasPeriod
-      ? props.panel.periodTo
-      : null,
-  }
-
-  const result = await panelsStore.createPanel(newPanel)
-
-  if (result.success && result.panel) {
-    pinSnackbarMessage.value = 'Trace panel created'
-    pinSnackbar.value = true
-    await nextTick()
-    const el = document.getElementById(`panel-${result.panel.id}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  pinSnackbarMessage.value = result.created
+    ? 'Trace panel created'
+    : 'Trace panel already pinned'
+  pinSnackbar.value = true
+  await nextTick()
+  document.getElementById(`panel-${result.panel.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 onMounted(() => {

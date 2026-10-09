@@ -45,6 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value && !!token.value)
   const authInitialized = ref(false)
   const refreshPromise = ref<Promise<boolean> | null>(null)
+  let refreshTimer: ReturnType<typeof setInterval> | null = null
 
   const saveToken = (newToken: string, expiresIn: number) => {
     token.value = newToken
@@ -259,8 +260,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (refreshed) {
       await fetchCurrentUser()
 
-      if (import.meta.client) {
-        setInterval(async () => {
+      // autoLogin runs again after every logout/login cycle; one timer is enough.
+      if (import.meta.client && !refreshTimer) {
+        refreshTimer = setInterval(async () => {
           if (shouldRefreshToken()) {
             await refreshAccessToken()
           }
@@ -273,7 +275,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const updateName = async (name: string) => {
     try {
-      const response = await client.put<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
+      const response = await client.patch<UpdateNameResponse>('/api/v1/accounts/me/name', { name } as UpdateNameRequest)
 
       if (user.value) {
         user.value.name = response.data.name

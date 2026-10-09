@@ -342,6 +342,51 @@
       />
     </svg>
 
+    <!-- service_map: nodes joined by directed calls, sized by volume -->
+    <svg
+      v-else-if="type === 'service_map'"
+      viewBox="0 0 80 52"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <line
+        v-for="(edge, i) in serviceMapEdges"
+        :key="`edge-${i}`"
+        :x1="serviceMapNodes[edge[0]]!.x"
+        :y1="serviceMapNodes[edge[0]]!.y"
+        :x2="serviceMapNodes[edge[1]]!.x"
+        :y2="serviceMapNodes[edge[1]]!.y"
+        stroke="currentColor"
+        stroke-width="1.5"
+        opacity="0.3"
+      />
+
+      <circle
+        v-for="(node, i) in serviceMapNodes"
+        :key="`node-${i}`"
+        :cx="node.x"
+        :cy="node.y"
+        :r="node.r"
+        :fill="node.color"
+      />
+    </svg>
+
+    <!-- service_red: rate, errors and duration lines stacked -->
+    <svg
+      v-else-if="type === 'service_red'"
+      viewBox="0 0 80 52"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <polyline
+        v-for="line in redLines"
+        :key="line.id"
+        :points="line.points"
+        fill="none"
+        :stroke="line.color"
+        stroke-width="2"
+        stroke-linejoin="round"
+      />
+    </svg>
+
     <!-- fallback -->
     <svg
       v-else
@@ -409,6 +454,21 @@ const latencyOverviewLines = [
   { id: 'avg', color: '#5b9cf6', points: '2,36 20,30 38,26 56,28 74,24', opacity: 0.9 },
   { id: 'p95', color: '#f97316', points: '2,28 20,22 38,18 56,20 74,16', opacity: 0.8 },
   { id: 'p99', color: '#f87171', points: '2,22 20,16 38,10 56,12 74,8', opacity: 0.65 },
+]
+
+// Health colors match the service map chart (healthy / degraded / dependency).
+const serviceMapNodes = [
+  { x: 12, y: 26, r: 7, color: '#43a047' },
+  { x: 40, y: 12, r: 6, color: '#43a047' },
+  { x: 40, y: 40, r: 5, color: '#ef6c00' },
+  { x: 68, y: 26, r: 6, color: '#78909c' },
+]
+const serviceMapEdges: [number, number][] = [[0, 1], [0, 2], [1, 3], [2, 3]]
+
+const redLines = [
+  { id: 'rate', color: '#1e88e5', points: '2,14 15,10 28,12 41,6 54,9 67,5 80,7' },
+  { id: 'errors', color: '#d81b60', points: '2,30 15,30 28,26 41,31 54,24 67,29 80,28' },
+  { id: 'duration', color: '#00897b', points: '2,46 15,42 28,44 41,38 54,42 67,36 80,40' },
 ]
 
 const errorListRows = [

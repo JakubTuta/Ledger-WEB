@@ -15,6 +15,7 @@ import type {
 } from '~/types/panel'
 import type { TrafficCategory } from '~/utils/clientChannel'
 import { defineStore } from 'pinia'
+import { isSelfFetchingPanel } from '~/types/panel'
 
 // --- Tabs types ---
 interface DashboardTab {
@@ -757,7 +758,7 @@ export const usePanelsStore = defineStore('panels', () => {
     return bottleneckListError.value.get(panelId) ?? null
   }
 
-  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map', 'metric_series']
+  const SERVER_PANEL_TYPES = ['logs', 'errors', 'metrics', 'error_list', 'bottleneck', 'error_heatmap', 'trace', 'trace_list', 'summary', 'latency_overview', 'country_map', 'metric_series', 'service_map', 'service_red']
 
   function toServerPayload(data: Partial<CreatePanelRequest | UpdatePanelRequest>): Record<string, any> {
     const payload: Record<string, any> = {}
@@ -1063,7 +1064,7 @@ export const usePanelsStore = defineStore('panels', () => {
       else if (response.data.type === 'country_map') {
         await fetchCountryBreakdownForPanel(response.data)
       }
-      else if (response.data.type !== 'trace' && response.data.type !== 'trace_list' && response.data.type !== 'metric_series') {
+      else if (!isSelfFetchingPanel(response.data.type)) {
         await fetchMetricsForPanel(response.data)
       }
 
@@ -1292,6 +1293,48 @@ export const usePanelsStore = defineStore('panels', () => {
     return panels.value.find(p => p.type === 'trace' && p.trace_id === traceId)
   }
 
+  /**
+   * The dashboard's panel for a trace, created if there is none yet. Traces
+   * have no route of their own - they are viewed as a pinned 'trace' panel -
+   * so every "open this trace" link (trace list, log, metric exemplar) lands
+   * here. A new panel inherits `source`'s time range.
+   */
+  const openTracePanel = async (
+    projectId: string,
+    traceId: string,
+    source?: Pick<Panel, 'period' | 'periodFrom' | 'periodTo'>,
+  ): Promise<{ panel?: Panel, created: boolean, error?: string }> => {
+    const existing = findTracePanelByTraceId(traceId)
+    if (existing)
+      return { panel: existing, created: false }
+
+    const hasPeriod = !!source?.period
+    const hasDates = !!source?.periodFrom && !!source?.periodTo
+
+    const result = await createPanel({
+      name: `Trace ${traceId.slice(0, 8)}…`,
+      type: 'trace',
+      project_id: projectId,
+      trace_id: traceId,
+      index: panels.value.length,
+      period: hasPeriod
+        ? source!.period!
+        : (hasDates
+            ? null
+            : 'last7days'),
+      periodFrom: hasDates && !hasPeriod
+        ? source!.periodFrom
+        : null,
+      periodTo: hasDates && !hasPeriod
+        ? source!.periodTo
+        : null,
+    })
+
+    return result.success && result.panel
+      ? { panel: result.panel, created: true }
+      : { created: false, error: result.error }
+  }
+
   return {
     panels,
     sortedPanels,
@@ -1362,5 +1405,6 @@ export const usePanelsStore = defineStore('panels', () => {
     migrateToTabs,
     applyTemplate,
     findTracePanelByTraceId,
+    openTracePanel,
   }
 })

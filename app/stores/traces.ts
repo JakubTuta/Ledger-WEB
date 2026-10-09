@@ -1,4 +1,5 @@
-import type { Span, TraceDetailResponse, TraceListFilters, TraceListResponse, TraceSummary } from '~/types/traces'
+import type { ExploreLogEntry } from '~/types/explore'
+import type { Span, TraceDetailResponse, TraceListFilters, TraceListResponse, TraceLogsResponse, TraceSummary } from '~/types/traces'
 import { defineStore } from 'pinia'
 
 export const useTracesStore = defineStore('traces', () => {
@@ -12,6 +13,10 @@ export const useTracesStore = defineStore('traces', () => {
   const listOffset = ref<Map<string | number, number>>(new Map())
   const listError = ref<Map<string | number, string>>(new Map())
   const detailError = ref<Map<string, string>>(new Map())
+  // Keyed by trace id, or `${traceId}:${spanId}` for one span's logs.
+  const logsByKey = ref<Map<string, TraceLogsResponse>>(new Map())
+  const logsLoading = ref<Set<string>>(new Set())
+  const logsError = ref<Map<string, string>>(new Map())
 
   function messageFor(error: any, fallback: string): string {
     return error?.response?.data?.detail || error?.message || fallback
@@ -91,6 +96,39 @@ export const useTracesStore = defineStore('traces', () => {
     }
   }
 
+  function logsKey(traceId: string, spanId?: string | null): string {
+    return spanId
+      ? `${traceId}:${spanId}`
+      : traceId
+  }
+
+  const fetchTraceLogs = async (traceId: string, projectId: string | number, spanId?: string | null, force = false) => {
+    const key = logsKey(traceId, spanId)
+    if (logsLoading.value.has(key) || (!force && logsByKey.value.has(key)))
+      return
+    logsLoading.value.add(key)
+    logsError.value.delete(key)
+    try {
+      const params: Record<string, string | number> = { project_id: projectId }
+      if (spanId)
+        params.span_id = spanId
+      const response = await client.get<TraceLogsResponse>(`/api/v1/traces/${traceId}/logs`, { params })
+      logsByKey.value.set(key, response.data)
+    }
+    catch (error: any) {
+      console.error('Error fetching trace logs:', error)
+      logsError.value.set(key, messageFor(error, 'Failed to load logs'))
+    }
+    finally {
+      logsLoading.value.delete(key)
+    }
+  }
+
+  const getTraceLogs = (traceId: string, spanId?: string | null) => computed<ExploreLogEntry[]>(() => logsByKey.value.get(logsKey(traceId, spanId))?.logs ?? [])
+  const areTraceLogsTruncated = (traceId: string, spanId?: string | null) => computed(() => logsByKey.value.get(logsKey(traceId, spanId))?.truncated ?? false)
+  const areTraceLogsLoading = (traceId: string, spanId?: string | null) => computed(() => logsLoading.value.has(logsKey(traceId, spanId)))
+  const getTraceLogsError = (traceId: string, spanId?: string | null) => computed(() => logsError.value.get(logsKey(traceId, spanId)) ?? null)
+
   const getListForPanel = (panelId: string | number) => computed(() => listsByPanel.value.get(panelId) ?? [])
 
   const getSpansForTrace = (traceId: string) => computed(() => detailsById.value.get(traceId) ?? [])
@@ -143,6 +181,11 @@ export const useTracesStore = defineStore('traces', () => {
     fetchList,
     fetchAllListForPanel,
     fetchDetail,
+    fetchTraceLogs,
+    getTraceLogs,
+    areTraceLogsTruncated,
+    areTraceLogsLoading,
+    getTraceLogsError,
     getListForPanel,
     getSpansForTrace,
     isListLoading,

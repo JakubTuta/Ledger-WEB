@@ -792,10 +792,9 @@ const callerEntries = computed<[string, unknown][]>(() => {
     : []
 })
 
-// Mirrors TraceListPanelCard's "pin trace" flow: traces don't have their own
-// waterfall route in this app — they're viewed as a 'trace' panel pinned to
-// the dashboard. Reuse that exact flow so a trace_id found in a log's
-// attributes navigates somewhere useful.
+// Traces have no route of their own - they're viewed as a 'trace' panel
+// pinned to the dashboard - so a trace_id found in a log's attributes opens
+// (or creates) that panel and navigates to it.
 async function viewTrace(traceId: string) {
   const projectId = exploreStore.filters.projectId
   if (!projectId)
@@ -803,20 +802,7 @@ async function viewTrace(traceId: string) {
 
   viewingTrace.value = true
   try {
-    let panel = panelsStore.findTracePanelByTraceId(traceId)
-
-    if (!panel) {
-      const result = await panelsStore.createPanel({
-        name: `Trace ${traceId.slice(0, 8)}…`,
-        type: 'trace',
-        project_id: projectId,
-        trace_id: traceId,
-        index: panelsStore.panels.length,
-        period: 'last7days',
-      })
-      if (result.success && result.panel)
-        panel = result.panel
-    }
+    const { panel } = await panelsStore.openTracePanel(projectId, traceId)
 
     if (panel) {
       await router.push({ path: '/panel', query: { project: projectId } })
@@ -844,17 +830,7 @@ function updateUrlParams() {
 }
 
 // --- Formatting helpers ---
-const LEVEL_COLORS: Record<string, string> = {
-  debug: 'grey',
-  info: 'info',
-  warning: 'warning',
-  error: 'error',
-  critical: 'error',
-}
-
-function levelColor(level: string): string {
-  return LEVEL_COLORS[level] ?? 'grey'
-}
+const levelColor = logLevelColor
 
 function levelBarClass(level: string): string {
   if (level === 'critical' || level === 'error')

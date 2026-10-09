@@ -53,6 +53,23 @@ function endOfBoundary(value: string): Date {
 }
 
 /**
+ * `range` shortened to its last `days` days, for endpoints that cap the
+ * window. `clamped` says whether anything was cut, so the panel can say so.
+ */
+export function clampToRecentDays(
+  range: ResolvedTimeRange,
+  days: number,
+): ResolvedTimeRange & { clamped: boolean } {
+  const end = new Date(range.to)
+  const earliest = new Date(end.getTime() - days * DAY_MS)
+
+  if (new Date(range.from) >= earliest)
+    return { ...range, clamped: false }
+
+  return { from: earliest.toISOString(), to: range.to, clamped: true }
+}
+
+/**
  * The absolute window a panel's period setting covers, as ISO timestamps, for
  * endpoints that take from/to rather than a named period. A panel with no
  * stored range falls back to last7days, like the other panel fetches.

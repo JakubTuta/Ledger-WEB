@@ -1,7 +1,17 @@
 import type { MetricAggregation, MetricInterval } from '~/types/metrics'
 import type { TrafficCategory } from '~/utils/clientChannel'
 
-export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview' | 'country_map' | 'metric_series'
+export type PanelType = 'logs' | 'errors' | 'metrics' | 'error_list' | 'bottleneck' | 'error_heatmap' | 'trace' | 'trace_list' | 'summary' | 'latency_overview' | 'country_map' | 'metric_series' | 'service_map' | 'service_red'
+
+/**
+ * Panels whose card fetches its own data (on mount and when its settings or
+ * time range change); dashboard-wide refreshes leave them alone.
+ */
+export const SELF_FETCHING_PANEL_TYPES: PanelType[] = ['trace', 'trace_list', 'metric_series', 'service_map', 'service_red']
+
+export function isSelfFetchingPanel(type: PanelType): boolean {
+  return SELF_FETCHING_PANEL_TYPES.includes(type)
+}
 
 export type BottleneckStatistic = 'min' | 'max' | 'avg' | 'median' | 'count'
 export type BottleneckSort = 'asc' | 'desc'

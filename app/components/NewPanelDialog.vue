@@ -86,7 +86,7 @@
             </div>
 
             <v-alert
-              v-if="form.panelType === 'trace_list'"
+              v-if="form.panelType === 'trace_list' || form.panelType === 'service_map' || form.panelType === 'service_red'"
               type="info"
               variant="tonal"
               density="compact"
@@ -238,6 +238,20 @@
                     class="mb-3"
                   />
                 </template>
+
+                <!-- RED config -->
+                <v-text-field
+                  v-if="form.panelType === 'service_red'"
+                  v-model="form.serviceFilter"
+                  label="Service (optional)"
+                  variant="outlined"
+                  density="compact"
+                  class="mb-3"
+                  clearable
+                  hint="Set to break one service down by operation; leave empty for all services"
+                  persistent-hint
+                  placeholder="e.g. orders-api"
+                />
 
                 <!-- Trace List config -->
                 <template v-if="form.panelType === 'trace_list'">
@@ -454,12 +468,14 @@ const allPanelTypeOptions = [
   { label: 'Summary KPIs', value: 'summary', icon: 'mdi-view-dashboard-outline', description: 'At-a-glance tiles: total requests, error rate %, avg latency, p95, and throughput.' },
   { label: 'Latency Overview', value: 'latency_overview', icon: 'mdi-chart-timeline-variant', description: 'Project-wide latency lines (avg, p95, p99) aggregated across all endpoints.' },
   { label: 'Endpoint Metrics', value: 'metrics', icon: 'mdi-chart-line', description: 'Latency lines (avg/p95/p99) for one specific endpoint URL.' },
-  { label: 'Metric', value: 'metric_series', icon: 'mdi-chart-line-variant', description: 'Chart a counter, gauge or histogram your app sends, split into series by tag.' },
+  { label: 'Metric', value: 'metric_series', icon: 'mdi-chart-line-variant', description: 'Chart a counter, gauge, histogram or summary your app sends, split into series by tag, with exemplars linking to traces.' },
   { label: 'HTTP Request Log', value: 'logs', icon: 'mdi-web', description: 'Live log of HTTP requests with status, method, path, and duration.' },
   { label: 'Error List', value: 'error_list', icon: 'mdi-format-list-bulleted', description: 'Grouped list of recent errors and failed requests (4xx optional) with occurrence counts and stack traces.' },
   { label: 'Bottleneck', value: 'bottleneck', icon: 'mdi-speedometer', description: 'Routes ranked by latency or request count. Click column headers to sort.' },
   { label: 'Error Heatmap', value: 'error_heatmap', icon: 'mdi-grid', description: 'Hour-by-day grid colored by error rate — spot recurring failure patterns.' },
   { label: 'Trace List', value: 'trace_list', icon: 'mdi-format-list-text', description: 'List of recent distributed traces. Click a row to pin it as a trace panel.' },
+  { label: 'Service Map', value: 'service_map', icon: 'mdi-graph-outline', description: 'Services and the calls between them, from traces - with request volume, error rate and p95 per connection.' },
+  { label: 'Service RED', value: 'service_red', icon: 'mdi-chart-multiline', description: 'Rate, errors and duration (p50/p95/p99) per service, or per operation of one service.' },
   { label: 'Country Map', value: 'country_map', icon: 'mdi-map', description: 'World map colored by request volume per country.' },
 ]
 
@@ -468,7 +484,7 @@ const panelTypeOptions = allPanelTypeOptions
 const showAdvanced = computed(() => {
   const t = form.value.panelType
 
-  return t === 'metrics' || t === 'trace_list' || t === 'metric_series'
+  return t === 'metrics' || t === 'trace_list' || t === 'metric_series' || t === 'service_red'
 })
 
 const errorFilterOptions = [
@@ -619,7 +635,7 @@ async function handleCreate() {
         : undefined,
       routes: undefined,
       statistic: undefined,
-      service_filter: form.value.panelType === 'trace_list'
+      service_filter: form.value.panelType === 'trace_list' || form.value.panelType === 'service_red'
         ? form.value.serviceFilter || undefined
         : undefined,
       operation_filter: form.value.panelType === 'trace_list'

@@ -1,4 +1,4 @@
-import { BarChart, HeatmapChart, LineChart, MapChart } from 'echarts/charts'
+import { BarChart, GraphChart, HeatmapChart, LineChart, MapChart, ScatterChart } from 'echarts/charts'
 import {
   GridComponent,
   LegendComponent,
@@ -14,6 +14,8 @@ use([
   CanvasRenderer,
   LineChart,
   BarChart,
+  ScatterChart,
+  GraphChart,
   HeatmapChart,
   MapChart,
   GridComponent,

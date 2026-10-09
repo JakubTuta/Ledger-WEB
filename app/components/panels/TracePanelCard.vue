@@ -50,17 +50,32 @@
         {{ detailError }}
       </v-alert>
 
+      <!--
+        A trace sampled out (or past retention) has no spans, but the logs it
+        produced are still linked by its id.
+      -->
       <div
         v-else-if="spans.length === 0"
-        class="d-flex flex-column align-center justify-center pa-6 text-center"
+        class="trace-panel-body"
       >
-        <v-icon
-          icon="mdi-alert-outline"
-          size="32"
-          color="warning"
-        />
+        <div class="d-flex flex-column align-center pa-4 text-center">
+          <v-icon
+            icon="mdi-alert-outline"
+            size="28"
+            color="warning"
+          />
 
-        <span class="text-body-2 mt-2">Trace not found or expired.</span>
+          <span class="text-body-2 mt-2">Trace spans not stored (sampled out or expired).</span>
+        </div>
+
+        <v-divider />
+
+        <div class="trace-waterfall-scroll flex-grow-1">
+          <TraceLogList
+            :trace-id="panel.trace_id"
+            :project-id="panel.project_id"
+          />
+        </div>
       </div>
 
       <div
@@ -152,6 +167,28 @@
 
             <v-spacer />
 
+            <v-btn-toggle
+              v-model="view"
+              density="compact"
+              variant="outlined"
+              mandatory
+              class="trace-view-toggle"
+            >
+              <v-btn
+                value="spans"
+                size="x-small"
+              >
+                Spans
+              </v-btn>
+
+              <v-btn
+                value="logs"
+                size="x-small"
+              >
+                Logs
+              </v-btn>
+            </v-btn-toggle>
+
             <span class="text-caption text-medium-emphasis">{{ formatStartTime }}</span>
           </div>
 
@@ -177,9 +214,16 @@
 
         <div class="trace-waterfall-scroll flex-grow-1">
           <TraceWaterfall
+            v-if="view === 'spans'"
             :spans="spans"
             class="pa-2"
             @select="openSpan"
+          />
+
+          <TraceLogList
+            v-else
+            :trace-id="panel.trace_id"
+            :project-id="panel.project_id"
           />
         </div>
       </div>
@@ -276,6 +320,17 @@
       <div class="mt-4">
         <SpanRow :span="selectedSpan" />
       </div>
+
+      <div class="text-subtitle-2 font-weight-bold mb-1 mt-4">
+        Logs in this span
+      </div>
+
+      <TraceLogList
+        v-if="panel.trace_id"
+        :trace-id="panel.trace_id"
+        :project-id="panel.project_id"
+        :span-id="selectedSpan.span_id"
+      />
     </div>
   </v-navigation-drawer>
 
@@ -320,6 +375,7 @@ const showExportError = computed({
 
 const drawerOpen = ref(false)
 const selectedSpan = ref<Span | null>(null)
+const view = ref<'spans' | 'logs'>('spans')
 
 const SERVICE_PALETTE = [
   '#42a5f5',
@@ -441,7 +497,10 @@ function openSpan(span: Span) {
 
 async function handleRefresh() {
   if (props.panel.trace_id) {
-    await tracesStore.fetchDetail(props.panel.trace_id, props.panel.project_id, true)
+    await Promise.all([
+      tracesStore.fetchDetail(props.panel.trace_id, props.panel.project_id, true),
+      tracesStore.fetchTraceLogs(props.panel.trace_id, props.panel.project_id, null, true),
+    ])
   }
 }
 
@@ -467,5 +526,9 @@ onMounted(() => {
 .trace-waterfall-scroll {
   overflow: auto;
   min-height: 0;
+}
+
+.trace-view-toggle {
+  height: 22px;
 }
 </style>
